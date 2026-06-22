@@ -51,7 +51,16 @@ class ReembolsoController extends Controller
 
         return view('reembolsos.create', compact('venta'));
     }
-
+/**
+ * Registra un reembolso parcial de una venta.
+ *
+ * Reglas:
+ * - Solo permite reembolsar ventas completadas de la caja abierta actual.
+ * - Devuelve stock a los lotes usados originalmente en la venta.
+ * - Registra movimientos de inventario para trazabilidad.
+ * - Ajusta caja descontando el monto reembolsado.
+ * - No modifica la venta original ni la elimina.
+ */
     public function store(Request $request, Venta $venta)
     {
         $datos = $request->validate([

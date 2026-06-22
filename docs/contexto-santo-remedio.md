@@ -773,3 +773,23 @@ Estado comprobado:
 - Movimientos de inventario quedan registrados.
 - Movimientos de caja quedan registrados.
 - No se eliminan registros críticos; se usan estados y auditoría.
+
+
+### Manejo de errores AJAX en desarrollo
+
+Durante el desarrollo, los `catch` de JavaScript pueden mostrar `error.message` para facilitar la depuración.
+
+Antes de entregar el sistema al cliente, los mensajes técnicos deben cambiarse por mensajes amigables, manteniendo `console.error()` para depuración.
+
+### Producto rápido desde compras
+
+El módulo de compras permite crear un producto nuevo sin salir de la pantalla de registro de compra.
+
+Mejora aplicada:
+- El formulario de producto rápido se muestra en modal.
+- Esto evita confusión visual con el formulario principal de compra.
+- Al guardar el producto, se crea:
+  - producto
+  - producto_presentacion
+  - código de barras opcional
+- El producto creado queda seleccionado automáticamente para continuar la compra.

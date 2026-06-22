@@ -84,6 +84,7 @@ Route::middleware('auth')->group(function () {
 
     Route::post('/cambios-producto/{cambioProducto}/anular', [CambioProductoController::class, 'anularStore'])
         ->name('cambios-producto.anular.store');
+        
     Route::get('/cambios-producto/{cambioProducto}', [CambioProductoController::class, 'show'])
         ->name('cambios-producto.show');
 
@@ -122,12 +123,19 @@ Route::middleware('auth')->group(function () {
     Route::put('/proveedores/{proveedor}', [ProveedorController::class, 'update'])->name('proveedores.update');
     Route::delete('/proveedores/{proveedor}', [ProveedorController::class, 'destroy'])->name('proveedores.destroy');
 
+
+    Route::post('/compras/laboratorio-rapido', [CompraController::class, 'laboratorioRapido'])
+        ->name('compras.laboratorio-rapido');
     // Compras
+    
     Route::get('/compras', [CompraController::class, 'index'])->name('compras.index');
     Route::get('/compras/crear', [CompraController::class, 'create'])->name('compras.create');
     Route::post('/compras', [CompraController::class, 'store'])->name('compras.store');
+    
     Route::get('/compras/buscar-productos', [CompraController::class, 'buscarProductos'])
     ->name('compras.buscar-productos');
+    Route::post('/compras/producto-rapido', [CompraController::class, 'productoRapido'])
+        ->name('compras.producto-rapido');
 
     Route::get('/compras/{compra}/pagar', [CompraController::class, 'pagoCreate'])
         ->name('compras.pago.create');

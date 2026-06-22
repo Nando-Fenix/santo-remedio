@@ -2,12 +2,17 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Categoria;
 use App\Models\Compra;
+use App\Models\CodigoBarra;
 use App\Models\DetalleCompra;
 use App\Models\Inventario;
+use App\Models\Laboratorio;
 use App\Models\Lote;
 use App\Models\MovimientoInventario;
 use App\Models\PagoCompra;
+use App\Models\Presentacion;
+use App\Models\Producto;
 use App\Models\ProductoPresentacion;
 use App\Models\Proveedor;
 use App\Models\Sucursal;
@@ -57,6 +62,18 @@ class CompraController extends Controller
             ->orderBy('nombre')
             ->get();
 
+        $categorias = Categoria::where('estado', 'activo')
+            ->orderBy('nombre')
+            ->get();
+
+        $laboratorios = Laboratorio::where('estado', 'activo')
+            ->orderBy('nombre')
+            ->get();
+
+        $presentaciones = Presentacion::where('estado', 'activo')
+            ->orderBy('nombre')
+            ->get();
+
         $productoPresentaciones = ProductoPresentacion::with(['producto', 'presentacion'])
             ->where('estado', 'activo')
             ->whereHas('producto', function ($query) {
@@ -68,6 +85,9 @@ class CompraController extends Controller
         return view('compras.create', compact(
             'sucursal',
             'proveedores',
+            'categorias',
+            'laboratorios',
+            'presentaciones',
             'productoPresentaciones'
         ));
     }
@@ -540,6 +560,137 @@ class CompraController extends Controller
         return redirect()
             ->route('compras.show', $compra)
             ->with('success', 'Compra anulada correctamente. El inventario fue ajustado.');
+    }
+
+    /**
+     * Crea un producto rápidamente desde la pantalla de compras.
+     *
+     * Reglas:
+     * - No crea stock todavía.
+     * - Solo crea producto, presentación inicial y código de barras opcional.
+     * - El stock se ingresará cuando se guarde la compra.
+     * - Se usa AJAX para no salir de la pantalla de compra.
+     */
+    public function productoRapido(Request $request)
+    {
+        $datos = $request->validate([
+            'nombre_comercial' => ['required', 'string', 'max:150'],
+            'nombre_generico' => ['nullable', 'string', 'max:150'],
+            'concentracion' => ['nullable', 'string', 'max:80'],
+
+            'laboratorio_id' => ['nullable', 'exists:laboratorios,id'],
+            'categoria_id' => ['nullable', 'exists:categorias,id'],
+
+            'presentacion_id' => ['required', 'exists:presentaciones,id'],
+            'nombre_mostrado' => ['nullable', 'string', 'max:150'],
+            'unidades_equivalentes' => ['required', 'integer', 'min:1'],
+
+            'precio_compra' => ['required', 'numeric', 'min:0'],
+            'precio_venta' => ['required', 'numeric', 'min:0'],
+
+            'codigo_barra' => ['nullable', 'string', 'max:100', 'unique:codigos_barras,codigo'],
+        ], [
+            'nombre_comercial.required' => 'El nombre comercial es obligatorio.',
+            'presentacion_id.required' => 'Debe seleccionar una presentación.',
+            'unidades_equivalentes.required' => 'Debe ingresar las unidades equivalentes.',
+            'precio_compra.required' => 'Debe ingresar el precio de compra.',
+            'precio_venta.required' => 'Debe ingresar el precio de venta.',
+            'codigo_barra.unique' => 'Ese código de barras ya está registrado.',
+        ]);
+
+        $productoPresentacion = DB::transaction(function () use ($datos) {
+            $producto = Producto::create([
+                'categoria_id' => $datos['categoria_id'] ?? null,
+                'laboratorio_id' => $datos['laboratorio_id'] ?? null,
+                'proveedor_id' => null,
+                'nombre_comercial' => $datos['nombre_comercial'],
+                'nombre_generico' => $datos['nombre_generico'] ?? null,
+                'concentracion' => $datos['concentracion'] ?? null,
+                'descripcion' => null,
+                'estado' => 'activo',
+            ]);
+
+            $presentacion = Presentacion::findOrFail($datos['presentacion_id']);
+
+            $nombreMostrado = $datos['nombre_mostrado']
+                ?: $producto->nombre_comercial . ' - ' . $presentacion->nombre;
+
+            $productoPresentacion = ProductoPresentacion::create([
+                'producto_id' => $producto->id,
+                'presentacion_id' => $presentacion->id,
+                'nombre_mostrado' => $nombreMostrado,
+                'unidades_equivalentes' => (int) $datos['unidades_equivalentes'],
+                'precio_compra' => round((float) $datos['precio_compra'], 2),
+                'precio_venta' => round((float) $datos['precio_venta'], 2),
+                'es_principal' => true,
+                'estado' => 'activo',
+            ]);
+
+            if (!empty($datos['codigo_barra'])) {
+                CodigoBarra::create([
+                    'producto_id' => $producto->id,
+                    'producto_presentacion_id' => $productoPresentacion->id,
+                    'codigo' => $datos['codigo_barra'],
+                    'tipo_codigo' => 'fabricante',
+                    'generado_por_sistema' => false,
+                    'estado' => 'activo',
+                ]);
+            }
+
+            return $productoPresentacion->load([
+                'producto',
+                'presentacion',
+                'codigosBarras',
+            ]);
+        });
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Producto creado correctamente.',
+            'producto' => [
+                'producto_presentacion_id' => $productoPresentacion->id,
+                'producto_id' => $productoPresentacion->producto_id,
+                'nombre_producto' => $productoPresentacion->producto->nombre_comercial,
+                'nombre_generico' => $productoPresentacion->producto->nombre_generico,
+                'concentracion' => $productoPresentacion->producto->concentracion,
+                'presentacion' => $productoPresentacion->nombre_mostrado,
+                'unidades_equivalentes' => $productoPresentacion->unidades_equivalentes,
+                'precio_compra' => (float) $productoPresentacion->precio_compra,
+                'precio_venta' => (float) $productoPresentacion->precio_venta,
+                'stock_disponible' => 0,
+            ],
+        ]);
+    }
+    
+    /**
+     * Crea un laboratorio rápidamente desde la pantalla de compras.
+     *
+     * Regla:
+     * - Se usa para no salir del registro de compra cuando el laboratorio no existe.
+     * - No crea productos ni stock, solo el laboratorio.
+     */
+    public function laboratorioRapido(Request $request)
+    {
+        $datos = $request->validate([
+            'nombre' => ['required', 'string', 'max:150', 'unique:laboratorios,nombre'],
+        ], [
+            'nombre.required' => 'El nombre del laboratorio es obligatorio.',
+            'nombre.unique' => 'Ese laboratorio ya está registrado.',
+        ]);
+
+        $laboratorio = Laboratorio::create([
+            'nombre' => $datos['nombre'],
+            'estado' => 'activo',
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Laboratorio creado correctamente.',
+            'laboratorio' => [
+                'id' => $laboratorio->id,
+                'nombre' => $laboratorio->nombre,
+            ],
+        ]);
     }
 
     public function show(Compra $compra)

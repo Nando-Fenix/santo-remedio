@@ -87,8 +87,117 @@
                 >
             </div>
 
-            <div id="resultados_producto_compra" class="card" style="display: none; margin-top: 12px; background: #FAFAFA;"></div>
+            <div id="resultados_producto_compra" class="card" style="display: none; margin-top: 12px; background: #FAFAFA;">
 
+            </div>
+            <button type="button" class="btn-primary" onclick="mostrarFormularioProductoRapido()">
+                + Crear producto rápido
+            </button>
+
+            <div id="modal_producto_rapido" class="modal-overlay" style="display: none;">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <div>
+                            <h3>Crear producto rápido</h3>
+                            <p>Registre un producto nuevo sin salir de la compra.</p>
+                        </div>
+
+                        <button type="button" class="modal-close" onclick="ocultarFormularioProductoRapido()">
+                            ✕
+                        </button>
+                    </div>
+
+                    <div class="grid" style="grid-template-columns: repeat(3, 1fr);">
+                        <div class="form-group">
+                            <label>Nombre comercial *</label>
+                            <input type="text" id="rapido_nombre_comercial" placeholder="Ej: Paracetamol">
+                        </div>
+
+                        <div class="form-group">
+                            <label>Nombre genérico</label>
+                            <input type="text" id="rapido_nombre_generico" placeholder="Ej: Acetaminofén">
+                        </div>
+
+                        <div class="form-group">
+                            <label>Concentración</label>
+                            <input type="text" id="rapido_concentracion" placeholder="Ej: 500 mg">
+                        </div>
+                    </div>
+
+                    <div class="grid" style="grid-template-columns: repeat(3, 1fr);">
+                        <div class="form-group">
+                            <label>Categoría</label>
+                            <select id="rapido_categoria_id">
+                                <option value="">Sin categoría</option>
+                                @foreach ($categorias as $categoria)
+                                    <option value="{{ $categoria->id }}">{{ $categoria->nombre }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Laboratorio</label>
+                            <select id="rapido_laboratorio_id">
+                                <option value="">Sin laboratorio</option>
+                                @foreach ($laboratorios as $laboratorio)
+                                    <option value="{{ $laboratorio->id }}">{{ $laboratorio->nombre }}</option>
+                                @endforeach
+                            </select>
+
+                            <button type="button" class="btn-secondary" style="margin-top: 8px;" onclick="crearLaboratorioRapido()">
+                                + Nuevo laboratorio
+                            </button>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Presentación *</label>
+                            <select id="rapido_presentacion_id">
+                                <option value="">Seleccione...</option>
+                                @foreach ($presentaciones as $presentacion)
+                                    <option value="{{ $presentacion->id }}">{{ $presentacion->nombre }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="grid" style="grid-template-columns: repeat(4, 1fr);">
+                        <div class="form-group">
+                            <label>Nombre mostrado</label>
+                            <input type="text" id="rapido_nombre_mostrado" placeholder="Ej: Paracetamol 500 mg tableta">
+                        </div>
+
+                        <div class="form-group">
+                            <label>Unidades equivalentes *</label>
+                            <input type="number" id="rapido_unidades_equivalentes" min="1" value="1">
+                        </div>
+
+                        <div class="form-group">
+                            <label>Precio compra *</label>
+                            <input type="number" id="rapido_precio_compra" min="0" step="0.01" value="0">
+                        </div>
+
+                        <div class="form-group">
+                            <label>Precio venta *</label>
+                            <input type="number" id="rapido_precio_venta" min="0" step="0.01" value="0">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Código de barras opcional</label>
+                        <input type="text" id="rapido_codigo_barra" placeholder="Escanear o escribir código de barras">
+                    </div>
+
+                    <div style="display: flex; gap: 10px; margin-top: 18px;">
+                        <button type="button" class="btn-primary" onclick="guardarProductoRapido()">
+                            Guardar producto rápido
+                        </button>
+
+                        <button type="button" class="btn-secondary" onclick="ocultarFormularioProductoRapido()">
+                            Cancelar
+                        </button>
+                    </div>
+                </div>
+            </div>
             <input type="hidden" id="producto_presentacion_id">
 
             <div id="producto_seleccionado_box" style="display: none; margin-top: 16px; padding: 14px; background: #F5F3FF; border-radius: 12px;">
@@ -305,12 +414,7 @@
     }
 
     function productoNoEncontrado() {
-        Swal.fire({
-            icon: 'info',
-            title: 'Producto no registrado',
-            text: 'Luego agregaremos la creación rápida de productos desde esta pantalla.',
-            confirmButtonColor: '#6D28D9'
-        });
+        mostrarFormularioProductoRapido();
     }
 
     function agregarProductoCompra() {
@@ -482,6 +586,253 @@
             });
         }
     });
+
+function mostrarFormularioProductoRapido() {
+    const modal = document.getElementById('modal_producto_rapido');
+
+    if (!modal) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Modal no encontrado',
+            text: 'No existe el contenedor modal_producto_rapido en la vista.',
+            confirmButtonColor: '#6D28D9'
+        });
+        return;
+    }
+
+    modal.style.display = 'flex';
+
+    setTimeout(() => {
+        document.getElementById('rapido_nombre_comercial')?.focus();
+    }, 100);
+}
+
+function ocultarFormularioProductoRapido() {
+    document.getElementById('modal_producto_rapido').style.display = 'none';
+}
+
+async function guardarProductoRapido() {
+    const datos = {
+        nombre_comercial: document.getElementById('rapido_nombre_comercial').value.trim(),
+        nombre_generico: document.getElementById('rapido_nombre_generico').value.trim(),
+        concentracion: document.getElementById('rapido_concentracion').value.trim(),
+
+        categoria_id: document.getElementById('rapido_categoria_id').value || null,
+        laboratorio_id: document.getElementById('rapido_laboratorio_id').value || null,
+        presentacion_id: document.getElementById('rapido_presentacion_id').value,
+
+        nombre_mostrado: document.getElementById('rapido_nombre_mostrado').value.trim(),
+        unidades_equivalentes: document.getElementById('rapido_unidades_equivalentes').value,
+
+        precio_compra: document.getElementById('rapido_precio_compra').value,
+        precio_venta: document.getElementById('rapido_precio_venta').value,
+
+        codigo_barra: document.getElementById('rapido_codigo_barra').value.trim(),
+    };
+
+    if (!datos.nombre_comercial || !datos.presentacion_id || !datos.unidades_equivalentes) {
+        Swal.fire({
+            icon: 'warning',
+            title: 'Datos incompletos',
+            text: 'Debe ingresar nombre comercial, presentación y unidades equivalentes.',
+            confirmButtonColor: '#6D28D9'
+        });
+        return;
+    }
+
+    try {
+        const respuesta = await fetch(`{{ route('compras.producto-rapido') }}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                'Accept': 'application/json',
+            },
+            body: JSON.stringify(datos),
+        });
+
+        const resultado = await respuesta.json();
+
+        if (!respuesta.ok) {
+            let mensaje = 'No se pudo crear el producto.';
+
+            if (resultado.errors) {
+                mensaje = Object.values(resultado.errors).flat().join('\n');
+            }
+
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: mensaje,
+                confirmButtonColor: '#6D28D9'
+            });
+
+            return;
+        }
+
+        /*
+         * Adaptamos la respuesta del producto rápido al mismo formato
+         * que ya usa seleccionarProductoCompra(producto).
+         */
+        const productoCreado = {
+            id: resultado.producto.producto_presentacion_id,
+            producto_id: resultado.producto.producto_id,
+            nombre: resultado.producto.nombre_producto,
+            generico: resultado.producto.nombre_generico,
+            concentracion: resultado.producto.concentracion,
+            presentacion: resultado.producto.presentacion,
+            unidades_equivalentes: resultado.producto.unidades_equivalentes,
+            precio_compra: Number(resultado.producto.precio_compra || 0),
+            precio_venta: Number(resultado.producto.precio_venta || 0),
+            stock_disponible: 0,
+        };
+
+        seleccionarProductoCompra(productoCreado);
+
+        limpiarFormularioProductoRapido();
+        ocultarFormularioProductoRapido();
+
+        Swal.fire({
+            icon: 'success',
+            title: 'Producto creado',
+            text: 'El producto fue creado y seleccionado para la compra.',
+            confirmButtonColor: '#6D28D9'
+        });
+
+    } catch (error) {
+        console.error('Error producto rápido:', error);
+
+        Swal.fire({
+            icon: 'error',
+            title: 'Error inesperado',
+            text: error.message,
+            confirmButtonColor: '#6D28D9'
+        });
+    }
+}
+
+function limpiarFormularioProductoRapido() {
+    document.getElementById('rapido_nombre_comercial').value = '';
+    document.getElementById('rapido_nombre_generico').value = '';
+    document.getElementById('rapido_concentracion').value = '';
+    document.getElementById('rapido_categoria_id').value = '';
+    document.getElementById('rapido_laboratorio_id').value = '';
+    document.getElementById('rapido_presentacion_id').value = '';
+    document.getElementById('rapido_nombre_mostrado').value = '';
+    document.getElementById('rapido_unidades_equivalentes').value = 1;
+    document.getElementById('rapido_precio_compra').value = 0;
+    document.getElementById('rapido_precio_venta').value = 0;
+    document.getElementById('rapido_codigo_barra').value = '';
+}
+async function crearLaboratorioRapido() {
+    const { value: nombre } = await Swal.fire({
+        title: 'Nuevo laboratorio',
+        input: 'text',
+        inputLabel: 'Nombre del laboratorio',
+        inputPlaceholder: 'Ej: INTI, COFAR, Bagó...',
+        showCancelButton: true,
+        confirmButtonText: 'Guardar',
+        cancelButtonText: 'Cancelar',
+        confirmButtonColor: '#6D28D9',
+        inputValidator: (value) => {
+            if (!value || !value.trim()) {
+                return 'Debe ingresar el nombre del laboratorio.';
+            }
+        }
+    });
+
+    if (!nombre) {
+        return;
+    }
+
+    try {
+        const respuesta = await fetch(`{{ route('compras.laboratorio-rapido') }}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                'Accept': 'application/json',
+            },
+            body: JSON.stringify({
+                nombre: nombre.trim(),
+            }),
+        });
+
+        const textoRespuesta = await respuesta.text();
+
+        let resultado = null;
+
+        try {
+            resultado = JSON.parse(textoRespuesta);
+        } catch (e) {
+            console.error('Respuesta no JSON:', textoRespuesta);
+
+            Swal.fire({
+                icon: 'error',
+                title: 'Respuesta inválida',
+                text: 'Laravel devolvió una respuesta no válida.',
+                confirmButtonColor: '#6D28D9'
+            });
+
+            return;
+        }
+
+        if (!respuesta.ok) {
+            let mensaje = 'No se pudo crear el laboratorio.';
+
+            if (resultado.errors) {
+                mensaje = Object.values(resultado.errors).flat().join('\n');
+            } else if (resultado.message) {
+                mensaje = resultado.message;
+            }
+
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: mensaje,
+                confirmButtonColor: '#6D28D9'
+            });
+
+            return;
+        }
+
+        const selectLaboratorio = document.getElementById('rapido_laboratorio_id');
+
+        const option = document.createElement('option');
+        option.value = resultado.laboratorio.id;
+        option.textContent = resultado.laboratorio.nombre;
+        option.selected = true;
+
+        selectLaboratorio.appendChild(option);
+
+        Swal.fire({
+            icon: 'success',
+            title: 'Laboratorio creado',
+            text: 'El laboratorio fue creado y seleccionado.',
+            confirmButtonColor: '#6D28D9'
+        });
+
+    } catch (error) {
+        console.error('Error laboratorio rápido:', error);
+
+        Swal.fire({
+            icon: 'error',
+            title: 'Error inesperado',
+            text: error.message,
+            confirmButtonColor: '#6D28D9'
+        });
+    }
+}
+
+document.addEventListener('keydown', function (event) {
+    if (event.key === 'Escape') {
+        const modal = document.getElementById('modal_producto_rapido');
+
+        if (modal && modal.style.display === 'flex') {
+            ocultarFormularioProductoRapido();
+        }
+    }
+});
 </script>
 
 @endsection
