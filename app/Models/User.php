@@ -3,6 +3,7 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
+use App\Models\Permiso;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
@@ -105,5 +106,41 @@ class User extends Authenticatable
     public function cambiosProducto()
     {
         return $this->hasMany(CambioProducto::class, 'usuario_id');
+    }
+
+    public function permisosDirectos()
+    {
+        return $this->belongsToMany(Permiso::class, 'usuario_permiso')
+            ->withTimestamps();
+    }
+
+    public function tienePermiso(string $nombrePermiso): bool
+    {
+        /*
+        * El administrador tiene acceso total automáticamente.
+        */
+        if ($this->rol && $this->rol->nombre === 'Administrador') {
+            return true;
+        }
+
+        /*
+        * Primero revisa permisos directos asignados al usuario.
+        */
+        if ($this->permisosDirectos()
+            ->where('nombre', $nombrePermiso)
+            ->exists()) {
+            return true;
+        }
+
+        /*
+        * Luego revisa permisos heredados desde el rol.
+        */
+        if ($this->rol && $this->rol->permisos()
+            ->where('nombre', $nombrePermiso)
+            ->exists()) {
+            return true;
+        }
+
+        return false;
     }
 }
