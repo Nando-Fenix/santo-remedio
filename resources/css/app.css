@@ -384,6 +384,14 @@ body {
     background: #E5E7EB;
 }
 
+.modal-overlay {
+    z-index: 9999;
+}
+
+.swal2-container {
+    z-index: 20000 !important;
+}
+
 @media (max-width: 700px) {
     .form-grid {
         grid-template-columns: 1fr;

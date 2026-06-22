@@ -693,6 +693,37 @@ class CompraController extends Controller
         ]);
     }
 
+    /**
+     * Crea una presentación rápidamente desde la pantalla de compras.
+     *
+     * Regla:
+     * - Se usa cuando la presentación del producto no existe.
+     * - No crea producto ni inventario, solo la presentación.
+     */
+    public function presentacionRapida(Request $request)
+    {
+        $datos = $request->validate([
+            'nombre' => ['required', 'string', 'max:100', 'unique:presentaciones,nombre'],
+        ], [
+            'nombre.required' => 'El nombre de la presentación es obligatorio.',
+            'nombre.unique' => 'Esa presentación ya está registrada.',
+        ]);
+
+        $presentacion = Presentacion::create([
+            'nombre' => $datos['nombre'],
+            'estado' => 'activo',
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Presentación creada correctamente.',
+            'presentacion' => [
+                'id' => $presentacion->id,
+                'nombre' => $presentacion->nombre,
+            ],
+        ]);
+    }
+
     public function show(Compra $compra)
     {
         $compra->load([

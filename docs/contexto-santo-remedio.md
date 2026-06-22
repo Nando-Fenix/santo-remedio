@@ -793,3 +793,16 @@ Mejora aplicada:
   - producto_presentacion
   - código de barras opcional
 - El producto creado queda seleccionado automáticamente para continuar la compra.
+
+### Z-index de modales
+
+El modal de producto rápido usa `z-index: 9999`.
+
+SweetAlert2 debe estar por encima para permitir crear laboratorio o presentación rápida dentro del modal de producto.
+
+Regla CSS aplicada:
+
+```css
+.swal2-container {
+    z-index: 20000 !important;
+}¨

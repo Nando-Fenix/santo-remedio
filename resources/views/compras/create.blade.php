@@ -157,6 +157,10 @@
                                     <option value="{{ $presentacion->id }}">{{ $presentacion->nombre }}</option>
                                 @endforeach
                             </select>
+
+                            <button type="button" class="btn-secondary" style="margin-top: 8px;" onclick="crearPresentacionRapida()">
+                                + Nueva presentación
+                            </button>
                         </div>
                     </div>
 
@@ -833,6 +837,106 @@ document.addEventListener('keydown', function (event) {
         }
     }
 });
+
+async function crearPresentacionRapida() {
+    const { value: nombre } = await Swal.fire({
+        title: 'Nueva presentación',
+        input: 'text',
+        inputLabel: 'Nombre de la presentación',
+        inputPlaceholder: 'Ej: Tableta, Caja, Frasco, Ampolla, Sachet...',
+        showCancelButton: true,
+        confirmButtonText: 'Guardar',
+        cancelButtonText: 'Cancelar',
+        confirmButtonColor: '#6D28D9',
+        inputValidator: (value) => {
+            if (!value || !value.trim()) {
+                return 'Debe ingresar el nombre de la presentación.';
+            }
+        }
+    });
+
+    if (!nombre) {
+        return;
+    }
+
+    try {
+        const respuesta = await fetch(`{{ route('compras.presentacion-rapida') }}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                'Accept': 'application/json',
+            },
+            body: JSON.stringify({
+                nombre: nombre.trim(),
+            }),
+        });
+
+        const textoRespuesta = await respuesta.text();
+
+        let resultado = null;
+
+        try {
+            resultado = JSON.parse(textoRespuesta);
+        } catch (e) {
+            console.error('Respuesta no JSON:', textoRespuesta);
+
+            Swal.fire({
+                icon: 'error',
+                title: 'Respuesta inválida',
+                text: 'Laravel devolvió una respuesta no válida.',
+                confirmButtonColor: '#6D28D9'
+            });
+
+            return;
+        }
+
+        if (!respuesta.ok) {
+            let mensaje = 'No se pudo crear la presentación.';
+
+            if (resultado.errors) {
+                mensaje = Object.values(resultado.errors).flat().join('\n');
+            } else if (resultado.message) {
+                mensaje = resultado.message;
+            }
+
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: mensaje,
+                confirmButtonColor: '#6D28D9'
+            });
+
+            return;
+        }
+
+        const selectPresentacion = document.getElementById('rapido_presentacion_id');
+
+        const option = document.createElement('option');
+        option.value = resultado.presentacion.id;
+        option.textContent = resultado.presentacion.nombre;
+        option.selected = true;
+
+        selectPresentacion.appendChild(option);
+
+        Swal.fire({
+            icon: 'success',
+            title: 'Presentación creada',
+            text: 'La presentación fue creada y seleccionada.',
+            confirmButtonColor: '#6D28D9'
+        });
+
+    } catch (error) {
+        console.error('Error presentación rápida:', error);
+
+        Swal.fire({
+            icon: 'error',
+            title: 'Error inesperado',
+            text: error.message,
+            confirmButtonColor: '#6D28D9'
+        });
+    }
+}
 </script>
 
 @endsection
