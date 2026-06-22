@@ -133,6 +133,10 @@
                                     <option value="{{ $categoria->id }}">{{ $categoria->nombre }}</option>
                                 @endforeach
                             </select>
+
+                            <button type="button" class="btn-secondary" style="margin-top: 8px;" onclick="crearCategoriaRapida()">
+                                + Nueva categoría
+                            </button>
                         </div>
 
                         <div class="form-group">
@@ -928,6 +932,106 @@ async function crearPresentacionRapida() {
 
     } catch (error) {
         console.error('Error presentación rápida:', error);
+
+        Swal.fire({
+            icon: 'error',
+            title: 'Error inesperado',
+            text: error.message,
+            confirmButtonColor: '#6D28D9'
+        });
+    }
+}
+
+async function crearCategoriaRapida() {
+    const { value: nombre } = await Swal.fire({
+        title: 'Nueva categoría',
+        input: 'text',
+        inputLabel: 'Nombre de la categoría',
+        inputPlaceholder: 'Ej: Analgésicos, Antibióticos, Jarabes...',
+        showCancelButton: true,
+        confirmButtonText: 'Guardar',
+        cancelButtonText: 'Cancelar',
+        confirmButtonColor: '#6D28D9',
+        inputValidator: (value) => {
+            if (!value || !value.trim()) {
+                return 'Debe ingresar el nombre de la categoría.';
+            }
+        }
+    });
+
+    if (!nombre) {
+        return;
+    }
+
+    try {
+        const respuesta = await fetch(`{{ route('compras.categoria-rapida') }}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                'Accept': 'application/json',
+            },
+            body: JSON.stringify({
+                nombre: nombre.trim(),
+            }),
+        });
+
+        const textoRespuesta = await respuesta.text();
+
+        let resultado = null;
+
+        try {
+            resultado = JSON.parse(textoRespuesta);
+        } catch (e) {
+            console.error('Respuesta no JSON:', textoRespuesta);
+
+            Swal.fire({
+                icon: 'error',
+                title: 'Respuesta inválida',
+                text: 'Laravel devolvió una respuesta no válida.',
+                confirmButtonColor: '#6D28D9'
+            });
+
+            return;
+        }
+
+        if (!respuesta.ok) {
+            let mensaje = 'No se pudo crear la categoría.';
+
+            if (resultado.errors) {
+                mensaje = Object.values(resultado.errors).flat().join('\n');
+            } else if (resultado.message) {
+                mensaje = resultado.message;
+            }
+
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: mensaje,
+                confirmButtonColor: '#6D28D9'
+            });
+
+            return;
+        }
+
+        const selectCategoria = document.getElementById('rapido_categoria_id');
+
+        const option = document.createElement('option');
+        option.value = resultado.categoria.id;
+        option.textContent = resultado.categoria.nombre;
+        option.selected = true;
+
+        selectCategoria.appendChild(option);
+
+        Swal.fire({
+            icon: 'success',
+            title: 'Categoría creada',
+            text: 'La categoría fue creada y seleccionada.',
+            confirmButtonColor: '#6D28D9'
+        });
+
+    } catch (error) {
+        console.error('Error categoría rápida:', error);
 
         Swal.fire({
             icon: 'error',

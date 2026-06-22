@@ -724,6 +724,37 @@ class CompraController extends Controller
         ]);
     }
 
+    /**
+     * Crea una categoría rápidamente desde la pantalla de compras.
+     *
+     * Regla:
+     * - Se usa cuando la categoría del producto no existe.
+     * - No crea producto ni inventario, solo la categoría.
+     */
+    public function categoriaRapida(Request $request)
+    {
+        $datos = $request->validate([
+            'nombre' => ['required', 'string', 'max:100', 'unique:categorias,nombre'],
+        ], [
+            'nombre.required' => 'El nombre de la categoría es obligatorio.',
+            'nombre.unique' => 'Esa categoría ya está registrada.',
+        ]);
+
+        $categoria = Categoria::create([
+            'nombre' => $datos['nombre'],
+            'estado' => 'activo',
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Categoría creada correctamente.',
+            'categoria' => [
+                'id' => $categoria->id,
+                'nombre' => $categoria->nombre,
+            ],
+        ]);
+    }
+
     public function show(Compra $compra)
     {
         $compra->load([
