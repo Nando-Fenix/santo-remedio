@@ -123,6 +123,9 @@ Route::middleware('auth')->group(function () {
     Route::put('/proveedores/{proveedor}', [ProveedorController::class, 'update'])->name('proveedores.update');
     Route::delete('/proveedores/{proveedor}', [ProveedorController::class, 'destroy'])->name('proveedores.destroy');
 
+    Route::post('/compras/proveedor-rapido', [CompraController::class, 'proveedorRapido'])
+        ->name('compras.proveedor-rapido');
+
     Route::post('/compras/categoria-rapida', [CompraController::class, 'categoriaRapida'])
         ->name('compras.categoria-rapida');
 

@@ -755,6 +755,44 @@ class CompraController extends Controller
         ]);
     }
 
+    /**
+     * Crea un proveedor rápidamente desde la pantalla de compras.
+     *
+     * Regla:
+     * - Se usa cuando el proveedor no existe al registrar una compra.
+     * - No crea compras ni deudas, solo el proveedor.
+     * - El proveedor creado queda disponible para seleccionarse inmediatamente.
+     */
+    public function proveedorRapido(Request $request)
+    {
+        $datos = $request->validate([
+            'nombre' => ['required', 'string', 'max:150', 'unique:proveedores,nombre'],
+            'telefono' => ['nullable', 'string', 'max:30'],
+            'direccion' => ['nullable', 'string', 'max:200'],
+            'contacto' => ['nullable', 'string', 'max:150'],
+        ], [
+            'nombre.required' => 'El nombre del proveedor es obligatorio.',
+            'nombre.unique' => 'Ese proveedor ya está registrado.',
+        ]);
+
+        $proveedor = Proveedor::create([
+            'nombre' => $datos['nombre'],
+            'telefono' => $datos['telefono'] ?? null,
+            'direccion' => $datos['direccion'] ?? null,
+            'contacto' => $datos['contacto'] ?? null,
+            'estado' => 'activo',
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Proveedor creado correctamente.',
+            'proveedor' => [
+                'id' => $proveedor->id,
+                'nombre' => $proveedor->nombre,
+            ],
+        ]);
+    }
+
     public function show(Compra $compra)
     {
         $compra->load([

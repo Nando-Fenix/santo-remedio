@@ -802,7 +802,20 @@ SweetAlert2 debe estar por encima para permitir crear laboratorio o presentació
 
 Regla CSS aplicada:
 
-```css
+```css'
 .swal2-container {
     z-index: 20000 !important;
-}¨
+}'
+
+### Checkpoint funcional - creación rápida desde compras
+
+Estado comprobado:
+- Producto rápido funciona desde compras.
+- El formulario de producto rápido se muestra en modal.
+- El producto creado queda seleccionado automáticamente.
+- Categoría rápida funciona.
+- Laboratorio rápido funciona.
+- Presentación rápida funciona.
+- Proveedor rápido funciona.
+- Los modales de SweetAlert2 aparecen por encima del modal principal.
+- El modal de proveedor rápido fue ajustado visualmente para evitar espacios desordenados.

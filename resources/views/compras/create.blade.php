@@ -36,14 +36,16 @@
             <div class="form-grid">
                 <div class="form-group">
                     <label>Proveedor *</label>
-                    <select name="proveedor_id" required>
-                        <option value="">Seleccione proveedor</option>
+                    <select name="proveedor_id" id="proveedor_id" required>
+                        <option value="">Seleccione proveedor...</option>
                         @foreach ($proveedores as $proveedor)
-                            <option value="{{ $proveedor->id }}" {{ old('proveedor_id') == $proveedor->id ? 'selected' : '' }}>
-                                {{ $proveedor->nombre }}
-                            </option>
+                            <option value="{{ $proveedor->id }}">{{ $proveedor->nombre }}</option>
                         @endforeach
                     </select>
+
+                    <button type="button" class="btn-secondary" style="margin-top: 8px;" onclick="crearProveedorRapido()">
+                        + Nuevo proveedor
+                    </button>
                 </div>
 
                 <div class="form-group">
@@ -1032,6 +1034,139 @@ async function crearCategoriaRapida() {
 
     } catch (error) {
         console.error('Error categoría rápida:', error);
+
+        Swal.fire({
+            icon: 'error',
+            title: 'Error inesperado',
+            text: error.message,
+            confirmButtonColor: '#6D28D9'
+        });
+    }
+}
+
+async function crearProveedorRapido() {
+    const { value: formValues } = await Swal.fire({
+        title: 'Nuevo proveedor',
+        width: 620,
+        html: `
+            <div class="swal-form-grid">
+                <div class="swal-form-group swal-form-full">
+                    <label>Nombre del proveedor *</label>
+                    <input id="swal_proveedor_nombre" class="swal-input-custom" placeholder="Ej: Distribuidora Farma">
+                </div>
+
+                <div class="swal-form-group">
+                    <label>Teléfono</label>
+                    <input id="swal_proveedor_telefono" class="swal-input-custom" placeholder="Ej: 76543210">
+                </div>
+
+                <div class="swal-form-group">
+                    <label>Contacto</label>
+                    <input id="swal_proveedor_contacto" class="swal-input-custom" placeholder="Ej: Juan Pérez">
+                </div>
+
+                <div class="swal-form-group swal-form-full">
+                    <label>Dirección</label>
+                    <input id="swal_proveedor_direccion" class="swal-input-custom" placeholder="Ej: Av. Principal #123">
+                </div>
+            </div>
+        `,
+        showCancelButton: true,
+        confirmButtonText: 'Guardar',
+        cancelButtonText: 'Cancelar',
+        confirmButtonColor: '#6D28D9',
+        focusConfirm: false,
+        didOpen: () => {
+            document.getElementById('swal_proveedor_nombre').focus();
+        },
+        preConfirm: () => {
+            const nombre = document.getElementById('swal_proveedor_nombre').value.trim();
+
+            if (!nombre) {
+                Swal.showValidationMessage('Debe ingresar el nombre del proveedor.');
+                return false;
+            }
+
+            return {
+                nombre: nombre,
+                telefono: document.getElementById('swal_proveedor_telefono').value.trim(),
+                contacto: document.getElementById('swal_proveedor_contacto').value.trim(),
+                direccion: document.getElementById('swal_proveedor_direccion').value.trim(),
+            };
+        }
+    });
+
+    if (!formValues) {
+        return;
+    }
+
+    try {
+        const respuesta = await fetch(`{{ route('compras.proveedor-rapido') }}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                'Accept': 'application/json',
+            },
+            body: JSON.stringify(formValues),
+        });
+
+        const textoRespuesta = await respuesta.text();
+
+        let resultado = null;
+
+        try {
+            resultado = JSON.parse(textoRespuesta);
+        } catch (e) {
+            console.error('Respuesta no JSON:', textoRespuesta);
+
+            Swal.fire({
+                icon: 'error',
+                title: 'Respuesta inválida',
+                text: 'Laravel devolvió una respuesta no válida.',
+                confirmButtonColor: '#6D28D9'
+            });
+
+            return;
+        }
+
+        if (!respuesta.ok) {
+            let mensaje = 'No se pudo crear el proveedor.';
+
+            if (resultado.errors) {
+                mensaje = Object.values(resultado.errors).flat().join('\n');
+            } else if (resultado.message) {
+                mensaje = resultado.message;
+            }
+
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: mensaje,
+                confirmButtonColor: '#6D28D9'
+            });
+
+            return;
+        }
+
+        const selectProveedor = document.getElementById('proveedor_id');
+
+        const option = document.createElement('option');
+        option.value = resultado.proveedor.id;
+        option.textContent = resultado.proveedor.nombre;
+        option.selected = true;
+
+        selectProveedor.appendChild(option);
+
+        Swal.fire({
+            icon: 'success',
+            title: 'Proveedor creado',
+            text: 'El proveedor fue creado y seleccionado.',
+            confirmButtonColor: '#6D28D9'
+        });
+
+    } catch (error) {
+        console.error('Error proveedor rápido:', error);
 
         Swal.fire({
             icon: 'error',
