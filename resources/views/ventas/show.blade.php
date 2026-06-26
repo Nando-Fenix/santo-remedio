@@ -22,22 +22,33 @@
                 Fecha: {{ $venta->fecha_hora->format('d/m/Y H:i') }}
             </p>
         </div>
-        @if ($venta->estado === 'completada' && $venta->caja?->estado === 'abierta')
-            <a href="{{ route('reembolsos.create', $venta) }}" class="btn-primary">
-                Registrar reembolso
-            </a>
+        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+            @if ($venta->estado === 'completada' && $venta->caja?->estado === 'abierta')
 
-            <a href="{{ route('cambios-producto.create', $venta) }}" class="btn-primary">
-                Cambio de producto
-            </a>
+                @if (auth()->user()->tienePermiso('reembolsar_venta'))
+                    <a href="{{ route('reembolsos.create', $venta) }}" class="btn-primary">
+                        Registrar reembolso
+                    </a>
+                @endif
 
-            <a href="{{ route('ventas.anular.create', $venta) }}" class="btn-danger">
-                Anular venta
+                @if (auth()->user()->tienePermiso('cambiar_producto'))
+                    <a href="{{ route('cambios-producto.create', $venta) }}" class="btn-primary">
+                        Cambio de producto
+                    </a>
+                @endif
+
+                @if (auth()->user()->tienePermiso('anular_venta'))
+                    <a href="{{ route('ventas.anular.create', $venta) }}" class="btn-danger">
+                        Anular venta
+                    </a>
+                @endif
+
+            @endif
+
+            <a href="{{ route('ventas.index') }}" class="btn-secondary">
+                Volver a ventas
             </a>
-        @endif
-        <a href="{{ route('ventas.index') }}" class="btn-secondary">
-            Volver a ventas
-        </a>
+        </div>
     </div>
 </div>
 
@@ -218,55 +229,6 @@
                             </td>
                             <td>
                                 <a href="{{ route('reembolsos.show', $reembolso) }}" class="btn-secondary">
-                                    Ver
-                                </a>
-                            </td>
-                        </tr>
-                    @endforeach
-                </tbody>
-            </table>
-        </div>
-    </div>
-@endif
-
-@if ($venta->cambiosProducto->count() > 0)
-    <div class="card" style="margin-top: 22px;">
-        <h3 style="margin-top: 0; color: #4C1D95;">Cambios de producto registrados</h3>
-
-        <div class="table-container">
-            <table class="table">
-                <thead>
-                    <tr>
-                        <th>N° cambio</th>
-                        <th>Fecha</th>
-                        <th>Monto devuelto</th>
-                        <th>Monto nuevo</th>
-                        <th>Diferencia</th>
-                        <th>Tipo</th>
-                        <th>Motivo</th>
-                        <th>Acción</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach ($venta->cambiosProducto as $cambio)
-                        <tr>
-                            <td><strong>{{ $cambio->numero_cambio }}</strong></td>
-                            <td>{{ $cambio->fecha_cambio->format('d/m/Y H:i') }}</td>
-                            <td>{{ number_format($cambio->monto_devuelto, 2) }} Bs</td>
-                            <td>{{ number_format($cambio->monto_nuevo, 2) }} Bs</td>
-                            <td>{{ number_format($cambio->diferencia, 2) }} Bs</td>
-                            <td>
-                                @if ($cambio->tipo_diferencia === 'cliente_paga')
-                                    <span class="badge badge-success">Cliente paga</span>
-                                @elseif ($cambio->tipo_diferencia === 'farmacia_devuelve')
-                                    <span class="badge badge-warning">Farmacia devuelve</span>
-                                @else
-                                    <span class="badge badge-secondary">Sin diferencia</span>
-                                @endif
-                            </td>
-                            <td>{{ $cambio->motivo }}</td>
-                            <td>
-                                <a href="{{ route('cambios-producto.show', $cambio) }}" class="btn-secondary">
                                     Ver
                                 </a>
                             </td>
