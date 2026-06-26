@@ -15,9 +15,11 @@
             </p>
         </div>
 
-        <a href="{{ route('compras.create') }}" class="btn-primary">
-            Nueva compra
-        </a>
+        @if (auth()->user()->tienePermiso('registrar_compra'))
+            <a href="{{ route('compras.create') }}" class="btn-primary">
+                Nueva compra
+            </a>
+        @endif
     </div>
 
     <form method="GET" action="{{ route('compras.index') }}" style="margin-top: 18px;">
@@ -68,7 +70,7 @@
                     <th>Pagado</th>
                     <th>Saldo</th>
                     <th>Estado pago</th>
-                    <th>Acción</th>
+                    <th>Acciones</th>
                 </tr>
             </thead>
             <tbody>
@@ -91,9 +93,25 @@
                             @endif
                         </td>
                         <td>
-                            <a href="{{ route('compras.show', $compra) }}" class="btn-secondary">
-                                Ver
-                            </a>
+                            <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                                @if (auth()->user()->tienePermiso('ver_compras'))
+                                    <a href="{{ route('compras.show', $compra) }}" class="btn-secondary">
+                                        Ver
+                                    </a>
+                                @endif
+
+                                @if ($compra->saldo_pendiente > 0 && $compra->estado !== 'anulada' && auth()->user()->tienePermiso('pagar_compra'))
+                                    <a href="{{ route('compras.pago.create', $compra) }}" class="btn-primary">
+                                        Pagar
+                                    </a>
+                                @endif
+
+                                @if ($compra->estado !== 'anulada' && auth()->user()->tienePermiso('anular_compra'))
+                                    <a href="{{ route('compras.anular.create', $compra) }}" class="btn-danger">
+                                        Anular
+                                    </a>
+                                @endif
+                            </div>
                         </td>
                     </tr>
                 @empty

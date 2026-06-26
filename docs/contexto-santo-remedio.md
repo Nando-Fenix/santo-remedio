@@ -866,3 +866,14 @@ Cambios:
 - Registrar egreso solo aparece con permiso `registrar_egreso`.
 - Cerrar caja solo aparece con permiso `cerrar_caja`.
 - Las rutas siguen protegidas por middleware y la vista evita mostrar acciones no permitidas.
+
+### Checkpoint funcional - botones de compras por permisos
+
+Se ajustó la vista de listado de compras.
+
+Cambios:
+- Nueva compra solo aparece con permiso `registrar_compra`.
+- Ver compra solo aparece con permiso `ver_compras`.
+- Pagar compra solo aparece si hay saldo pendiente, la compra no está anulada y el usuario tiene permiso `pagar_compra`.
+- Anular compra solo aparece si la compra no está anulada y el usuario tiene permiso `anular_compra`.
+- Las rutas siguen protegidas por middleware y la vista evita mostrar acciones no permitidas.
