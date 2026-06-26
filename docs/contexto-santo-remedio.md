@@ -877,3 +877,15 @@ Cambios:
 - Pagar compra solo aparece si hay saldo pendiente, la compra no está anulada y el usuario tiene permiso `pagar_compra`.
 - Anular compra solo aparece si la compra no está anulada y el usuario tiene permiso `anular_compra`.
 - Las rutas siguen protegidas por middleware y la vista evita mostrar acciones no permitidas.
+
+### Checkpoint funcional - botones de productos por permisos
+
+Se ajustó la vista de listado de productos.
+
+Cambios:
+- Nuevo producto solo aparece con permiso `crear_producto`.
+- Presentaciones solo aparece con permiso `ver_productos`.
+- Editar solo aparece con permiso `editar_producto`.
+- Desactivar solo aparece con permiso `desactivar_producto`.
+- La confirmación de desactivación usa SweetAlert mediante `confirmarFormulario`.
+- Las rutas siguen protegidas por middleware y la vista evita mostrar acciones no permitidas.

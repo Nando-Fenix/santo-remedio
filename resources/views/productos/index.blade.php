@@ -16,9 +16,11 @@
             </p>
         </div>
 
-        <a href="{{ route('productos.create') }}" class="btn-primary">
-            + Nuevo producto
-        </a>
+        @if (auth()->user()->tienePermiso('crear_producto'))
+            <a href="{{ route('productos.create') }}" class="btn-primary">
+                + Nuevo producto
+            </a>
+        @endif
     </div>
 
     @if (session('success'))
@@ -90,18 +92,25 @@
                         </td>
                         <td>
                             <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-                                <a href="{{ route('productos.presentaciones.index', $producto) }}" class="btn-secondary">
-                                    Presentaciones
-                                </a>
+                                @if (auth()->user()->tienePermiso('ver_productos'))
+                                    <a href="{{ route('productos.presentaciones.index', $producto) }}" class="btn-secondary">
+                                        Presentaciones
+                                    </a>
+                                @endif
 
-                                <a href="{{ route('productos.edit', $producto) }}" class="btn-secondary">
-                                    Editar
-                                </a>
+                                @if (auth()->user()->tienePermiso('editar_producto'))
+                                    <a href="{{ route('productos.edit', $producto) }}" class="btn-secondary">
+                                        Editar
+                                    </a>
+                                @endif
 
-                                @if ($producto->estado === 'activo')
-                                    <form method="POST" action="{{ route('productos.destroy', $producto) }}" onsubmit="return confirm('¿Desea desactivar este producto?')">
+                                @if ($producto->estado === 'activo' && auth()->user()->tienePermiso('desactivar_producto'))
+                                    <form method="POST"
+                                        action="{{ route('productos.destroy', $producto) }}"
+                                        onsubmit="return confirmarFormulario(event, '¿Desea desactivar este producto?')">
                                         @csrf
                                         @method('DELETE')
+
                                         <button type="submit" class="btn-danger">
                                             Desactivar
                                         </button>
