@@ -900,3 +900,15 @@ Cambios:
 - Editar cliente solo aparece con permiso `editar_cliente`.
 - Desactivar cliente solo aparece con permiso `eliminar_cliente`.
 - Las rutas siguen protegidas por middleware y la vista evita mostrar acciones no permitidas.
+
+### Checkpoint funcional - botones de proveedores por permisos
+
+Se ajustó la vista de listado de proveedores.
+
+Cambios:
+- Nuevo proveedor solo aparece con permiso `crear_proveedor`.
+- Ver proveedor solo aparece con permiso `ver_proveedores`.
+- Editar proveedor solo aparece con permiso `editar_proveedor`.
+- Desactivar proveedor solo aparece con permiso `eliminar_proveedor`.
+- El usuario sin permiso `ver_proveedores` no puede ingresar al módulo.
+- Las rutas siguen protegidas por middleware y la vista evita mostrar acciones no permitidas.

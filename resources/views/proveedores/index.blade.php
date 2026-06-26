@@ -15,9 +15,11 @@
             </p>
         </div>
 
-        <a href="{{ route('proveedores.create') }}" class="btn-primary">
-            Nuevo proveedor
-        </a>
+        @if (auth()->user()->tienePermiso('crear_proveedor'))
+            <a href="{{ route('proveedores.create') }}" class="btn-primary">
+                Nuevo proveedor
+            </a>
+        @endif
     </div>
 
     <form method="GET" action="{{ route('proveedores.index') }}" style="margin-top: 18px;">
@@ -78,16 +80,22 @@
                         </td>
                         <td>
                             <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-                                <a href="{{ route('proveedores.show', $proveedor) }}" class="btn-secondary">
-                                    Ver
-                                </a>
+                                @if (auth()->user()->tienePermiso('ver_proveedores'))
+                                    <a href="{{ route('proveedores.show', $proveedor) }}" class="btn-secondary">
+                                        Ver
+                                    </a>
+                                @endif
 
-                                <a href="{{ route('proveedores.edit', $proveedor) }}" class="btn-secondary">
-                                    Editar
-                                </a>
+                                @if (auth()->user()->tienePermiso('editar_proveedor'))
+                                    <a href="{{ route('proveedores.edit', $proveedor) }}" class="btn-secondary">
+                                        Editar
+                                    </a>
+                                @endif
 
-                                @if ($proveedor->estado === 'activo')
-                                    <form method="POST" action="{{ route('proveedores.destroy', $proveedor) }}" onsubmit="return confirmarFormulario(event, '¿Desea desactivar este proveedor?')">
+                                @if ($proveedor->estado === 'activo' && auth()->user()->tienePermiso('eliminar_proveedor'))
+                                    <form method="POST"
+                                        action="{{ route('proveedores.destroy', $proveedor) }}"
+                                        onsubmit="return confirmarFormulario(event, '¿Desea desactivar este proveedor?')">
                                         @csrf
                                         @method('DELETE')
 
