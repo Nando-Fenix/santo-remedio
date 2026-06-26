@@ -481,6 +481,122 @@ body {
     color: #4C1D95;
 }
 
+.menu {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.menu-section {
+    margin: 16px 0 6px;
+    padding: 0 14px;
+    font-size: 11px;
+    font-weight: 800;
+    color: rgba(255, 255, 255, 0.55);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+}
+
+.menu-link {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-height: 42px;
+    padding: 10px 14px;
+    border-radius: 12px;
+    color: rgba(255, 255, 255, 0.82);
+    text-decoration: none;
+    transition: 0.18s ease;
+}
+
+.menu-link:hover {
+    background: rgba(255, 255, 255, 0.10);
+    color: #FFFFFF;
+    transform: translateX(2px);
+}
+
+.menu-link.active {
+    background: rgba(255, 255, 255, 0.16);
+    color: #FFFFFF;
+    font-weight: 800;
+}
+
+.menu-link-primary {
+    background: #FFFFFF;
+    color: #4C1D95;
+    font-weight: 900;
+    margin-bottom: 8px;
+}
+
+.menu-link-primary:hover,
+.menu-link-primary.active {
+    background: #F5F3FF;
+    color: #4C1D95;
+}
+
+.menu-icon {
+    width: 24px;
+    text-align: center;
+    font-size: 18px;
+    flex-shrink: 0;
+}
+
+.menu-text {
+    font-size: 14px;
+    white-space: nowrap;
+}
+
+.topbar-actions {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+
+.btn-quick-sale {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    background: #6D28D9;
+    color: #FFFFFF;
+    text-decoration: none;
+    font-weight: 800;
+    border-radius: 12px;
+    padding: 10px 14px;
+    box-shadow: 0 10px 20px rgba(109, 40, 217, 0.20);
+}
+
+.btn-quick-sale:hover {
+    background: #5B21B6;
+}
+
+.sidebar {
+    height: 100vh;
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+.sidebar::-webkit-scrollbar {
+    width: 6px;
+}
+
+.sidebar::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.06);
+}
+
+.sidebar::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.28);
+    border-radius: 999px;
+}
+
+.sidebar::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.42);
+}
+
+.menu {
+    padding-bottom: 24px;
+}
+
 @media (max-width: 700px) {
     .form-grid {
         grid-template-columns: 1fr;

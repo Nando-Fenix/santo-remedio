@@ -831,3 +831,16 @@ Regla actual:
 - ventas.usuario_id representa el usuario que realizó la venta.
 - movimientos_caja.usuario_id representa el usuario que realizó el movimiento.
 - El cierre de caja puede ser realizado por un usuario autorizado de la misma sucursal.
+
+### Checkpoint funcional - menú por permisos
+
+Se reorganizó el menú principal del sistema.
+
+Cambios realizados:
+- Se agregó botón destacado para Venta rápida.
+- Se agruparon opciones por secciones: Principal, Operación, Administración y Control.
+- El menú ahora muestra opciones según permisos del usuario.
+- Se agregaron iconos simples y tooltips.
+- Se corrigió el scroll del menú lateral para usuarios administradores con más opciones.
+- El vendedor solo visualiza las opciones permitidas.
+- El administrador visualiza todos los módulos habilitados.
