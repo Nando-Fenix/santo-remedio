@@ -924,3 +924,13 @@ Cambios:
 - Se corrigió la lectura de sucursal principal usando `principal` en lugar de `es_principal`.
 - El usuario no puede desactivarse a sí mismo.
 - Las rutas siguen protegidas por middleware.
+
+### Checkpoint funcional - botones de inventario por permisos
+
+Se ajustó la vista de inventario.
+
+Cambios:
+- Ver movimientos solo aparece con permiso `ver_movimientos_inventario`.
+- Entrada de inventario solo aparece con permiso `ajustar_inventario`.
+- El usuario puede consultar inventario si tiene permiso `ver_inventario`.
+- Las rutas siguen protegidas por middleware y la vista evita mostrar acciones no permitidas.

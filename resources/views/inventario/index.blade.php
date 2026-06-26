@@ -17,13 +17,17 @@
         </div>
 
         <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-            <a href="{{ route('inventario.movimientos') }}" class="btn-secondary">
-                Ver movimientos
-            </a>
+            @if (auth()->user()->tienePermiso('ver_movimientos_inventario'))
+                <a href="{{ route('inventario.movimientos') }}" class="btn-secondary">
+                    Ver movimientos
+                </a>
+            @endif
 
-            <a href="{{ route('inventario.create') }}" class="btn-primary">
-                + Entrada de inventario
-            </a>
+            @if (auth()->user()->tienePermiso('ajustar_inventario'))
+                <a href="{{ route('inventario.create') }}" class="btn-primary">
+                    + Entrada de inventario
+                </a>
+            @endif
         </div>
     </div>
 
