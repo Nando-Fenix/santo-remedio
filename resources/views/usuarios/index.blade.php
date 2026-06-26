@@ -15,9 +15,11 @@
             </p>
         </div>
 
-        <a href="{{ route('usuarios.create') }}" class="btn-primary">
-            + Nuevo usuario
-        </a>
+        @if (auth()->user()->tienePermiso('administrar_usuarios'))
+            <a href="{{ route('usuarios.create') }}" class="btn-primary">
+                + Nuevo usuario
+            </a>
+        @endif
     </div>
 </div>
 
@@ -57,9 +59,9 @@
 
                         <td>
                             @forelse ($usuario->sucursales as $sucursal)
-                                <span class="badge {{ $sucursal->pivot->es_principal ? 'badge-success' : 'badge-secondary' }}">
+                                <span class="badge {{ $sucursal->pivot->principal ? 'badge-success' : 'badge-secondary' }}">
                                     {{ $sucursal->nombre }}
-                                    {{ $sucursal->pivot->es_principal ? '(Principal)' : '' }}
+                                    {{ $sucursal->pivot->principal ? '(Principal)' : '' }}
                                 </span>
                             @empty
                                 <span style="color:#6B7280;">Sin sucursal</span>
@@ -86,21 +88,23 @@
 
                         <td>
                             <div style="display:flex; gap:8px; flex-wrap:wrap;">
-                                <a href="{{ route('usuarios.edit', $usuario) }}" class="btn-secondary">
-                                    Editar
-                                </a>
+                                @if (auth()->user()->tienePermiso('administrar_usuarios'))
+                                    <a href="{{ route('usuarios.edit', $usuario) }}" class="btn-secondary">
+                                        Editar
+                                    </a>
 
-                                @if ($usuario->id !== auth()->id() && $usuario->estado === 'activo')
-                                    <form method="POST"
-                                          action="{{ route('usuarios.destroy', $usuario) }}"
-                                          onsubmit="return confirmarFormulario(event, '¿Desactivar este usuario?')">
-                                        @csrf
-                                        @method('DELETE')
+                                    @if ($usuario->id !== auth()->id() && $usuario->estado === 'activo')
+                                        <form method="POST"
+                                            action="{{ route('usuarios.destroy', $usuario) }}"
+                                            onsubmit="return confirmarFormulario(event, '¿Desactivar este usuario?')">
+                                            @csrf
+                                            @method('DELETE')
 
-                                        <button type="submit" class="btn-danger">
-                                            Desactivar
-                                        </button>
-                                    </form>
+                                            <button type="submit" class="btn-danger">
+                                                Desactivar
+                                            </button>
+                                        </form>
+                                    @endif
                                 @endif
                             </div>
                         </td>

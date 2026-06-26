@@ -912,3 +912,15 @@ Cambios:
 - Desactivar proveedor solo aparece con permiso `eliminar_proveedor`.
 - El usuario sin permiso `ver_proveedores` no puede ingresar al módulo.
 - Las rutas siguen protegidas por middleware y la vista evita mostrar acciones no permitidas.
+
+### Checkpoint funcional - vista de usuarios por permisos
+
+Se ajustó la vista de listado de usuarios.
+
+Cambios:
+- Nuevo usuario solo aparece con permiso `administrar_usuarios`.
+- Editar usuario solo aparece con permiso `administrar_usuarios`.
+- Desactivar usuario solo aparece con permiso `administrar_usuarios`.
+- Se corrigió la lectura de sucursal principal usando `principal` en lugar de `es_principal`.
+- El usuario no puede desactivarse a sí mismo.
+- Las rutas siguen protegidas por middleware.
