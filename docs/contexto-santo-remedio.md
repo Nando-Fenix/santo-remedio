@@ -889,3 +889,14 @@ Cambios:
 - Desactivar solo aparece con permiso `desactivar_producto`.
 - La confirmación de desactivación usa SweetAlert mediante `confirmarFormulario`.
 - Las rutas siguen protegidas por middleware y la vista evita mostrar acciones no permitidas.
+
+### Checkpoint funcional - botones de clientes por permisos
+
+Se ajustó la vista de listado de clientes.
+
+Cambios:
+- Nuevo cliente solo aparece con permiso `crear_cliente`.
+- Ver cliente solo aparece con permiso `ver_clientes`.
+- Editar cliente solo aparece con permiso `editar_cliente`.
+- Desactivar cliente solo aparece con permiso `eliminar_cliente`.
+- Las rutas siguen protegidas por middleware y la vista evita mostrar acciones no permitidas.

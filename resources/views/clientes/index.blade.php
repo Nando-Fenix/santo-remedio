@@ -15,9 +15,11 @@
             </p>
         </div>
 
-        <a href="{{ route('clientes.create') }}" class="btn-primary">
-            Nuevo cliente
-        </a>
+        @if (auth()->user()->tienePermiso('crear_cliente'))
+            <a href="{{ route('clientes.create') }}" class="btn-primary">
+                Nuevo cliente
+            </a>
+        @endif
     </div>
 
     <form method="GET" action="{{ route('clientes.index') }}" style="margin-top: 18px;">
@@ -84,15 +86,22 @@
                         </td>
                         <td>
                             <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-                                <a href="{{ route('clientes.show', $cliente) }}" class="btn-secondary">
-                                    Ver
-                                </a>
-                                <a href="{{ route('clientes.edit', $cliente) }}" class="btn-secondary">
-                                    Editar
-                                </a>
+                                @if (auth()->user()->tienePermiso('ver_clientes'))
+                                    <a href="{{ route('clientes.show', $cliente) }}" class="btn-secondary">
+                                        Ver
+                                    </a>
+                                @endif
 
-                                @if ($cliente->estado === 'activo')
-                                    <form method="POST" action="{{ route('clientes.destroy', $cliente) }}" onsubmit="return confirmarFormulario(event, '¿Desea desactivar este cliente?')">
+                                @if (auth()->user()->tienePermiso('editar_cliente'))
+                                    <a href="{{ route('clientes.edit', $cliente) }}" class="btn-secondary">
+                                        Editar
+                                    </a>
+                                @endif
+
+                                @if ($cliente->estado === 'activo' && auth()->user()->tienePermiso('eliminar_cliente'))
+                                    <form method="POST"
+                                        action="{{ route('clientes.destroy', $cliente) }}"
+                                        onsubmit="return confirmarFormulario(event, '¿Desea desactivar este cliente?')">
                                         @csrf
                                         @method('DELETE')
 
