@@ -85,6 +85,7 @@ class PermisosSeeder extends Seeder
 
                 'ver_ventas',
                 'realizar_venta',
+                'aplicar_descuento',
 
                 'ver_clientes',
                 'crear_cliente',

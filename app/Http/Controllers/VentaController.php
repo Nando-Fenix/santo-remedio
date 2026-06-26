@@ -41,8 +41,7 @@ class VentaController extends Controller
                 ->with('error', 'El usuario no tiene una sucursal asignada.');
         }
 
-        $cajaAbierta = Caja::where('usuario_id', $user->id)
-            ->where('sucursal_id', $sucursal->id)
+        $cajaAbierta = Caja::where('sucursal_id', $sucursal->id)
             ->where('estado', 'abierta')
             ->latest('fecha_apertura')
             ->first();
@@ -101,8 +100,7 @@ class VentaController extends Controller
             ]);
         }
 
-        $cajaAbierta = Caja::where('usuario_id', $user->id)
-            ->where('sucursal_id', $sucursal->id)
+        $cajaAbierta = Caja::where('sucursal_id', $sucursal->id)
             ->where('estado', 'abierta')
             ->latest('fecha_apertura')
             ->first();
@@ -323,8 +321,7 @@ class VentaController extends Controller
 
         $user = auth()->user();
 
-        $cajaAbierta = Caja::where('usuario_id', $user->id)
-            ->where('sucursal_id', $venta->sucursal_id)
+        $cajaAbierta = Caja::where('sucursal_id', $venta->sucursal_id)
             ->where('estado', 'abierta')
             ->latest('fecha_apertura')
             ->first();
@@ -355,8 +352,7 @@ class VentaController extends Controller
 
         $user = auth()->user();
 
-        $cajaAbierta = Caja::where('usuario_id', $user->id)
-            ->where('sucursal_id', $venta->sucursal_id)
+        $cajaAbierta = Caja::where('sucursal_id', $venta->sucursal_id)
             ->where('estado', 'abierta')
             ->latest('fecha_apertura')
             ->first();

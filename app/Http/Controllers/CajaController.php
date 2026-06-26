@@ -12,12 +12,25 @@ use App\Models\CierreCaja;
 
 class CajaController extends Controller
 {
-    public function index()
+    private function obtenerSucursalActual()
     {
         $user = auth()->user();
 
-        $sucursal = $user->sucursalPrincipal()->first()
+        return $user->sucursalPrincipal()->first()
             ?? $user->sucursales()->wherePivot('estado', 'activo')->first();
+    }
+
+    private function obtenerCajaAbiertaPorSucursal(int $sucursalId)
+    {
+        return Caja::where('sucursal_id', $sucursalId)
+            ->where('estado', 'abierta')
+            ->latest('fecha_apertura')
+            ->first();
+    }
+
+    public function index()
+    {
+        $sucursal = $this->obtenerSucursalActual();
 
         if (!$sucursal) {
             return redirect()
@@ -26,7 +39,6 @@ class CajaController extends Controller
         }
 
         $cajaAbierta = Caja::with(['sucursal', 'usuario', 'turno'])
-            ->where('usuario_id', $user->id)
             ->where('sucursal_id', $sucursal->id)
             ->where('estado', 'abierta')
             ->latest('fecha_apertura')
@@ -42,10 +54,7 @@ class CajaController extends Controller
 
     public function create()
     {
-        $user = auth()->user();
-
-        $sucursal = $user->sucursalPrincipal()->first()
-            ?? $user->sucursales()->wherePivot('estado', 'activo')->first();
+        $sucursal = $this->obtenerSucursalActual();
 
         if (!$sucursal) {
             return redirect()
@@ -53,15 +62,12 @@ class CajaController extends Controller
                 ->with('error', 'El usuario no tiene una sucursal asignada.');
         }
 
-        $cajaAbierta = Caja::where('usuario_id', $user->id)
-            ->where('sucursal_id', $sucursal->id)
-            ->where('estado', 'abierta')
-            ->first();
+        $cajaAbierta = $this->obtenerCajaAbiertaPorSucursal($sucursal->id);
 
         if ($cajaAbierta) {
             return redirect()
                 ->route('caja.index')
-                ->with('success', 'Ya existe una caja abierta para este usuario.');
+                ->with('info', 'Ya existe una caja abierta para esta sucursal.');
         }
 
         $turnos = Turno::where('estado', 'activo')
@@ -83,9 +89,7 @@ class CajaController extends Controller
         ]);
 
         $user = auth()->user();
-
-        $sucursal = $user->sucursalPrincipal()->first()
-            ?? $user->sucursales()->wherePivot('estado', 'activo')->first();
+        $sucursal = $this->obtenerSucursalActual();
 
         if (!$sucursal) {
             return back()->withErrors([
@@ -93,21 +97,20 @@ class CajaController extends Controller
             ]);
         }
 
-        $yaTieneCajaAbierta = Caja::where('usuario_id', $user->id)
-            ->where('sucursal_id', $sucursal->id)
+        $yaExisteCajaAbierta = Caja::where('sucursal_id', $sucursal->id)
             ->where('estado', 'abierta')
             ->exists();
 
-        if ($yaTieneCajaAbierta) {
+        if ($yaExisteCajaAbierta) {
             return redirect()
                 ->route('caja.index')
-                ->with('success', 'Ya existe una caja abierta para este usuario.');
+                ->with('info', 'Ya existe una caja abierta para esta sucursal.');
         }
 
         DB::transaction(function () use ($datos, $user, $sucursal) {
             $caja = Caja::create([
                 'sucursal_id' => $sucursal->id,
-                'usuario_id' => $user->id,
+                'usuario_id' => $user->id, // Usuario que abrió la caja
                 'turno_id' => $datos['turno_id'],
                 'fecha_apertura' => now(),
                 'fecha_cierre' => null,
@@ -141,10 +144,7 @@ class CajaController extends Controller
 
     public function egresoCreate()
     {
-        $user = auth()->user();
-
-        $sucursal = $user->sucursalPrincipal()->first()
-            ?? $user->sucursales()->wherePivot('estado', 'activo')->first();
+        $sucursal = $this->obtenerSucursalActual();
 
         if (!$sucursal) {
             return redirect()
@@ -152,16 +152,12 @@ class CajaController extends Controller
                 ->with('error', 'El usuario no tiene una sucursal asignada.');
         }
 
-        $cajaAbierta = Caja::where('usuario_id', $user->id)
-            ->where('sucursal_id', $sucursal->id)
-            ->where('estado', 'abierta')
-            ->latest('fecha_apertura')
-            ->first();
+        $cajaAbierta = $this->obtenerCajaAbiertaPorSucursal($sucursal->id);
 
         if (!$cajaAbierta) {
             return redirect()
                 ->route('caja.index')
-                ->with('success', 'Debe abrir caja antes de registrar un egreso.');
+                ->with('error', 'Debe existir una caja abierta en esta sucursal antes de registrar un egreso.');
         }
 
         return view('caja.egreso', compact('sucursal', 'cajaAbierta'));
@@ -179,9 +175,7 @@ class CajaController extends Controller
         ]);
 
         $user = auth()->user();
-
-        $sucursal = $user->sucursalPrincipal()->first()
-            ?? $user->sucursales()->wherePivot('estado', 'activo')->first();
+        $sucursal = $this->obtenerSucursalActual();
 
         if (!$sucursal) {
             return back()->withErrors([
@@ -189,16 +183,12 @@ class CajaController extends Controller
             ]);
         }
 
-        $cajaAbierta = Caja::where('usuario_id', $user->id)
-            ->where('sucursal_id', $sucursal->id)
-            ->where('estado', 'abierta')
-            ->latest('fecha_apertura')
-            ->first();
+        $cajaAbierta = $this->obtenerCajaAbiertaPorSucursal($sucursal->id);
 
         if (!$cajaAbierta) {
             return redirect()
                 ->route('caja.index')
-                ->with('success', 'Debe abrir caja antes de registrar un egreso.');
+                ->with('error', 'Debe existir una caja abierta en esta sucursal antes de registrar un egreso.');
         }
 
         DB::transaction(function () use ($datos, $user, $sucursal, $cajaAbierta) {
@@ -215,7 +205,6 @@ class CajaController extends Controller
             ]);
 
             $cajaAbierta->increment('total_egresos', $datos['monto']);
-
             $cajaAbierta->refresh();
 
             $cajaAbierta->update([
@@ -233,10 +222,7 @@ class CajaController extends Controller
 
     public function movimientos(Request $request)
     {
-        $user = auth()->user();
-
-        $sucursal = $user->sucursalPrincipal()->first()
-            ?? $user->sucursales()->wherePivot('estado', 'activo')->first();
+        $sucursal = $this->obtenerSucursalActual();
 
         if (!$sucursal) {
             return redirect()
@@ -260,10 +246,7 @@ class CajaController extends Controller
 
     public function cierreCreate()
     {
-        $user = auth()->user();
-
-        $sucursal = $user->sucursalPrincipal()->first()
-            ?? $user->sucursales()->wherePivot('estado', 'activo')->first();
+        $sucursal = $this->obtenerSucursalActual();
 
         if (!$sucursal) {
             return redirect()
@@ -272,7 +255,6 @@ class CajaController extends Controller
         }
 
         $cajaAbierta = Caja::with(['turno', 'movimientos'])
-            ->where('usuario_id', $user->id)
             ->where('sucursal_id', $sucursal->id)
             ->where('estado', 'abierta')
             ->latest('fecha_apertura')
@@ -281,7 +263,7 @@ class CajaController extends Controller
         if (!$cajaAbierta) {
             return redirect()
                 ->route('caja.index')
-                ->with('success', 'No existe una caja abierta para cerrar.');
+                ->with('error', 'No existe una caja abierta en esta sucursal para cerrar.');
         }
 
         return view('caja.cierre', compact('sucursal', 'cajaAbierta'));
@@ -302,9 +284,7 @@ class CajaController extends Controller
         ]);
 
         $user = auth()->user();
-
-        $sucursal = $user->sucursalPrincipal()->first()
-            ?? $user->sucursales()->wherePivot('estado', 'activo')->first();
+        $sucursal = $this->obtenerSucursalActual();
 
         if (!$sucursal) {
             return back()->withErrors([
@@ -312,16 +292,12 @@ class CajaController extends Controller
             ]);
         }
 
-        $cajaAbierta = Caja::where('usuario_id', $user->id)
-            ->where('sucursal_id', $sucursal->id)
-            ->where('estado', 'abierta')
-            ->latest('fecha_apertura')
-            ->first();
+        $cajaAbierta = $this->obtenerCajaAbiertaPorSucursal($sucursal->id);
 
         if (!$cajaAbierta) {
             return redirect()
                 ->route('caja.index')
-                ->with('success', 'No existe una caja abierta para cerrar.');
+                ->with('error', 'No existe una caja abierta en esta sucursal para cerrar.');
         }
 
         DB::transaction(function () use ($datos, $user, $sucursal, $cajaAbierta) {
@@ -344,7 +320,7 @@ class CajaController extends Controller
 
             $cierre = \App\Models\CierreCaja::create([
                 'caja_id' => $cajaAbierta->id,
-                'usuario_id' => $user->id,
+                'usuario_id' => $user->id, // Usuario que cerró la caja
                 'sucursal_id' => $sucursal->id,
                 'turno_id' => $cajaAbierta->turno_id,
                 'fecha_cierre' => now(),

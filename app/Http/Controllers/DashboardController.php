@@ -19,14 +19,13 @@ class DashboardController extends Controller
 
         /*
         |--------------------------------------------------------------------------
-        | Caja abierta del usuario
+        | Caja abierta de la sucursal
         |--------------------------------------------------------------------------
         */
         $cajaAbierta = null;
 
         if ($sucursal) {
-            $cajaAbierta = Caja::with('turno')
-                ->where('usuario_id', $user->id)
+            $cajaAbierta = Caja::with(['turno', 'usuario'])
                 ->where('sucursal_id', $sucursal->id)
                 ->where('estado', 'abierta')
                 ->latest('fecha_apertura')

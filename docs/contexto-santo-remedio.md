@@ -802,7 +802,7 @@ SweetAlert2 debe estar por encima para permitir crear laboratorio o presentació
 
 Regla CSS aplicada:
 
-```css'
+"```css''"
 .swal2-container {
     z-index: 20000 !important;
 }'
@@ -819,3 +819,15 @@ Estado comprobado:
 - Proveedor rápido funciona.
 - Los modales de SweetAlert2 aparecen por encima del modal principal.
 - El modal de proveedor rápido fue ajustado visualmente para evitar espacios desordenados.
+
+### Checkpoint funcional - caja compartida por sucursal
+
+Se corrigió la lógica de caja para que la caja abierta dependa de la sucursal y no del usuario.
+
+Regla actual:
+- Una sucursal solo puede tener una caja abierta.
+- Varios usuarios de la misma sucursal pueden vender usando la misma caja.
+- cajas.usuario_id representa el usuario que abrió la caja.
+- ventas.usuario_id representa el usuario que realizó la venta.
+- movimientos_caja.usuario_id representa el usuario que realizó el movimiento.
+- El cierre de caja puede ser realizado por un usuario autorizado de la misma sucursal.

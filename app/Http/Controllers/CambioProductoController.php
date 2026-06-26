@@ -40,8 +40,7 @@ class CambioProductoController extends Controller
 
         $user = auth()->user();
 
-        $cajaAbierta = Caja::where('usuario_id', $user->id)
-            ->where('sucursal_id', $venta->sucursal_id)
+        $cajaAbierta = Caja::where('sucursal_id', $venta->sucursal_id)
             ->where('estado', 'abierta')
             ->latest('fecha_apertura')
             ->first();
@@ -162,8 +161,7 @@ class CambioProductoController extends Controller
 
         $user = auth()->user();
 
-        $cajaAbierta = Caja::where('usuario_id', $user->id)
-            ->where('sucursal_id', $venta->sucursal_id)
+        $cajaAbierta = Caja::where('sucursal_id', $venta->sucursal_id)
             ->where('estado', 'abierta')
             ->latest('fecha_apertura')
             ->first();
@@ -497,8 +495,7 @@ class CambioProductoController extends Controller
 
         $user = auth()->user();
 
-        $cajaAbierta = Caja::where('usuario_id', $user->id)
-            ->where('sucursal_id', $cambioProducto->sucursal_id)
+        $cajaAbierta = Caja::where('sucursal_id', $cambioProducto->sucursal_id)
             ->where('estado', 'abierta')
             ->latest('fecha_apertura')
             ->first();
@@ -540,8 +537,7 @@ class CambioProductoController extends Controller
 
         $user = auth()->user();
 
-        $cajaAbierta = Caja::where('usuario_id', $user->id)
-            ->where('sucursal_id', $cambioProducto->sucursal_id)
+        $cajaAbierta = Caja::where('sucursal_id', $cambioProducto->sucursal_id)
             ->where('estado', 'abierta')
             ->latest('fecha_apertura')
             ->first();
