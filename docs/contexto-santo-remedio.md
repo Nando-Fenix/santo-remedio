@@ -844,3 +844,25 @@ Cambios realizados:
 - Se corrigió el scroll del menú lateral para usuarios administradores con más opciones.
 - El vendedor solo visualiza las opciones permitidas.
 - El administrador visualiza todos los módulos habilitados.
+
+### Checkpoint funcional - botones internos por permisos
+
+Se ajustó la vista de detalle de venta.
+
+Cambios:
+- El botón Registrar reembolso solo aparece con permiso `reembolsar_venta`.
+- El botón Cambio de producto solo aparece con permiso `cambiar_producto`.
+- El botón Anular venta solo aparece con permiso `anular_venta`.
+- Se eliminó el bloque duplicado de cambios de producto registrados.
+- Las rutas siguen protegidas por middleware, y la vista ahora evita mostrar acciones no permitidas.
+
+### Checkpoint funcional - botones de caja por permisos
+
+Se ajustó la vista de caja para mostrar acciones según permisos.
+
+Cambios:
+- Abrir caja solo aparece con permiso `abrir_caja`.
+- Ver movimientos solo aparece con permiso `ver_caja`.
+- Registrar egreso solo aparece con permiso `registrar_egreso`.
+- Cerrar caja solo aparece con permiso `cerrar_caja`.
+- Las rutas siguen protegidas por middleware y la vista evita mostrar acciones no permitidas.

@@ -27,27 +27,33 @@
             </p>
         </div>
 
-        @if (!$cajaAbierta)
-            <a href="{{ route('caja.create') }}" class="btn-primary">
-                Abrir caja
-            </a>
-        @endif
-
-        @if ($cajaAbierta)
-            <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 22px;">
-                <a href="{{ route('caja.movimientos') }}" class="btn-secondary">
-                    Ver movimientos
+        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+            @if (!$cajaAbierta && auth()->user()->tienePermiso('abrir_caja'))
+                <a href="{{ route('caja.create') }}" class="btn-primary">
+                    Abrir caja
                 </a>
+            @endif
 
-                <a href="{{ route('caja.egreso.create') }}" class="btn-secondary">
-                    Registrar egreso
-                </a>
+            @if ($cajaAbierta)
+                @if (auth()->user()->tienePermiso('ver_caja'))
+                    <a href="{{ route('caja.movimientos') }}" class="btn-secondary">
+                        Ver movimientos
+                    </a>
+                @endif
 
-                <a href="{{ route('caja.cierre.create') }}" class="btn-primary">
-                    Cerrar caja
-                </a>
-            </div>
-        @endif
+                @if (auth()->user()->tienePermiso('registrar_egreso'))
+                    <a href="{{ route('caja.egreso.create') }}" class="btn-secondary">
+                        Registrar egreso
+                    </a>
+                @endif
+
+                @if (auth()->user()->tienePermiso('cerrar_caja'))
+                    <a href="{{ route('caja.cierre.create') }}" class="btn-primary">
+                        Cerrar caja
+                    </a>
+                @endif
+            @endif
+        </div>
     </div>
 </div>
 
