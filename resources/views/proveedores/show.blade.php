@@ -15,14 +15,18 @@
             </p>
         </div>
 
-        <div style="display: flex; gap: 10px;">
-            <a href="{{ route('proveedores.edit', $proveedor) }}" class="btn-primary">
-                Editar proveedor
-            </a>
+        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+            @if (auth()->user()->tienePermiso('editar_proveedor'))
+                <a href="{{ route('proveedores.edit', $proveedor) }}" class="btn-primary">
+                    Editar proveedor
+                </a>
+            @endif
 
-            <a href="{{ route('proveedores.index') }}" class="btn-secondary">
-                Volver
-            </a>
+            @if (auth()->user()->tienePermiso('ver_proveedores'))
+                <a href="{{ route('proveedores.index') }}" class="btn-secondary">
+                    Volver
+                </a>
+            @endif
         </div>
     </div>
 
@@ -122,9 +126,13 @@
                             @endif
                         </td>
                         <td>
-                            <a href="{{ route('compras.show', $compra) }}" class="btn-secondary">
-                                Ver compra
-                            </a>
+                            @if (auth()->user()->tienePermiso('ver_compras'))
+                                <a href="{{ route('compras.show', $compra) }}" class="btn-secondary">
+                                    Ver compra
+                                </a>
+                            @else
+                                -
+                            @endif
                         </td>
                     </tr>
                 @empty
@@ -171,9 +179,17 @@
                             @endif
                         </td>
                         <td>
-                            <a href="{{ route('productos.edit', $producto) }}" class="btn-secondary">
-                                Ver producto
-                            </a>
+                            @if (auth()->user()->tienePermiso('editar_producto'))
+                                <a href="{{ route('productos.edit', $producto) }}" class="btn-secondary">
+                                    Editar producto
+                                </a>
+                            @elseif (auth()->user()->tienePermiso('ver_productos'))
+                                <a href="{{ route('productos.presentaciones.index', $producto) }}" class="btn-secondary">
+                                    Ver producto
+                                </a>
+                            @else
+                                -
+                            @endif
                         </td>
                     </tr>
                 @empty

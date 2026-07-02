@@ -44,16 +44,21 @@
 </div>
 
 <div class="card">
-    @if ($errors->any())
+    @if (!auth()->user()->tienePermiso('reembolsar_venta'))
         <div class="alert-danger">
-            <strong>Revise los siguientes errores:</strong>
-            <ul style="margin-bottom: 0;">
-                @foreach ($errors->all() as $error)
-                    <li>{{ $error }}</li>
-                @endforeach
-            </ul>
+            No tiene permiso para registrar reembolsos.
         </div>
-    @endif
+    @else
+        @if ($errors->any())
+            <div class="alert-danger">
+                <strong>Revise los siguientes errores:</strong>
+                <ul style="margin-bottom: 0;">
+                    @foreach ($errors->all() as $error)
+                        <li>{{ $error }}</li>
+                    @endforeach
+                </ul>
+            </div>
+         @endif
 
     <form method="POST" action="{{ route('reembolsos.store', $venta) }}" onsubmit="return confirmarFormulario(event, '¿Confirmar reembolso?')">
         @csrf
@@ -160,15 +165,18 @@
         </div>
 
         <div style="display: flex; gap: 12px; margin-top: 24px;">
-            <button type="submit" class="btn-danger">
-                Registrar reembolso
-            </button>
+            @if (auth()->user()->tienePermiso('reembolsar_venta'))
+                <button type="submit" class="btn-danger">
+                    Registrar reembolso
+                </button>
+            @endif
 
             <a href="{{ route('ventas.show', $venta) }}" class="btn-secondary">
                 Cancelar
             </a>
         </div>
     </form>
+    @endif
 </div>
 
 @endsection

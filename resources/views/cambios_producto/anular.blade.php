@@ -111,16 +111,21 @@
 </div>
 
 <div class="card">
-    @if ($errors->any())
+    @if (!auth()->user()->tienePermiso('anular_cambio_producto'))
         <div class="alert-danger">
-            <strong>Revise los siguientes errores:</strong>
-            <ul style="margin-bottom: 0;">
-                @foreach ($errors->all() as $error)
-                    <li>{{ $error }}</li>
-                @endforeach
-            </ul>
+            No tiene permiso para anular cambios de producto.
         </div>
-    @endif
+    @else
+        @if ($errors->any())
+            <div class="alert-danger">
+                <strong>Revise los siguientes errores:</strong>
+                <ul style="margin-bottom: 0;">
+                    @foreach ($errors->all() as $error)
+                        <li>{{ $error }}</li>
+                    @endforeach
+                </ul>
+            </div>
+        @endif
 
     <form method="POST" action="{{ route('cambios-producto.anular.store', $cambioProducto) }}" onsubmit="return confirmarFormulario(event, '¿Confirmar anulación del cambio de producto?')">
         @csrf
@@ -145,15 +150,18 @@
         </div>
 
         <div style="display: flex; gap: 12px; margin-top: 24px;">
-            <button type="submit" class="btn-danger">
-                Anular cambio
-            </button>
+            @if (auth()->user()->tienePermiso('anular_cambio_producto'))
+                <button type="submit" class="btn-danger">
+                    Anular cambio
+                </button>
+            @endif
 
             <a href="{{ route('cambios-producto.show', $cambioProducto) }}" class="btn-secondary">
                 Cancelar
             </a>
         </div>
     </form>
+    @endif
 </div>
 
 @endsection

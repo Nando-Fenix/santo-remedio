@@ -21,6 +21,12 @@
         </a>
     </div>
 
+    @if (!auth()->user()->tienePermiso('ver_caja'))
+        <div class="alert-danger">
+            No tiene permiso para ver movimientos de caja.
+        </div>
+    @else
+
     <form method="GET" action="{{ route('caja.movimientos') }}" style="margin-bottom: 18px;">
         <div class="form-grid">
             <div class="form-group">
@@ -84,10 +90,12 @@
                         </td>
                         <td>{{ $movimiento->usuario->nombre ?? '-' }}</td>
                         <td>
-                            @if ($movimiento->venta)
+                            @if ($movimiento->venta && auth()->user()->tienePermiso('ver_ventas'))
                                 <a href="{{ route('ventas.show', $movimiento->venta) }}" class="btn-secondary">
                                     {{ $movimiento->venta->numero_venta }}
                                 </a>
+                            @elseif ($movimiento->venta)
+                                {{ $movimiento->venta->numero_venta }}
                             @else
                                 -
                             @endif
@@ -108,7 +116,7 @@
     <div style="margin-top: 18px;">
         {{ $movimientos->links() }}
     </div>
-
+    @endif
 </div>
 
 @endsection

@@ -15,14 +15,18 @@
             </p>
         </div>
 
-        <div style="display: flex; gap: 10px;">
-            <a href="{{ route('clientes.edit', $cliente) }}" class="btn-primary">
-                Editar cliente
-            </a>
+        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+            @if (auth()->user()->tienePermiso('editar_cliente'))
+                <a href="{{ route('clientes.edit', $cliente) }}" class="btn-primary">
+                    Editar cliente
+                </a>
+            @endif
 
-            <a href="{{ route('clientes.index') }}" class="btn-secondary">
-                Volver
-            </a>
+            @if (auth()->user()->tienePermiso('ver_clientes'))
+                <a href="{{ route('clientes.index') }}" class="btn-secondary">
+                    Volver
+                </a>
+            @endif
         </div>
     </div>
 
@@ -112,9 +116,13 @@
                             <strong>{{ number_format($venta->total, 2) }} Bs</strong>
                         </td>
                         <td>
-                            <a href="{{ route('ventas.show', $venta) }}" class="btn-secondary">
-                                Ver venta
-                            </a>
+                            @if (auth()->user()->tienePermiso('ver_ventas'))
+                                <a href="{{ route('ventas.show', $venta) }}" class="btn-secondary">
+                                    Ver venta
+                                </a>
+                            @else
+                                -
+                            @endif
                         </td>
                     </tr>
                 @empty

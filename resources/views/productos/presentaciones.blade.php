@@ -20,9 +20,11 @@
             </p>
         </div>
 
-        <a href="{{ route('productos.index') }}" class="btn-secondary">
-            Volver a productos
-        </a>
+        @if (auth()->user()->tienePermiso('ver_productos'))
+            <a href="{{ route('productos.index') }}" class="btn-secondary">
+                Volver a productos
+            </a>
+        @endif
     </div>
 </div>
 
@@ -43,81 +45,85 @@
     </div>
 @endif
 
-<div class="card" style="margin-bottom: 22px;">
-    <h3 style="margin-top: 0; color: #4C1D95;">Agregar presentación</h3>
+@if (auth()->user()->tienePermiso('editar_producto'))
+    <div class="card" style="margin-bottom: 22px;">
+        <h3 style="margin-top: 0; color: #4C1D95;">Agregar presentación</h3>
 
-    <form method="POST" action="{{ route('productos.presentaciones.store', $producto) }}">
-        @csrf
+        <form method="POST" action="{{ route('productos.presentaciones.store', $producto) }}">
+            @csrf
 
-        <div class="form-grid">
-            <div class="form-group">
-                <label>Presentación *</label>
-                <select name="presentacion_id">
-                    <option value="">Seleccione</option>
-                    @foreach ($presentaciones as $presentacion)
-                        <option value="{{ $presentacion->id }}" @selected(old('presentacion_id') == $presentacion->id)>
-                            {{ $presentacion->nombre }}
-                        </option>
-                    @endforeach
-                </select>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label>Presentación *</label>
+                    <select name="presentacion_id">
+                        <option value="">Seleccione</option>
+                        @foreach ($presentaciones as $presentacion)
+                            <option value="{{ $presentacion->id }}" @selected(old('presentacion_id') == $presentacion->id)>
+                                {{ $presentacion->nombre }}
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>Nombre mostrado *</label>
+                    <input type="text" name="nombre_mostrado" value="{{ old('nombre_mostrado') }}" placeholder="Ej: Caja x 100 tabletas">
+                </div>
+
+                <div class="form-group">
+                    <label>Unidades equivalentes *</label>
+                    <input type="number" min="1" name="unidades_equivalentes" value="{{ old('unidades_equivalentes', 1) }}">
+                </div>
+
+                <div class="form-group">
+                    <label>Precio de compra *</label>
+                    <input type="number" step="0.01" min="0" name="precio_compra" value="{{ old('precio_compra', 0) }}">
+                </div>
+
+                <div class="form-group">
+                    <label>Precio de venta *</label>
+                    <input type="number" step="0.01" min="0" name="precio_venta" value="{{ old('precio_venta', 0) }}">
+                </div>
+
+                <div class="form-group">
+                    <label>Código de barras</label>
+                    <input 
+                        type="text" 
+                        id="codigo_barras"
+                        name="codigo_barras" 
+                        value="{{ old('codigo_barras') }}" 
+                        placeholder="Escanee el código del producto"
+                    >
+                </div>
+
+                <button type="button" class="btn-secondary" onclick="activarEscaner()">
+                    Escanear código
+                </button>
+
+                <script>
+                    function activarEscaner() {
+                        const input = document.getElementById('codigo_barras');
+                        input.focus();
+                        input.select();
+                    }
+                </script>
             </div>
 
-            <div class="form-group">
-                <label>Nombre mostrado *</label>
-                <input type="text" name="nombre_mostrado" value="{{ old('nombre_mostrado') }}" placeholder="Ej: Caja x 100 tabletas">
+            <label class="checkbox-line" style="margin-top: 18px;">
+                <input type="checkbox" name="es_principal" value="1" @checked(old('es_principal'))>
+                Usar como presentación rápida/principal para ventas
+            </label>
+
+            <div style="margin-top: 22px;">
+                @if (auth()->user()->tienePermiso('editar_producto'))
+                    <button class="btn-primary" type="submit">
+                        Guardar presentación
+                    </button>
+                @endif
             </div>
-
-            <div class="form-group">
-                <label>Unidades equivalentes *</label>
-                <input type="number" min="1" name="unidades_equivalentes" value="{{ old('unidades_equivalentes', 1) }}">
-            </div>
-
-            <div class="form-group">
-                <label>Precio de compra *</label>
-                <input type="number" step="0.01" min="0" name="precio_compra" value="{{ old('precio_compra', 0) }}">
-            </div>
-
-            <div class="form-group">
-                <label>Precio de venta *</label>
-                <input type="number" step="0.01" min="0" name="precio_venta" value="{{ old('precio_venta', 0) }}">
-            </div>
-
-            <div class="form-group">
-                <label>Código de barras</label>
-                <input 
-                    type="text" 
-                    id="codigo_barras"
-                    name="codigo_barras" 
-                    value="{{ old('codigo_barras') }}" 
-                    placeholder="Escanee el código del producto"
-                >
-            </div>
-
-            <button type="button" class="btn-secondary" onclick="activarEscaner()">
-                Escanear código
-            </button>
-
-            <script>
-                function activarEscaner() {
-                    const input = document.getElementById('codigo_barras');
-                    input.focus();
-                    input.select();
-                }
-            </script>
-        </div>
-
-        <label class="checkbox-line" style="margin-top: 18px;">
-            <input type="checkbox" name="es_principal" value="1" @checked(old('es_principal'))>
-            Usar como presentación rápida/principal para ventas
-        </label>
-
-        <div style="margin-top: 22px;">
-            <button class="btn-primary" type="submit">
-                Guardar presentación
-            </button>
-        </div>
-    </form>
-</div>
+        </form>
+    </div>
+@endif
 
 <div class="card">
     <h3 style="margin-top: 0; color: #4C1D95;">Presentaciones registradas</h3>
@@ -165,10 +171,13 @@
                             </span>
                         </td>
                         <td>
-                            @if ($item->estado === 'activo')
-                                <form method="POST" action="{{ route('productos.presentaciones.destroy', [$producto, $item]) }}" onsubmit="return confirmarFormulario(event,'¿Desactivar esta presentación?')">
+                            @if ($item->estado === 'activo' && auth()->user()->tienePermiso('desactivar_producto'))
+                                <form method="POST"
+                                    action="{{ route('productos.presentaciones.destroy', [$producto, $item]) }}"
+                                    onsubmit="return confirmarFormulario(event,'¿Desactivar esta presentación?')">
                                     @csrf
                                     @method('DELETE')
+
                                     <button class="btn-danger" type="submit">
                                         Desactivar
                                     </button>

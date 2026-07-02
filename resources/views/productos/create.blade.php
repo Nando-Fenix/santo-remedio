@@ -15,6 +15,12 @@
         </p>
     </div>
 
+    @if (!auth()->user()->tienePermiso('crear_producto'))
+        <div class="alert-danger">
+            No tiene permiso para crear productos.
+        </div>
+    @else
+
     @if ($errors->any())
         <div class="alert-danger">
             <strong>Revise los siguientes errores:</strong>
@@ -88,16 +94,20 @@
         </div>
 
         <div style="display: flex; gap: 12px; margin-top: 24px;">
-            <button type="submit" class="btn-primary">
-                Guardar producto
-            </button>
+            @if (auth()->user()->tienePermiso('crear_producto'))
+                <button type="submit" class="btn-primary">
+                    Guardar producto
+                </button>
+            @endif
 
-            <a href="{{ route('productos.index') }}" class="btn-secondary">
-                Cancelar
-            </a>
+            @if (auth()->user()->tienePermiso('ver_productos'))
+                <a href="{{ route('productos.index') }}" class="btn-secondary">
+                    Cancelar
+                </a>
+            @endif
         </div>
     </form>
-
+    @endif
 </div>
 
 @endsection

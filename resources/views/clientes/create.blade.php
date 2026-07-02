@@ -7,6 +7,11 @@
 @section('content')
 
 <div class="card">
+    @if (!auth()->user()->tienePermiso('crear_cliente'))
+        <div class="alert-danger">
+            No tiene permiso para crear clientes.
+        </div>
+    @else
     <form method="POST" action="{{ route('clientes.store') }}">
         @csrf
 
@@ -65,15 +70,21 @@
         </div>
 
         <div style="display: flex; gap: 12px; margin-top: 24px;">
-            <button type="submit" class="btn-primary">
-                Guardar cliente
-            </button>
+            @if (auth()->user()->tienePermiso('crear_cliente'))
+                <button type="submit" class="btn-primary">
+                    Guardar cliente
+                </button>
+            @endif
 
-            <a href="{{ route('clientes.index') }}" class="btn-secondary">
-                Cancelar
-            </a>
+            @if (auth()->user()->tienePermiso('ver_clientes'))
+                <a href="{{ route('clientes.index') }}" class="btn-secondary">
+                    Cancelar
+                </a>
+            @endif
         </div>
     </form>
+
+    @endif
 </div>
 
 @endsection

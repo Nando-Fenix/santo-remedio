@@ -87,16 +87,21 @@
 </div>
 
 <div class="card">
-    @if ($errors->any())
+    @if (!auth()->user()->tienePermiso('anular_compra'))
         <div class="alert-danger">
-            <strong>Revise los siguientes errores:</strong>
-            <ul style="margin-bottom: 0;">
-                @foreach ($errors->all() as $error)
-                    <li>{{ $error }}</li>
-                @endforeach
-            </ul>
+            No tiene permiso para anular compras.
         </div>
-    @endif
+    @else
+        @if ($errors->any())
+            <div class="alert-danger">
+                <strong>Revise los siguientes errores:</strong>
+                <ul style="margin-bottom: 0;">
+                    @foreach ($errors->all() as $error)
+                        <li>{{ $error }}</li>
+                    @endforeach
+                </ul>
+            </div>
+        @endif
 
     <form method="POST" action="{{ route('compras.anular.store', $compra) }}" onsubmit="return confirmarFormulario(event, '¿Confirmar anulación de compra?')">
         @csrf
@@ -121,15 +126,18 @@
         </div>
 
         <div style="display: flex; gap: 12px; margin-top: 24px;">
-            <button type="submit" class="btn-danger">
-                Anular compra
-            </button>
+            @if (auth()->user()->tienePermiso('anular_compra'))
+                <button type="submit" class="btn-danger">
+                    Anular compra
+                </button>
+            @endif
 
             <a href="{{ route('compras.show', $compra) }}" class="btn-secondary">
                 Cancelar
             </a>
         </div>
     </form>
+    @endif
 </div>
 
 @endsection

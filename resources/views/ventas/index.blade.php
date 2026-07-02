@@ -16,9 +16,11 @@
             </p>
         </div>
 
-        <a href="{{ route('ventas.create') }}" class="btn-primary">
-            + Nueva venta
-        </a>
+        @if (auth()->user()->tienePermiso('realizar_venta'))
+            <a href="{{ route('ventas.create') }}" class="btn-primary">
+                + Nueva venta
+            </a>
+        @endif
     </div>
 
     @if (session('success'))
@@ -39,7 +41,7 @@
                     <th>Pago</th>
                     <th>Total</th>
                     <th>Estado</th>
-                    <th>Acción</th>
+                    <th>Acciones</th>
                 </tr>
             </thead>
             <tbody>
@@ -68,9 +70,11 @@
                             </span>
                         </td>
                         <td>
-                            <a href="{{ route('ventas.show', $venta) }}" class="btn-secondary">
-                                Ver
-                            </a>
+                            @if (auth()->user()->tienePermiso('ver_ventas'))
+                                <a href="{{ route('ventas.show', $venta) }}" class="btn-secondary">
+                                    Ver
+                                </a>
+                            @endif
                         </td>
                     </tr>
                 @empty

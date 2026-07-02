@@ -7,6 +7,11 @@
 @section('content')
 
 <div class="card">
+    @if (!auth()->user()->tienePermiso('editar_proveedor'))
+        <div class="alert-danger">
+            No tiene permiso para editar proveedores.
+        </div>
+    @else
     <form method="POST" action="{{ route('proveedores.update', $proveedor) }}">
         @csrf
         @method('PUT')
@@ -57,15 +62,20 @@
         </div>
 
         <div style="display: flex; gap: 12px; margin-top: 24px;">
-            <button type="submit" class="btn-primary">
-                Actualizar proveedor
-            </button>
+            @if (auth()->user()->tienePermiso('editar_proveedor'))
+                <button type="submit" class="btn-primary">
+                    Actualizar proveedor
+                </button>
+            @endif
 
-            <a href="{{ route('proveedores.index') }}" class="btn-secondary">
-                Cancelar
-            </a>
+            @if (auth()->user()->tienePermiso('ver_proveedores'))
+                <a href="{{ route('proveedores.index') }}" class="btn-secondary">
+                    Cancelar
+                </a>
+            @endif
         </div>
     </form>
+    @endif
 </div>
 
 @endsection

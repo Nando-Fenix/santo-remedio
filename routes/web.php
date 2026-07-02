@@ -220,8 +220,7 @@ Route::middleware('auth')->group(function () {
         Route::post('/productos', [ProductoController::class, 'store'])
             ->name('productos.store');
 
-        Route::post('/productos/{producto}/presentaciones', [ProductoPresentacionController::class, 'store'])
-            ->name('productos.presentaciones.store');
+        
     });
 
     Route::middleware('permiso:editar_producto')->group(function () {
@@ -230,6 +229,9 @@ Route::middleware('auth')->group(function () {
 
         Route::put('/productos/{producto}', [ProductoController::class, 'update'])
             ->name('productos.update');
+
+        Route::post('/productos/{producto}/presentaciones', [ProductoPresentacionController::class, 'store'])
+            ->name('productos.presentaciones.store');
     });
 
     Route::middleware('permiso:desactivar_producto')->group(function () {

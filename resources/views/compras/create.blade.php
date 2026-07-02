@@ -43,9 +43,11 @@
                         @endforeach
                     </select>
 
-                    <button type="button" class="btn-secondary" style="margin-top: 8px;" onclick="crearProveedorRapido()">
-                        + Nuevo proveedor
-                    </button>
+                    @if (auth()->user()->tienePermiso('creacion_rapida_compras'))
+                        <button type="button" class="btn-secondary" style="margin-top: 8px;" onclick="crearProveedorRapido()">
+                            + Nuevo proveedor
+                        </button>
+                    @endif
                 </div>
 
                 <div class="form-group">
@@ -92,9 +94,11 @@
             <div id="resultados_producto_compra" class="card" style="display: none; margin-top: 12px; background: #FAFAFA;">
 
             </div>
-            <button type="button" class="btn-primary" onclick="mostrarFormularioProductoRapido()">
-                + Crear producto rápido
-            </button>
+            @if (auth()->user()->tienePermiso('creacion_rapida_compras'))
+                <button type="button" class="btn-primary" onclick="mostrarFormularioProductoRapido()">
+                    + Crear producto rápido
+                </button>
+            @endif
 
             <div id="modal_producto_rapido" class="modal-overlay" style="display: none;">
                 <div class="modal-content">
@@ -136,9 +140,11 @@
                                 @endforeach
                             </select>
 
-                            <button type="button" class="btn-secondary" style="margin-top: 8px;" onclick="crearCategoriaRapida()">
-                                + Nueva categoría
-                            </button>
+                            @if (auth()->user()->tienePermiso('creacion_rapida_compras'))
+                                <button type="button" class="btn-secondary" style="margin-top: 8px;" onclick="crearCategoriaRapida()">
+                                    + Nueva categoría
+                                </button>
+                            @endif
                         </div>
 
                         <div class="form-group">
@@ -150,9 +156,11 @@
                                 @endforeach
                             </select>
 
-                            <button type="button" class="btn-secondary" style="margin-top: 8px;" onclick="crearLaboratorioRapido()">
-                                + Nuevo laboratorio
-                            </button>
+                            @if (auth()->user()->tienePermiso('creacion_rapida_compras'))
+                                <button type="button" class="btn-secondary" style="margin-top: 8px;" onclick="crearLaboratorioRapido()">
+                                    + Nuevo laboratorio
+                                </button>
+                            @endif
                         </div>
 
                         <div class="form-group">
@@ -164,9 +172,11 @@
                                 @endforeach
                             </select>
 
-                            <button type="button" class="btn-secondary" style="margin-top: 8px;" onclick="crearPresentacionRapida()">
-                                + Nueva presentación
-                            </button>
+                            @if (auth()->user()->tienePermiso('creacion_rapida_compras'))
+                                <button type="button" class="btn-secondary" style="margin-top: 8px;" onclick="crearPresentacionRapida()">
+                                    + Nueva presentación
+                                </button>
+                            @endif
                         </div>
                     </div>
 
@@ -242,9 +252,11 @@
             </div>
 
             <div style="margin-top: 14px;">
-                <button type="button" class="btn-primary" onclick="agregarProductoCompra()">
-                    Agregar a compra
-                </button>
+                @if (auth()->user()->tienePermiso('registrar_compra'))
+                    <button type="button" class="btn-primary" onclick="agregarProductoCompra()">
+                        Agregar a compra
+                    </button>
+                @endif
             </div>
         </div>
 
@@ -297,9 +309,11 @@
         <div id="inputs_compra"></div>
 
         <div style="display: flex; gap: 12px; margin-top: 24px;">
-            <button type="submit" class="btn-primary">
-                Guardar compra
-            </button>
+            @if (auth()->user()->tienePermiso('registrar_compra'))
+                <button type="submit" class="btn-primary">
+                    Guardar compra
+                </button>
+            @endif
 
             <a href="{{ route('compras.index') }}" class="btn-secondary">
                 Cancelar
@@ -313,6 +327,7 @@
 
     const buscadorProductoCompra = document.getElementById('buscador_producto_compra');
     const resultadosProductoCompra = document.getElementById('resultados_producto_compra');
+    const puedeCrearRapidoCompras = @json(auth()->user()->tienePermiso('creacion_rapida_compras'));
 
     const productoPresentacionInput = document.getElementById('producto_presentacion_id');
     const productoSeleccionadoBox = document.getElementById('producto_seleccionado_box');
@@ -374,9 +389,12 @@
                     <p style="color:#6B7280; margin: 0;">
                         No se encontraron productos.
                     </p>
-                    <button type="button" class="btn-secondary" onclick="productoNoEncontrado()">
-                        Crear producto rápido
-                    </button>
+
+                    ${puedeCrearRapidoCompras ? `
+                        <button type="button" class="btn-secondary" onclick="productoNoEncontrado()">
+                            Crear producto rápido
+                        </button>
+                    ` : ''}
                 </div>
             `;
             return;
@@ -424,6 +442,17 @@
     }
 
     function productoNoEncontrado() {
+        if (!puedeCrearRapidoCompras) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Sin permiso',
+                text: 'No tiene permiso para crear productos rápidos desde compras.',
+                confirmButtonColor: '#6D28D9'
+            });
+
+            return;
+        }
+
         mostrarFormularioProductoRapido();
     }
 
@@ -598,6 +627,17 @@
     });
 
 function mostrarFormularioProductoRapido() {
+    if (!puedeCrearRapidoCompras) {
+        Swal.fire({
+            icon: 'warning',
+            title: 'Sin permiso',
+            text: 'No tiene permiso para crear productos rápidos desde compras.',
+            confirmButtonColor: '#6D28D9'
+        });
+
+        return;
+    }
+
     const modal = document.getElementById('modal_producto_rapido');
 
     if (!modal) {

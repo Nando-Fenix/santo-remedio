@@ -16,19 +16,25 @@
         </div>
 
         <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-            @if ($cambioProducto->estado === 'registrado' && $cambioProducto->caja?->estado === 'abierta')
+            @if (
+                $cambioProducto->estado === 'registrado'
+                && $cambioProducto->caja?->estado === 'abierta'
+                && auth()->user()->tienePermiso('anular_cambio_producto')
+            )
                 <a href="{{ route('cambios-producto.anular.create', $cambioProducto) }}" class="btn-danger">
                     Anular cambio
                 </a>
             @endif
 
-            <a href="{{ route('ventas.show', $cambioProducto->venta) }}" class="btn-primary">
-                Ver venta
-            </a>
+            @if (auth()->user()->tienePermiso('ver_ventas'))
+                <a href="{{ route('ventas.show', $cambioProducto->venta) }}" class="btn-primary">
+                    Ver venta
+                </a>
 
-            <a href="{{ route('ventas.index') }}" class="btn-secondary">
-                Volver a ventas
-            </a>
+                <a href="{{ route('ventas.index') }}" class="btn-secondary">
+                    Volver a ventas
+                </a>
+            @endif
         </div>
     </div>
 

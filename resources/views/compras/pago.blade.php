@@ -39,6 +39,11 @@
 </div>
 
 <div class="card">
+    @if (!auth()->user()->tienePermiso('pagar_compra'))
+        <div class="alert-danger">
+            No tiene permiso para registrar pagos de compras.
+        </div>
+    @else
     @if ($errors->any())
         <div class="alert-danger">
             <strong>Revise los siguientes errores:</strong>
@@ -50,71 +55,74 @@
         </div>
     @endif
 
-    <form method="POST" action="{{ route('compras.pago.store', $compra) }}" onsubmit="return confirmarFormulario(event, '¿Registrar pago de compra?')">
-        @csrf
+        <form method="POST" action="{{ route('compras.pago.store', $compra) }}" onsubmit="return confirmarFormulario(event, '¿Registrar pago de compra?')">
+            @csrf
 
-        <div class="form-grid">
-            <div class="form-group">
-                <label>Monto a pagar *</label>
-                <input
-                    type="number"
-                    name="monto"
-                    step="0.01"
-                    min="0.01"
-                    max="{{ $compra->saldo_pendiente }}"
-                    value="{{ old('monto', $compra->saldo_pendiente) }}"
-                    required
-                >
-                @error('monto')
-                    <small class="error">{{ $message }}</small>
-                @enderror
+            <div class="form-grid">
+                <div class="form-group">
+                    <label>Monto a pagar *</label>
+                    <input
+                        type="number"
+                        name="monto"
+                        step="0.01"
+                        min="0.01"
+                        max="{{ $compra->saldo_pendiente }}"
+                        value="{{ old('monto', $compra->saldo_pendiente) }}"
+                        required
+                    >
+                    @error('monto')
+                        <small class="error">{{ $message }}</small>
+                    @enderror
+                </div>
+
+                <div class="form-group">
+                    <label>Método de pago *</label>
+                    <select name="metodo_pago" required>
+                        <option value="efectivo" {{ old('metodo_pago') === 'efectivo' ? 'selected' : '' }}>Efectivo</option>
+                        <option value="qr" {{ old('metodo_pago') === 'qr' ? 'selected' : '' }}>QR</option>
+                        <option value="transferencia" {{ old('metodo_pago') === 'transferencia' ? 'selected' : '' }}>Transferencia</option>
+                        <option value="otro" {{ old('metodo_pago') === 'otro' ? 'selected' : '' }}>Otro</option>
+                    </select>
+                    @error('metodo_pago')
+                        <small class="error">{{ $message }}</small>
+                    @enderror
+                </div>
+
+                <div class="form-group">
+                    <label>Referencia</label>
+                    <input
+                        type="text"
+                        name="referencia"
+                        value="{{ old('referencia') }}"
+                        placeholder="N° comprobante, QR, transferencia, etc."
+                    >
+                    @error('referencia')
+                        <small class="error">{{ $message }}</small>
+                    @enderror
+                </div>
+
+                <div class="form-group" style="grid-column: 1 / -1;">
+                    <label>Observación</label>
+                    <textarea name="observacion" rows="3" placeholder="Opcional">{{ old('observacion') }}</textarea>
+                    @error('observacion')
+                        <small class="error">{{ $message }}</small>
+                    @enderror
+                </div>
             </div>
 
-            <div class="form-group">
-                <label>Método de pago *</label>
-                <select name="metodo_pago" required>
-                    <option value="efectivo" {{ old('metodo_pago') === 'efectivo' ? 'selected' : '' }}>Efectivo</option>
-                    <option value="qr" {{ old('metodo_pago') === 'qr' ? 'selected' : '' }}>QR</option>
-                    <option value="transferencia" {{ old('metodo_pago') === 'transferencia' ? 'selected' : '' }}>Transferencia</option>
-                    <option value="otro" {{ old('metodo_pago') === 'otro' ? 'selected' : '' }}>Otro</option>
-                </select>
-                @error('metodo_pago')
-                    <small class="error">{{ $message }}</small>
-                @enderror
+            <div style="display: flex; gap: 12px; margin-top: 24px;">
+                @if (auth()->user()->tienePermiso('pagar_compra'))
+                    <button type="submit" class="btn-primary">
+                        Registrar pago
+                    </button>
+                @endif
+
+                <a href="{{ route('compras.show', $compra) }}" class="btn-secondary">
+                    Cancelar
+                </a>
             </div>
-
-            <div class="form-group">
-                <label>Referencia</label>
-                <input
-                    type="text"
-                    name="referencia"
-                    value="{{ old('referencia') }}"
-                    placeholder="N° comprobante, QR, transferencia, etc."
-                >
-                @error('referencia')
-                    <small class="error">{{ $message }}</small>
-                @enderror
-            </div>
-
-            <div class="form-group" style="grid-column: 1 / -1;">
-                <label>Observación</label>
-                <textarea name="observacion" rows="3" placeholder="Opcional">{{ old('observacion') }}</textarea>
-                @error('observacion')
-                    <small class="error">{{ $message }}</small>
-                @enderror
-            </div>
-        </div>
-
-        <div style="display: flex; gap: 12px; margin-top: 24px;">
-            <button type="submit" class="btn-primary">
-                Registrar pago
-            </button>
-
-            <a href="{{ route('compras.show', $compra) }}" class="btn-secondary">
-                Cancelar
-            </a>
-        </div>
-    </form>
+        </form>
+    @endif
 </div>
 
 @endsection

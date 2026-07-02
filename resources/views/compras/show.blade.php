@@ -15,14 +15,14 @@
             </p>
         </div>
 
-        <div style="display: flex; gap: 10px;">
-            @if ($compra->estado === 'registrada')
+        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+            @if ($compra->estado === 'registrada' && auth()->user()->tienePermiso('anular_compra'))
                 <a href="{{ route('compras.anular.create', $compra) }}" class="btn-danger">
                     Anular compra
                 </a>
             @endif
 
-            @if ($compra->saldo_pendiente > 0 && $compra->estado === 'registrada')
+            @if ($compra->saldo_pendiente > 0 && $compra->estado === 'registrada' && auth()->user()->tienePermiso('pagar_compra'))
                 <a href="{{ route('compras.pago.create', $compra) }}" class="btn-primary">
                     Registrar pago
                 </a>

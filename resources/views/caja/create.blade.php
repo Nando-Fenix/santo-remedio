@@ -16,6 +16,12 @@
         </p>
     </div>
 
+    @if (!auth()->user()->tienePermiso('abrir_caja'))
+        <div class="alert-danger">
+            No tiene permiso para abrir caja.
+        </div>
+    @else
+
     @if ($errors->any())
         <div class="alert-danger">
             <strong>Revise los siguientes errores:</strong>
@@ -62,16 +68,18 @@
         </div>
 
         <div style="display: flex; gap: 12px; margin-top: 24px;">
-            <button type="submit" class="btn-primary">
-                Abrir caja
-            </button>
+            @if (auth()->user()->tienePermiso('abrir_caja'))
+                <button type="submit" class="btn-primary">
+                    Abrir caja
+                </button>
+            @endif
 
             <a href="{{ route('caja.index') }}" class="btn-secondary">
                 Cancelar
             </a>
         </div>
     </form>
-
+    @endif
 </div>
 
 @endsection

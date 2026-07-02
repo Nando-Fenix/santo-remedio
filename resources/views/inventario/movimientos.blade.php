@@ -16,10 +16,18 @@
             </p>
         </div>
 
-        <a href="{{ route('inventario.index') }}" class="btn-secondary">
-            Volver al inventario
-        </a>
+        @if (auth()->user()->tienePermiso('ver_inventario'))
+            <a href="{{ route('inventario.index') }}" class="btn-secondary">
+                Volver al inventario
+            </a>
+        @endif
     </div>
+
+    @if (!auth()->user()->tienePermiso('ver_movimientos_inventario'))
+        <div class="alert-danger">
+            No tiene permiso para ver movimientos de inventario.
+        </div>
+    @else
 
     <form method="GET" action="{{ route('inventario.movimientos') }}" style="margin-bottom: 18px;">
         <div class="form-grid">
@@ -125,6 +133,7 @@
     <div style="margin-top: 18px;">
         {{ $movimientos->links() }}
     </div>
+    @endif
 
 </div>
 

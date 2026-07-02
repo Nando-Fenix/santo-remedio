@@ -77,9 +77,13 @@
                 @forelse ($ventasDelDia as $venta)
                     <tr>
                         <td>
-                            <a href="{{ route('ventas.show', $venta) }}" class="btn-secondary">
+                            @if (auth()->user()->tienePermiso('ver_ventas'))
+                                <a href="{{ route('ventas.show', $venta) }}" class="btn-secondary">
+                                    {{ $venta->numero_venta }}
+                                </a>
+                            @else
                                 {{ $venta->numero_venta }}
-                            </a>
+                            @endif
                         </td>
                         <td>{{ $venta->fecha_hora->format('H:i') }}</td>
                         <td>{{ $venta->sucursal->nombre ?? '-' }}</td>
@@ -106,7 +110,7 @@
         </table>
     </div>
 </div>
-
+@if (auth()->user()->tienePermiso('ver_inventario'))
 <div class="grid" style="grid-template-columns: repeat(2, 1fr);">
     <div class="card">
         <h3 style="margin-top: 0; color: #4C1D95;">Stock bajo</h3>
@@ -194,7 +198,9 @@
         </div>
     </div>
 </div>
+@endif
 
+@if (auth()->user()->tienePermiso('ver_inventario'))
 <div class="card" style="margin-top: 22px;">
     <h3 style="margin-top: 0; color: #4C1D95;">Productos agotados</h3>
 
@@ -237,5 +243,5 @@
         </table>
     </div>
 </div>
-
+@endif
 @endsection

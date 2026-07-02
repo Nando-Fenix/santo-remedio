@@ -119,15 +119,30 @@
 
                 <div class="form-group">
                     <label>Descuento (%)</label>
-                    <input
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        max="100"
-                        name="descuento_porcentaje"
-                        id="descuento_porcentaje"
-                        value="{{ old('descuento_porcentaje', 0) }}"
-                    >
+
+                    @if (auth()->user()->tienePermiso('aplicar_descuento'))
+                        <input
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            max="100"
+                            name="descuento_porcentaje"
+                            id="descuento_porcentaje"
+                            value="{{ old('descuento_porcentaje', 0) }}"
+                        >
+                    @else
+                        <input
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            max="100"
+                            id="descuento_porcentaje"
+                            value="0"
+                            disabled
+                        >
+
+                        <input type="hidden" name="descuento_porcentaje" value="0">
+                    @endif
                 </div>
 
                 <div class="form-group">
@@ -175,9 +190,11 @@
         <div id="inputs_carrito"></div>
 
         <div style="display: flex; gap: 12px; margin-top: 24px;">
-            <button type="submit" class="btn-primary">
-                Guardar venta
-            </button>
+            @if (auth()->user()->tienePermiso('realizar_venta'))
+                <button type="submit" class="btn-primary">
+                    Guardar venta
+                </button>
+            @endif
 
             <a href="{{ route('ventas.index') }}" class="btn-secondary">
                 Cancelar
@@ -202,6 +219,7 @@
     const cambioVentaText = document.getElementById('cambio_venta');
     const clienteSelect = document.getElementById('cliente_id');
     const descuentoInput = document.getElementById('descuento_porcentaje');
+    const puedeAplicarDescuento = @json(auth()->user()->tienePermiso('aplicar_descuento'));
     const subtotalVentaText = document.getElementById('subtotal_venta');
     const descuentoVentaText = document.getElementById('descuento_venta');
 
@@ -305,7 +323,11 @@
         const unidadesNecesarias = cantidad * item.unidades_equivalentes;
 
         if (unidadesNecesarias > item.stock_disponible) {
-            alert('No hay stock suficiente para esa cantidad.');
+            Swal.fire({
+                icon: 'warning',
+                title: 'Stock insuficiente',
+                text: 'No hay stock suficiente para esa cantidad.'
+            });
             cantidad = Math.floor(item.stock_disponible / item.unidades_equivalentes);
             if (cantidad < 1) cantidad = 1;
         }
@@ -398,18 +420,29 @@
 
     descuentoInput.addEventListener('input', actualizarTotales);
 
+    
+
     clienteSelect.addEventListener('change', function () {
         const option = this.options[this.selectedIndex];
         const descuentoCliente = Number(option.getAttribute('data-descuento') || 0);
 
-        descuentoInput.value = descuentoCliente;
+        if (puedeAplicarDescuento) {
+            descuentoInput.value = descuentoCliente;
+        } else {
+            descuentoInput.value = 0;
+        }
+
         actualizarTotales();
     });
 
     document.getElementById('form_venta').addEventListener('submit', function (event) {
         if (carrito.length === 0) {
             event.preventDefault();
-            alert('Debe agregar al menos un producto.');
+            Swal.fire({
+                icon: 'warning',
+                title: 'Carrito vacío',
+                text: 'Debe agregar al menos un producto.'
+            });
         }
     });
 </script>

@@ -16,6 +16,12 @@
         </p>
     </div>
 
+    @if (!auth()->user()->tienePermiso('registrar_egreso'))
+        <div class="alert-danger">
+            No tiene permiso para registrar egresos de caja.
+        </div>
+    @else
+
     @if ($errors->any())
         <div class="alert-danger">
             <strong>Revise los siguientes errores:</strong>
@@ -69,16 +75,18 @@
         </div>
 
         <div style="display: flex; gap: 12px; margin-top: 24px;">
-            <button type="submit" class="btn-primary">
-                Guardar egreso
-            </button>
+            @if (auth()->user()->tienePermiso('registrar_egreso'))
+                <button type="submit" class="btn-primary">
+                    Guardar egreso
+                </button>
+            @endif
 
             <a href="{{ route('caja.index') }}" class="btn-secondary">
                 Cancelar
             </a>
         </div>
     </form>
-
+    @endif
 </div>
 
 @endsection

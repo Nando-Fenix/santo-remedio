@@ -7,6 +7,12 @@
 @section('content')
 
 <div class="card">
+
+    @if (!auth()->user()->tienePermiso('editar_cliente'))
+        <div class="alert-danger">
+            No tiene permiso para editar clientes.
+        </div>
+    @else
     <form method="POST" action="{{ route('clientes.update', $cliente) }}">
         @csrf
         @method('PUT')
@@ -77,15 +83,20 @@
         </div>
 
         <div style="display: flex; gap: 12px; margin-top: 24px;">
-            <button type="submit" class="btn-primary">
-                Actualizar cliente
-            </button>
+            @if (auth()->user()->tienePermiso('editar_cliente'))
+                <button type="submit" class="btn-primary">
+                    Actualizar cliente
+                </button>
+            @endif
 
-            <a href="{{ route('clientes.index') }}" class="btn-secondary">
-                Cancelar
-            </a>
+            @if (auth()->user()->tienePermiso('ver_clientes'))
+                <a href="{{ route('clientes.index') }}" class="btn-secondary">
+                    Cancelar
+                </a>
+            @endif
         </div>
     </form>
+    @endif
 </div>
 
 @endsection

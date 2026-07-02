@@ -15,7 +15,11 @@
         </p>
     </div>
 
-    @if ($errors->any())
+    @if (!auth()->user()->tienePermiso('ajustar_inventario'))
+        <div class="alert-danger">
+            No tiene permiso para registrar entradas de inventario.
+        </div>
+    @else
         <div class="alert-danger">
             <strong>Revise los siguientes errores:</strong>
             <ul style="margin-bottom: 0;">
@@ -103,16 +107,20 @@
         </div>
 
         <div style="display: flex; gap: 12px; margin-top: 24px;">
-            <button type="submit" class="btn-primary">
-                Guardar entrada
-            </button>
+            @if (auth()->user()->tienePermiso('ajustar_inventario'))
+                <button type="submit" class="btn-primary">
+                    Guardar entrada
+                </button>
+            @endif
 
-            <a href="{{ route('inventario.index') }}" class="btn-secondary">
-                Cancelar
-            </a>
+            @if (auth()->user()->tienePermiso('ver_inventario'))
+                <a href="{{ route('inventario.index') }}" class="btn-secondary">
+                    Cancelar
+                </a>
+            @endif
         </div>
     </form>
-
+@endif  
 </div>
 
 @endsection

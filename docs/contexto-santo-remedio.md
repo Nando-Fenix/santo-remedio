@@ -934,3 +934,123 @@ Cambios:
 - Entrada de inventario solo aparece con permiso `ajustar_inventario`.
 - El usuario puede consultar inventario si tiene permiso `ver_inventario`.
 - Las rutas siguen protegidas por middleware y la vista evita mostrar acciones no permitidas.
+
+### Checkpoint funcional - dashboard por permisos
+
+Se ajustó el dashboard principal.
+
+Cambios:
+- Mensaje de caja actualizado a caja abierta por sucursal.
+- Estado de caja solo aparece con permiso `ver_caja`.
+- Ventas del día, cantidad de ventas y últimas ventas solo aparecen con permiso `ver_ventas`.
+- Caja actual solo aparece con permiso `ver_caja`.
+- Productos por vencer, stock bajo y agotados solo aparecen con permiso `ver_inventario`.
+- El dashboard se mantiene limpio para usuarios con permisos limitados.
+
+### Checkpoint funcional - creación de venta por permisos
+
+Se ajustó la vista de creación de venta.
+
+Cambios:
+- El descuento solo puede ser modificado por usuarios con permiso `aplicar_descuento`.
+- Si el usuario no tiene permiso `aplicar_descuento`, el descuento queda bloqueado en 0.
+- El descuento automático del cliente solo se aplica si el usuario tiene permiso `aplicar_descuento`.
+- Guardar venta solo aparece con permiso `realizar_venta`.
+- Se reemplazaron alertas básicas por SweetAlert para stock insuficiente y carrito vacío.
+- Las rutas siguen protegidas por middleware y el backend debe seguir validando los permisos.
+
+### Checkpoint funcional - creación de compra por permisos
+
+Se ajustó la vista de creación de compra.
+
+Cambios:
+- Guardar compra solo aparece con permiso `registrar_compra`.
+- Agregar producto a compra solo aparece con permiso `registrar_compra`.
+- Nuevo proveedor rápido solo aparece con permiso `creacion_rapida_compras`.
+- Crear producto rápido solo aparece con permiso `creacion_rapida_compras`.
+- Crear categoría rápida solo aparece con permiso `creacion_rapida_compras`.
+- Crear laboratorio rápido solo aparece con permiso `creacion_rapida_compras`.
+- Crear presentación rápida solo aparece con permiso `creacion_rapida_compras`.
+- Si no se encuentra un producto, el botón de creación rápida solo aparece si el usuario tiene permiso.
+- Se añadió validación visual en JavaScript para evitar abrir creación rápida sin permiso.
+- Las rutas deben seguir protegidas por middleware en backend.
+
+### Checkpoint funcional - detalle de compra por permisos
+
+Se ajustó la vista de detalle de compra.
+
+Cambios:
+- Anular compra solo aparece con permiso `anular_compra`.
+- Registrar pago solo aparece con permiso `pagar_compra`.
+- Volver al listado se mantiene disponible.
+- El detalle de compra sigue dependiendo del permiso `ver_compras`.
+- Las rutas siguen protegidas por middleware y la vista evita mostrar acciones no permitidas.
+
+### Checkpoint funcional - pagos y anulación de compras por permisos
+
+Se ajustaron las vistas específicas de compras.
+
+Cambios:
+- En pago de compra, el formulario solo se muestra con permiso `pagar_compra`.
+- Registrar pago solo aparece con permiso `pagar_compra`.
+- En anulación de compra, el formulario solo se muestra con permiso `anular_compra`.
+- Anular compra solo aparece con permiso `anular_compra`.
+- Si un usuario llega a la vista sin permiso, se muestra una alerta y no se permite ejecutar la acción.
+- Las rutas siguen protegidas por middleware y la vista evita mostrar acciones no permitidas.
+
+### Checkpoint funcional - vistas internas de caja por permisos
+
+Se ajustaron las vistas internas de caja.
+
+Cambios:
+- Abrir caja solo muestra formulario con permiso `abrir_caja`.
+- Guardar egreso solo muestra formulario con permiso `registrar_egreso`.
+- Cerrar caja solo muestra formulario con permiso `cerrar_caja`.
+- Movimientos de caja solo muestra filtros y tabla con permiso `ver_caja`.
+- En movimientos de caja, el enlace al detalle de venta solo aparece con permiso `ver_ventas`.
+- Si un usuario llega a una vista interna sin permiso, se muestra alerta y no se permite ejecutar la acción.
+- Las rutas siguen protegidas por middleware.
+
+### Checkpoint funcional - reembolsos por permisos
+
+Se ajustó la vista de creación de reembolsos.
+
+Cambios:
+- El formulario de reembolso solo se muestra con permiso `reembolsar_venta`.
+- Registrar reembolso solo aparece con permiso `reembolsar_venta`.
+- Si un usuario llega a la vista sin permiso, se muestra una alerta y no se permite ejecutar la acción.
+- El reembolso sigue siendo una operación delicada porque afecta inventario y caja.
+- Las rutas siguen protegidas por middleware.
+
+### Checkpoint funcional - cambio de producto por permisos
+
+Se ajustó la vista de creación de cambio de producto.
+
+Cambios:
+- El formulario de cambio solo se muestra con permiso `cambiar_producto`.
+- Registrar cambio solo aparece con permiso `cambiar_producto`.
+- Si un usuario llega a la vista sin permiso, se muestra una alerta y no se permite ejecutar la acción.
+- El cambio de producto sigue siendo una operación delicada porque devuelve stock, descuenta nuevo stock y puede ajustar caja.
+- Las rutas siguen protegidas por middleware.
+
+### Checkpoint funcional - anulación de cambios de producto por permisos
+
+Se ajustó la vista de anulación de cambio de producto.
+
+Cambios:
+- El formulario de anulación solo se muestra con permiso `anular_cambio_producto`.
+- Anular cambio solo aparece con permiso `anular_cambio_producto`.
+- Si un usuario llega a la vista sin permiso, se muestra una alerta y no se permite ejecutar la acción.
+- La anulación de cambio sigue siendo una operación delicada porque revierte inventario y caja.
+- Las rutas siguen protegidas por middleware.
+
+### Checkpoint funcional - formularios de usuarios por permisos
+
+Se ajustaron las vistas de creación y edición de usuarios.
+
+Cambios:
+- Crear usuario solo muestra formulario con permiso `administrar_usuarios`.
+- Editar usuario solo muestra formulario con permiso `administrar_usuarios`.
+- Guardar usuario y guardar cambios solo aparecen con permiso `administrar_usuarios`.
+- Si un usuario llega sin permiso, se muestra alerta y no se permite administrar usuarios.
+- Las rutas siguen protegidas por middleware.

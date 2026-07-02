@@ -6,6 +6,14 @@
 
 @section('content')
 
+@if (!auth()->user()->tienePermiso('administrar_usuarios'))
+    <div class="card">
+        <div class="alert-danger">
+            No tiene permiso para administrar usuarios.
+        </div>
+    </div>
+@else
+
 <form method="POST" action="{{ route('usuarios.store') }}">
     @csrf
 
@@ -18,9 +26,11 @@
                 </p>
             </div>
 
-            <a href="{{ route('usuarios.index') }}" class="btn-secondary">
-                Volver
-            </a>
+            @if (auth()->user()->tienePermiso('administrar_usuarios'))
+                <a href="{{ route('usuarios.index') }}" class="btn-secondary">
+                    Volver
+                </a>
+            @endif
         </div>
     </div>
 
@@ -166,9 +176,11 @@
 
     <div class="card">
         <div style="display:flex; gap:12px;">
-            <button type="submit" class="btn-primary">
-                Guardar usuario
-            </button>
+            @if (auth()->user()->tienePermiso('administrar_usuarios'))
+                <button type="submit" class="btn-primary">
+                    Guardar usuario
+                </button>
+            @endif
 
             <a href="{{ route('usuarios.index') }}" class="btn-secondary">
                 Cancelar
@@ -176,7 +188,7 @@
         </div>
     </div>
 </form>
-
+@endif
 <script>
     function marcarTodosPermisos() {
         document.querySelectorAll('.permiso-checkbox').forEach(input => input.checked = true);
