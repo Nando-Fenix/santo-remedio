@@ -150,6 +150,11 @@ class VentaController extends Controller
         $subtotalVenta = round($totalVentaAntesDescuento, 2);
 
         $descuentoPorcentaje = (float) ($datos['descuento_porcentaje'] ?? 0);
+
+        if (!$user->tienePermiso('aplicar_descuento')) {
+            $descuentoPorcentaje = 0;
+        }
+
         $descuentoTotal = round($subtotalVenta * ($descuentoPorcentaje / 100), 2);
         $totalVenta = round($subtotalVenta - $descuentoTotal, 2);
 
@@ -267,10 +272,14 @@ class VentaController extends Controller
             $cajaAbierta->refresh();
 
             $cajaAbierta->update([
-                'total_final' => $cajaAbierta->monto_inicial
+                'total_final' => round(
+                    $cajaAbierta->monto_inicial
                     + $cajaAbierta->total_efectivo
+                    + $cajaAbierta->total_qr
                     - $cajaAbierta->total_egresos
                     - $cajaAbierta->total_reembolsos,
+                    2
+                ),
             ]);
 
             MovimientoCaja::create([
@@ -434,10 +443,14 @@ class VentaController extends Controller
             $cajaAbierta->refresh();
 
             $cajaAbierta->update([
-                'total_final' => $cajaAbierta->monto_inicial
+                'total_final' => round(
+                    $cajaAbierta->monto_inicial
                     + $cajaAbierta->total_efectivo
+                    + $cajaAbierta->total_qr
                     - $cajaAbierta->total_egresos
                     - $cajaAbierta->total_reembolsos,
+                    2
+                ),
             ]);
 
             $venta->update([

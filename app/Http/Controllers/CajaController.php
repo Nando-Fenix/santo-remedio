@@ -208,10 +208,14 @@ class CajaController extends Controller
             $cajaAbierta->refresh();
 
             $cajaAbierta->update([
-                'total_final' => $cajaAbierta->monto_inicial
+                'total_final' => round(
+                    $cajaAbierta->monto_inicial
                     + $cajaAbierta->total_efectivo
+                    + $cajaAbierta->total_qr
                     - $cajaAbierta->total_egresos
                     - $cajaAbierta->total_reembolsos,
+                    2
+                ),
             ]);
         });
 
@@ -314,11 +318,11 @@ class CajaController extends Controller
             $totalSistema = $efectivoSistema + $qrSistema;
             $totalVerificado = $datos['efectivo_contado'] + $datos['qr_verificado'];
 
-            $estado = ($diferenciaEfectivo == 0 && $diferenciaQr == 0)
+            $estado = (abs($diferenciaEfectivo) < 0.01 && abs($diferenciaQr) < 0.01)
                 ? 'correcto'
                 : 'con_diferencia';
 
-            $cierre = \App\Models\CierreCaja::create([
+            $cierre = CierreCaja::create([
                 'caja_id' => $cajaAbierta->id,
                 'usuario_id' => $user->id, // Usuario que cerró la caja
                 'sucursal_id' => $sucursal->id,

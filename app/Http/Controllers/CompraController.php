@@ -133,7 +133,7 @@ class CompraController extends Controller
             $cantidad = (int) $item['cantidad'];
             $precioCompra = (float) $item['precio_compra'];
             $unidadesIngresadas = $cantidad * $productoPresentacion->unidades_equivalentes;
-            $subtotalItem = $cantidad * $precioCompra;
+            $subtotalItem = round($cantidad * $precioCompra, 2);
 
             $itemsProcesados[] = [
                 'producto_presentacion' => $productoPresentacion,
@@ -153,6 +153,14 @@ class CompraController extends Controller
         $totalCompra = round($subtotalCompra - $descuentoTotal, 2);
         $montoPagado = round(min((float) $datos['monto_pagado'], $totalCompra), 2);
         $saldoPendiente = round($totalCompra - $montoPagado, 2);
+
+        if ($datos['tipo_pago'] === 'contado' && $montoPagado < $totalCompra) {
+            return back()
+                ->withErrors([
+                    'monto_pagado' => 'Una compra al contado debe pagarse completamente.',
+                ])
+                ->withInput();
+        }
 
         if ($saldoPendiente <= 0) {
             $estadoPago = 'pagado';
@@ -266,7 +274,7 @@ class CompraController extends Controller
                     'usuario_id' => $user->id,
                     'fecha_pago' => now(),
                     'monto' => $montoPagado,
-                    'metodo_pago' => 'efectivo',
+                    'metodo_pago' => $datos['metodo_pago'] ?? 'efectivo',
                     'referencia' => null,
                     'observacion' => 'Pago registrado al momento de la compra.',
                 ]);
@@ -550,10 +558,18 @@ class CompraController extends Controller
                 ]);
             }
 
+            $notaPagos = $compra->monto_pagado > 0
+                ? "\nNOTA: Esta compra tenía pagos registrados por " . number_format($compra->monto_pagado, 2) . " Bs. Revisar devolución o ajuste con proveedor."
+                : '';
+
             $compra->update([
                 'estado' => 'anulada',
                 'saldo_pendiente' => 0,
-                'observacion' => trim(($compra->observacion ? $compra->observacion . "\n" : '') . 'ANULADA: ' . $datos['motivo_anulacion']),
+                'observacion' => trim(
+                    ($compra->observacion ? $compra->observacion . "\n" : '')
+                    . 'ANULADA: ' . $datos['motivo_anulacion']
+                    . $notaPagos
+                ),
             ]);
         });
 

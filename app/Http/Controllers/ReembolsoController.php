@@ -212,15 +212,18 @@ class ReembolsoController extends Controller
                         'estado' => 'activo',
                     ]);
 
+                    $montoPorUnidadBase = $item['monto_devuelto'] / max($item['unidades_devueltas'], 1);
+                    $montoDevueltoLote = round($unidadesADevolver * $montoPorUnidadBase, 2);
+
                     DetalleReembolso::create([
                         'reembolso_id' => $reembolso->id,
                         'detalle_venta_id' => $detalleVenta->id,
                         'producto_id' => $detalleVenta->producto_id,
                         'producto_presentacion_id' => $detalleVenta->producto_presentacion_id,
                         'lote_id' => $loteDescontado->lote_id,
-                        'cantidad_devuelta' => $item['cantidad_devuelta'],
+                        'cantidad_devuelta' => 0,
                         'unidades_devueltas' => $unidadesADevolver,
-                        'monto_devuelto' => $item['monto_devuelto'],
+                        'monto_devuelto' => $montoDevueltoLote,
                     ]);
 
                     MovimientoInventario::create([
@@ -243,20 +246,18 @@ class ReembolsoController extends Controller
 
             $metodoPagoPrincipal = $venta->pagos()->with('metodoPago')->first();
 
-            if ($metodoPagoPrincipal?->metodoPago?->tipo === 'efectivo') {
-                $cajaAbierta->decrement('total_efectivo', $montoTotalReembolso);
-            } else {
-                $cajaAbierta->decrement('total_qr', $montoTotalReembolso);
-            }
-
             $cajaAbierta->increment('total_reembolsos', $montoTotalReembolso);
             $cajaAbierta->refresh();
 
             $cajaAbierta->update([
-                'total_final' => $cajaAbierta->monto_inicial
+                'total_final' => round(
+                    $cajaAbierta->monto_inicial
                     + $cajaAbierta->total_efectivo
+                    + $cajaAbierta->total_qr
                     - $cajaAbierta->total_egresos
                     - $cajaAbierta->total_reembolsos,
+                    2
+                ),
             ]);
 
             MovimientoCaja::create([

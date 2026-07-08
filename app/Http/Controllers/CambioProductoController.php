@@ -433,12 +433,6 @@ class CambioProductoController extends Controller
                 }
 
                 if ($tipoDiferencia === 'farmacia_devuelve') {
-                    if ($tipoPago === 'efectivo') {
-                        $cajaAbierta->decrement('total_efectivo', $diferencia);
-                    } else {
-                        $cajaAbierta->decrement('total_qr', $diferencia);
-                    }
-
                     $cajaAbierta->increment('total_reembolsos', $diferencia);
 
                     MovimientoCaja::create([
@@ -457,10 +451,14 @@ class CambioProductoController extends Controller
                 $cajaAbierta->refresh();
 
                 $cajaAbierta->update([
-                    'total_final' => $cajaAbierta->monto_inicial
+                    'total_final' => round(
+                        $cajaAbierta->monto_inicial
                         + $cajaAbierta->total_efectivo
+                        + $cajaAbierta->total_qr
                         - $cajaAbierta->total_egresos
                         - $cajaAbierta->total_reembolsos,
+                        2
+                    ),
                 ]);
             }
 
@@ -666,7 +664,7 @@ class CambioProductoController extends Controller
                 if ($cambioProducto->tipo_diferencia === 'cliente_paga') {
                     /*
                     * En el cambio original el cliente pagó dinero.
-                    * Al anular, se retira ese dinero de la caja.
+                    * Al anular, se revierte ese ingreso.
                     */
                     if ($tipoPago === 'efectivo') {
                         $cajaAbierta->decrement('total_efectivo', $diferencia);
@@ -674,15 +672,13 @@ class CambioProductoController extends Controller
                         $cajaAbierta->decrement('total_qr', $diferencia);
                     }
 
-                    $cajaAbierta->increment('total_reembolsos', $diferencia);
-
                     MovimientoCaja::create([
                         'caja_id' => $cajaAbierta->id,
                         'venta_id' => $cambioProducto->venta_id,
                         'usuario_id' => $user->id,
                         'sucursal_id' => $cambioProducto->sucursal_id,
                         'metodo_pago_id' => $metodoPagoPrincipal?->metodo_pago_id,
-                        'tipo_movimiento' => 'egreso',
+                        'tipo_movimiento' => 'anulacion',
                         'monto' => $diferencia,
                         'descripcion' => 'Anulación de diferencia pagada por cliente en cambio ' . $cambioProducto->numero_cambio,
                         'autorizado_por' => null,
@@ -692,14 +688,8 @@ class CambioProductoController extends Controller
                 if ($cambioProducto->tipo_diferencia === 'farmacia_devuelve') {
                     /*
                     * En el cambio original la farmacia devolvió dinero.
-                    * Al anular, ese dinero vuelve a contabilizarse en caja.
+                    * Al anular, se revierte ese reembolso.
                     */
-                    if ($tipoPago === 'efectivo') {
-                        $cajaAbierta->increment('total_efectivo', $diferencia);
-                    } else {
-                        $cajaAbierta->increment('total_qr', $diferencia);
-                    }
-
                     $cajaAbierta->decrement('total_reembolsos', $diferencia);
 
                     MovimientoCaja::create([
@@ -708,19 +698,19 @@ class CambioProductoController extends Controller
                         'usuario_id' => $user->id,
                         'sucursal_id' => $cambioProducto->sucursal_id,
                         'metodo_pago_id' => $metodoPagoPrincipal?->metodo_pago_id,
-                        'tipo_movimiento' => 'entrada',
+                        'tipo_movimiento' => 'anulacion',
                         'monto' => $diferencia,
                         'descripcion' => 'Anulación de diferencia devuelta por farmacia en cambio ' . $cambioProducto->numero_cambio,
                         'autorizado_por' => null,
                     ]);
                 }
-
                 $cajaAbierta->refresh();
 
                 $cajaAbierta->update([
                     'total_final' => round(
                         $cajaAbierta->monto_inicial
                         + $cajaAbierta->total_efectivo
+                        + $cajaAbierta->total_qr
                         - $cajaAbierta->total_egresos
                         - $cajaAbierta->total_reembolsos,
                         2

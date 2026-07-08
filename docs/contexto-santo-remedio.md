@@ -1054,3 +1054,21 @@ Cambios:
 - Guardar usuario y guardar cambios solo aparecen con permiso `administrar_usuarios`.
 - Si un usuario llega sin permiso, se muestra alerta y no se permite administrar usuarios.
 - Las rutas siguen protegidas por middleware.
+
+### Checkpoint funcional - revisión backend de permisos
+
+Se revisó `routes/web.php` para confirmar protección por middleware.
+
+Cambios:
+- Se confirmó protección backend en ventas, compras, caja, inventario, usuarios, reportes, reembolsos y cambios de producto.
+- Se corrigió la ruta `productos.presentaciones.store`.
+- Agregar presentación de producto ahora queda bajo permiso `editar_producto`, no `crear_producto`.
+- La vista y el backend quedan alineados para presentaciones de productos.
+
+### Pendiente técnico importante
+Crear una estructura para registrar los lotes afectados en cambios de producto.
+
+Motivo:
+- Actualmente el cambio guarda solo el primer lote devuelto y el primer lote nuevo.
+- Si un cambio afecta varios lotes, la anulación puede no revertir exactamente todo por lote.
+- Solución futura: tabla `detalle_cambio_producto_lotes` para guardar cada lote afectado.
