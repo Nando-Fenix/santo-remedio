@@ -49,6 +49,19 @@ class ProductoPresentacionController extends Controller
             'codigo_barras.unique' => 'Este código de barras ya está registrado.',
         ]);
 
+        $existePresentacion = ProductoPresentacion::where('producto_id', $producto->id)
+            ->where('presentacion_id', $datos['presentacion_id'])
+            ->where('estado', 'activo')
+            ->exists();
+
+        if ($existePresentacion) {
+            return back()
+                ->withErrors([
+                    'presentacion_id' => 'Este producto ya tiene registrada esa presentación.',
+                ])
+                ->withInput();
+        }
+
         DB::transaction(function () use ($datos, $producto, $request) {
             $esPrincipal = $request->boolean('es_principal');
 
@@ -62,8 +75,8 @@ class ProductoPresentacionController extends Controller
                 'presentacion_id' => $datos['presentacion_id'],
                 'nombre_mostrado' => $datos['nombre_mostrado'],
                 'unidades_equivalentes' => $datos['unidades_equivalentes'],
-                'precio_compra' => $datos['precio_compra'],
-                'precio_venta' => $datos['precio_venta'],
+                'precio_compra' => round((float) $datos['precio_compra'], 2),
+                'precio_venta' => round((float) $datos['precio_venta'], 2),
                 'es_principal' => $esPrincipal,
                 'estado' => 'activo',
             ]);
@@ -89,6 +102,16 @@ class ProductoPresentacionController extends Controller
     {
         if ($productoPresentacion->producto_id !== $producto->id) {
             abort(404);
+        }
+
+        $stockDisponible = $producto->inventarios()
+            ->where('stock_actual', '>', 0)
+            ->sum('stock_actual');
+
+        if ($stockDisponible > 0) {
+            return redirect()
+                ->route('productos.presentaciones.index', $producto)
+                ->with('error', 'No se puede desactivar la presentación porque el producto todavía tiene stock disponible.');
         }
 
         $productoPresentacion->update([

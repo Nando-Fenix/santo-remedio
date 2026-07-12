@@ -20,15 +20,16 @@
             No tiene permiso para registrar entradas de inventario.
         </div>
     @else
-        <div class="alert-danger">
-            <strong>Revise los siguientes errores:</strong>
-            <ul style="margin-bottom: 0;">
-                @foreach ($errors->all() as $error)
-                    <li>{{ $error }}</li>
-                @endforeach
-            </ul>
-        </div>
-    @endif
+        @if ($errors->any())
+            <div class="alert-danger">
+                <strong>Revise los siguientes errores:</strong>
+                <ul style="margin-bottom: 0;">
+                    @foreach ($errors->all() as $error)
+                        <li>{{ $error }}</li>
+                    @endforeach
+                </ul>
+            </div>
+        @endif
 
     <form method="POST" action="{{ route('inventario.store') }}">
         @csrf

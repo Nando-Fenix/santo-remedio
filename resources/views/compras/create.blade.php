@@ -70,6 +70,16 @@
                         required
                     >
                 </div>
+
+                <div class="form-group">
+                    <label for="metodo_pago">Método de pago</label>
+                    <select name="metodo_pago" id="metodo_pago" class="form-control">
+                        <option value="efectivo" {{ old('metodo_pago') == 'efectivo' ? 'selected' : '' }}>Efectivo</option>
+                        <option value="qr" {{ old('metodo_pago') == 'qr' ? 'selected' : '' }}>QR</option>
+                        <option value="transferencia" {{ old('metodo_pago') == 'transferencia' ? 'selected' : '' }}>Transferencia</option>
+                        <option value="otro" {{ old('metodo_pago') == 'otro' ? 'selected' : '' }}>Otro</option>
+                    </select>
+                </div>
             </div>
 
             <div class="form-group" style="margin-top: 14px;">

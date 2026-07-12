@@ -14,6 +14,7 @@ class ProductoController extends Controller
     {
         $buscar = $request->get('buscar');
         $estado = $request->get('estado');
+        $tipoProducto = $request->get('tipo_producto');
 
         $productos = Producto::with(['categoria', 'laboratorio', 'proveedor'])
             ->when($buscar, function ($query, $buscar) {
@@ -35,11 +36,14 @@ class ProductoController extends Controller
             ->when($estado, function ($query, $estado) {
                 $query->where('estado', $estado);
             })
+            ->when($tipoProducto, function ($query, $tipoProducto) {
+                $query->where('tipo_producto', $tipoProducto);
+            })
             ->latest()
             ->paginate(10)
             ->withQueryString();
 
-        return view('productos.index', compact('productos', 'buscar', 'estado'));
+        return view('productos.index', compact('productos', 'buscar', 'estado', 'tipoProducto'));
     }
 
     public function create()
@@ -58,10 +62,13 @@ class ProductoController extends Controller
             'nombre_generico' => ['nullable', 'string', 'max:150'],
             'concentracion' => ['nullable', 'string', 'max:100'],
             'descripcion' => ['nullable', 'string'],
+            'tipo_producto' => ['required', 'in:medicamento,insumo_medico,producto_general,higiene,bebe,otro'],
             'categoria_id' => ['nullable', 'exists:categorias,id'],
             'laboratorio_id' => ['nullable', 'exists:laboratorios,id'],
             'proveedor_id' => ['nullable', 'exists:proveedores,id'],
         ], [
+            'tipo_producto.required' => 'Seleccione el tipo de producto.',
+            'tipo_producto.in' => 'El tipo de producto seleccionado no es válido.',
             'nombre_comercial.required' => 'El nombre comercial es obligatorio.',
             'categoria_id.exists' => 'La categoría seleccionada no es válida.',
             'laboratorio_id.exists' => 'El laboratorio seleccionado no es válido.',
@@ -93,11 +100,14 @@ class ProductoController extends Controller
             'nombre_generico' => ['nullable', 'string', 'max:150'],
             'concentracion' => ['nullable', 'string', 'max:100'],
             'descripcion' => ['nullable', 'string'],
+            'tipo_producto' => ['required', 'in:medicamento,insumo_medico,producto_general,higiene,bebe,otro'],
             'categoria_id' => ['nullable', 'exists:categorias,id'],
             'laboratorio_id' => ['nullable', 'exists:laboratorios,id'],
             'proveedor_id' => ['nullable', 'exists:proveedores,id'],
             'estado' => ['required', 'in:activo,inactivo'],
         ], [
+            'tipo_producto.required' => 'Seleccione el tipo de producto.',
+            'tipo_producto.in' => 'El tipo de producto seleccionado no es válido.',
             'nombre_comercial.required' => 'El nombre comercial es obligatorio.',
             'categoria_id.exists' => 'La categoría seleccionada no es válida.',
             'laboratorio_id.exists' => 'El laboratorio seleccionado no es válido.',
@@ -114,6 +124,16 @@ class ProductoController extends Controller
 
     public function destroy(Producto $producto)
     {
+        $stockDisponible = $producto->inventarios()
+            ->where('stock_actual', '>', 0)
+            ->sum('stock_actual');
+
+        if ($stockDisponible > 0) {
+            return redirect()
+                ->route('productos.index')
+                ->with('error', 'No se puede desactivar el producto porque todavía tiene stock disponible.');
+        }
+
         $producto->update([
             'estado' => 'inactivo',
         ]);

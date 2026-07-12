@@ -98,6 +98,7 @@ class CompraController extends Controller
             'proveedor_id' => ['required', 'exists:proveedores,id'],
             'tipo_pago' => ['required', 'in:contado,credito'],
             'monto_pagado' => ['required', 'numeric', 'min:0'],
+            'metodo_pago' => ['nullable', 'in:efectivo,qr,transferencia,otro'],
             'observacion' => ['nullable', 'string'],
 
             'items' => ['required', 'array', 'min:1'],
@@ -160,6 +161,9 @@ class CompraController extends Controller
                     'monto_pagado' => 'Una compra al contado debe pagarse completamente.',
                 ])
                 ->withInput();
+        }
+        if ($montoPagado > 0 && empty($datos['metodo_pago'])) {
+            $datos['metodo_pago'] = 'efectivo';
         }
 
         if ($saldoPendiente <= 0) {

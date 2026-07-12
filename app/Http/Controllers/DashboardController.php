@@ -17,20 +17,30 @@ class DashboardController extends Controller
         $sucursal = $user->sucursalPrincipal()->first()
             ?? $user->sucursales()->wherePivot('estado', 'activo')->first();
 
+        if (!$sucursal) {
+            return view('dashboard', [
+                'sucursal' => null,
+                'totalVentasDia' => 0,
+                'cantidadVentasDia' => 0,
+                'cajaAbierta' => null,
+                'stockBajoCantidad' => 0,
+                'productosAgotadosCantidad' => 0,
+                'productosPorVencerCantidad' => 0,
+                'ultimasVentas' => collect(),
+            ])->with('error', 'El usuario no tiene una sucursal asignada.');
+        }
+
         /*
         |--------------------------------------------------------------------------
         | Caja abierta de la sucursal
         |--------------------------------------------------------------------------
         */
-        $cajaAbierta = null;
 
-        if ($sucursal) {
-            $cajaAbierta = Caja::with(['turno', 'usuario'])
-                ->where('sucursal_id', $sucursal->id)
-                ->where('estado', 'abierta')
-                ->latest('fecha_apertura')
-                ->first();
-        }
+        $cajaAbierta = Caja::with(['turno', 'usuario'])
+            ->where('sucursal_id', $sucursal->id)
+            ->where('estado', 'abierta')
+            ->latest('fecha_apertura')
+            ->first();
 
         /*
         |--------------------------------------------------------------------------
@@ -41,24 +51,18 @@ class DashboardController extends Controller
         $finDia = Carbon::now()->endOfDay();
 
         $ventasQuery = Venta::where('estado', 'completada')
+            ->where('sucursal_id', $sucursal->id)
             ->whereBetween('fecha_hora', [$inicioDia, $finDia]);
-
-        if ($sucursal) {
-            $ventasQuery->where('sucursal_id', $sucursal->id);
-        }
 
         /*
         | Si quieres que el dashboard muestre solo ventas de la caja abierta,
         | dejamos este filtro. Si prefieres todas las ventas del día de la sucursal,
         | puedes borrar este bloque.
         */
-        if ($cajaAbierta) {
-            $ventasQuery->where('caja_id', $cajaAbierta->id);
-        }
 
         $ventasDelDia = $ventasQuery->get();
 
-        $totalVentasDia = $ventasDelDia->sum('total');
+        $totalVentasDia = round($ventasDelDia->sum('total'), 2);
         $cantidadVentasDia = $ventasDelDia->count();
 
         /*
@@ -68,9 +72,11 @@ class DashboardController extends Controller
         */
         $stockBajoQuery = Inventario::whereColumn('stock_actual', '<=', 'stock_minimo')
             ->where('stock_actual', '>', 0)
-            ->where('estado', 'activo');
+            ->where('estado', 'activo')
+            ->where('sucursal_id', $sucursal->id);
 
-        $agotadosQuery = Inventario::where('stock_actual', '<=', 0);
+        $agotadosQuery = Inventario::where('stock_actual', '<=', 0)
+            ->where('sucursal_id', $sucursal->id);
 
         $porVencerQuery = Inventario::whereHas('lote', function ($query) {
                 $query->whereNotNull('fecha_vencimiento')
@@ -80,13 +86,12 @@ class DashboardController extends Controller
                     ]);
             })
             ->where('stock_actual', '>', 0)
-            ->where('estado', 'activo');
+            ->where('estado', 'activo')
+            ->where('sucursal_id', $sucursal->id);
 
-        if ($sucursal) {
-            $stockBajoQuery->where('sucursal_id', $sucursal->id);
-            $agotadosQuery->where('sucursal_id', $sucursal->id);
-            $porVencerQuery->where('sucursal_id', $sucursal->id);
-        }
+        $stockBajoQuery->where('sucursal_id', $sucursal->id);
+        $agotadosQuery->where('sucursal_id', $sucursal->id);
+        $porVencerQuery->where('sucursal_id', $sucursal->id);
 
         $stockBajoCantidad = $stockBajoQuery->count();
         $productosAgotadosCantidad = $agotadosQuery->count();
@@ -98,12 +103,7 @@ class DashboardController extends Controller
         |--------------------------------------------------------------------------
         */
         $ultimasVentas = Venta::with(['usuario', 'sucursal', 'pagos.metodoPago'])
-            ->when($sucursal, function ($query) use ($sucursal) {
-                $query->where('sucursal_id', $sucursal->id);
-            })
-            ->when($cajaAbierta, function ($query) use ($cajaAbierta) {
-                $query->where('caja_id', $cajaAbierta->id);
-            })
+            ->where('sucursal_id', $sucursal->id)
             ->latest('fecha_hora')
             ->limit(5)
             ->get();

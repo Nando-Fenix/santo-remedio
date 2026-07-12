@@ -83,7 +83,7 @@
     <div class="card" style="margin-bottom: 22px;">
         <h3 style="margin-top: 0; color: #4C1D95;">Resumen actual</h3>
 
-        <div class="grid" style="grid-template-columns: repeat(4, 1fr); margin-bottom: 0;">
+        <div class="grid" style="grid-template-columns: repeat(5, 1fr); margin-bottom: 0;">
             <div class="stat-card">
                 <span>Efectivo</span>
                 <h3>{{ number_format($cajaAbierta->total_efectivo, 2) }} Bs</h3>
@@ -97,6 +97,11 @@
             <div class="stat-card">
                 <span>Egresos</span>
                 <h3>{{ number_format($cajaAbierta->total_egresos, 2) }} Bs</h3>
+            </div>
+
+            <div class="stat-card">
+                <span>Reembolsos / devoluciones</span>
+                <h3>{{ number_format($cajaAbierta->total_reembolsos, 2) }} Bs</h3>
             </div>
 
             <div class="stat-card">

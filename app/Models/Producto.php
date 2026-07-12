@@ -17,6 +17,7 @@ class Producto extends Model
         'laboratorio_id',
         'proveedor_id',
         'estado',
+        'tipo_producto',
     ];
 
     public function categoria()
@@ -90,4 +91,5 @@ class Producto extends Model
     {
         return $this->hasMany(DetalleCambioProducto::class, 'producto_nuevo_id');
     }
+
 }

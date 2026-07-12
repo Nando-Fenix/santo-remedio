@@ -52,6 +52,19 @@
             </div>
 
             <div class="form-group">
+                <label for="tipo_producto">Tipo de producto</label>
+                <select name="tipo_producto" id="tipo_producto" class="form-control" required>
+                    <option value="">Seleccione un tipo</option>
+                    <option value="medicamento" {{ old('tipo_producto') == 'medicamento' ? 'selected' : '' }}>Medicamento</option>
+                    <option value="insumo_medico" {{ old('tipo_producto') == 'insumo_medico' ? 'selected' : '' }}>Insumo médico</option>
+                    <option value="producto_general" {{ old('tipo_producto') == 'producto_general' ? 'selected' : '' }}>Producto general</option>
+                    <option value="higiene" {{ old('tipo_producto') == 'higiene' ? 'selected' : '' }}>Higiene</option>
+                    <option value="bebe" {{ old('tipo_producto') == 'bebe' ? 'selected' : '' }}>Bebé</option>
+                    <option value="otro" {{ old('tipo_producto') == 'otro' ? 'selected' : '' }}>Otro</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
                 <label>Categoría</label>
                 <select name="categoria_id">
                     <option value="">Seleccione una categoría</option>
