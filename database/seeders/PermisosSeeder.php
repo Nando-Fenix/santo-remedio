@@ -63,6 +63,32 @@ class PermisosSeeder extends Seeder
             ['nombre' => 'editar_proveedor', 'modulo' => 'Proveedores', 'descripcion' => 'Editar proveedores.'],
             ['nombre' => 'eliminar_proveedor', 'modulo' => 'Proveedores', 'descripcion' => 'Eliminar o desactivar proveedores.'],
             ['nombre' => 'ver_ventas', 'modulo' => 'Ventas', 'descripcion' => 'Consultar ventas.'],
+
+            [
+                'nombre' => 'ver_promociones',
+                'descripcion' => 'Ver promociones',
+                'modulo' => 'Promociones',
+            ],
+            [
+                'nombre' => 'crear_promocion',
+                'descripcion' => 'Crear promociones',
+                'modulo' => 'Promociones',
+            ],
+            [
+                'nombre' => 'editar_promocion',
+                'descripcion' => 'Editar promociones',
+                'modulo' => 'Promociones',
+            ],
+            [
+                'nombre' => 'desactivar_promocion',
+                'descripcion' => 'Desactivar promociones',
+                'modulo' => 'Promociones',
+            ],
+            [
+                'nombre' => 'vender_promocion',
+                'descripcion' => 'Vender promociones',
+                'modulo' => 'Promociones',
+            ],
         ];
 
         foreach ($permisos as $permiso) {
@@ -99,6 +125,12 @@ class PermisosSeeder extends Seeder
                 'ver_caja',
                 'abrir_caja',
                 'cerrar_caja',
+
+                'ver_promociones',
+                'crear_promocion',
+                'editar_promocion',
+                'desactivar_promocion',
+                'vender_promocion',
             ])->pluck('id')->toArray();
 
             $vendedor->permisos()->sync($permisosVendedor);

@@ -208,6 +208,10 @@ class CompraController extends Controller
             foreach ($itemsProcesados as $item) {
                 $productoPresentacion = $item['producto_presentacion'];
 
+                $productoPresentacion->update([
+                    'precio_compra' => round((float) $item['precio_compra'], 2),
+                ]);
+
                 $numeroLote = $item['numero_lote'];
 
                 if (!$numeroLote) {
@@ -300,7 +304,11 @@ class CompraController extends Controller
             return response()->json([]);
         }
 
-        $productos = ProductoPresentacion::with(['producto', 'presentacion', 'codigosBarras'])
+        $productos = ProductoPresentacion::with([
+                'producto.laboratorio',
+                'presentacion',
+                'codigosBarras',
+            ])
             ->where('estado', 'activo')
             ->whereHas('producto', function ($query) {
                 $query->where('estado', 'activo');
@@ -310,26 +318,40 @@ class CompraController extends Controller
                     ->orWhereHas('producto', function ($q) use ($termino) {
                         $q->where('nombre_comercial', 'like', "%{$termino}%")
                             ->orWhere('nombre_generico', 'like', "%{$termino}%")
-                            ->orWhere('concentracion', 'like', "%{$termino}%");
+                            ->orWhere('concentracion', 'like', "%{$termino}%")
+                            ->orWhereHas('laboratorio', function ($lab) use ($termino) {
+                                $lab->where('nombre', 'like', "%{$termino}%");
+                            });
                     })
                     ->orWhereHas('codigosBarras', function ($q) use ($termino) {
                         $q->where('codigo', $termino)
                             ->where('estado', 'activo');
                     });
             })
+            ->orderByDesc('es_principal')
             ->limit(10)
             ->get()
             ->map(function ($presentacion) {
+                $producto = $presentacion->producto;
+                $unidadesEquivalentes = max((int) $presentacion->unidades_equivalentes, 1);
+
                 return [
                     'id' => $presentacion->id,
                     'producto_id' => $presentacion->producto_id,
-                    'nombre' => $presentacion->producto->nombre_comercial ?? '-',
-                    'generico' => $presentacion->producto->nombre_generico ?? '',
-                    'concentracion' => $presentacion->producto->concentracion ?? '',
-                    'presentacion' => $presentacion->nombre_mostrado,
-                    'unidades_equivalentes' => $presentacion->unidades_equivalentes,
+
+                    'nombre' => $producto->nombre_comercial ?? '-',
+                    'nombre_mostrado' => $presentacion->nombre_mostrado,
+                    'generico' => $producto->nombre_generico ?? '',
+                    'concentracion' => $producto->concentracion ?? '',
+                    'laboratorio' => $producto->laboratorio->nombre ?? '',
+                    'tipo_producto' => $producto->tipo_producto ?? '',
+
+                    'presentacion' => $presentacion->presentacion->nombre ?? '',
+                    'unidades_equivalentes' => $unidadesEquivalentes,
+
                     'precio_compra' => (float) $presentacion->precio_compra,
                     'precio_venta' => (float) $presentacion->precio_venta,
+
                     'codigo_barras' => $presentacion->codigosBarras->first()->codigo ?? null,
                 ];
             })
@@ -597,6 +619,7 @@ class CompraController extends Controller
             'nombre_comercial' => ['required', 'string', 'max:150'],
             'nombre_generico' => ['nullable', 'string', 'max:150'],
             'concentracion' => ['nullable', 'string', 'max:80'],
+            'tipo_producto' => ['nullable', 'in:medicamento,insumo_medico,producto_general,higiene,bebe,otro'],
 
             'laboratorio_id' => ['nullable', 'exists:laboratorios,id'],
             'categoria_id' => ['nullable', 'exists:categorias,id'],
@@ -626,14 +649,26 @@ class CompraController extends Controller
                 'nombre_comercial' => $datos['nombre_comercial'],
                 'nombre_generico' => $datos['nombre_generico'] ?? null,
                 'concentracion' => $datos['concentracion'] ?? null,
+                'tipo_producto' => $datos['tipo_producto'] ?? 'medicamento',
                 'descripcion' => null,
                 'estado' => 'activo',
             ]);
 
+            $producto->load('laboratorio');
+
             $presentacion = Presentacion::findOrFail($datos['presentacion_id']);
 
-            $nombreMostrado = $datos['nombre_mostrado']
-                ?: $producto->nombre_comercial . ' - ' . $presentacion->nombre;
+            $partesNombre = array_filter([
+                $producto->nombre_comercial,
+                $producto->concentracion,
+                $producto->laboratorio->nombre ?? null,
+            ]);
+
+            $nombreBase = trim(implode(' ', $partesNombre));
+
+            $nombreMostrado = !empty($datos['nombre_mostrado'])
+                ? $datos['nombre_mostrado']
+                : $nombreBase . ' - ' . $presentacion->nombre;
 
             $productoPresentacion = ProductoPresentacion::create([
                 'producto_id' => $producto->id,
@@ -658,7 +693,7 @@ class CompraController extends Controller
             }
 
             return $productoPresentacion->load([
-                'producto',
+                'producto.laboratorio',
                 'presentacion',
                 'codigosBarras',
             ]);
@@ -670,11 +705,17 @@ class CompraController extends Controller
             'producto' => [
                 'producto_presentacion_id' => $productoPresentacion->id,
                 'producto_id' => $productoPresentacion->producto_id,
+
                 'nombre_producto' => $productoPresentacion->producto->nombre_comercial,
+                'nombre_mostrado' => $productoPresentacion->nombre_mostrado,
                 'nombre_generico' => $productoPresentacion->producto->nombre_generico,
                 'concentracion' => $productoPresentacion->producto->concentracion,
-                'presentacion' => $productoPresentacion->nombre_mostrado,
+                'laboratorio' => $productoPresentacion->producto->laboratorio->nombre ?? '',
+                'tipo_producto' => $productoPresentacion->producto->tipo_producto ?? '',
+
+                'presentacion' => $productoPresentacion->presentacion->nombre ?? '',
                 'unidades_equivalentes' => $productoPresentacion->unidades_equivalentes,
+
                 'precio_compra' => (float) $productoPresentacion->precio_compra,
                 'precio_venta' => (float) $productoPresentacion->precio_venta,
                 'stock_disponible' => 0,
@@ -820,6 +861,7 @@ class CompraController extends Controller
             'sucursal',
             'usuario',
             'detalles.producto',
+            'detalles.producto.laboratorio',
             'detalles.productoPresentacion.presentacion',
             'detalles.lote',
             'pagos.usuario',

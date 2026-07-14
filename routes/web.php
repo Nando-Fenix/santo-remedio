@@ -12,6 +12,7 @@ use App\Http\Controllers\VentaProductoController;
 use App\Http\Controllers\UsuarioController;
 use App\Http\Controllers\ProductoPresentacionController;
 use App\Http\Controllers\ProveedorController;
+use App\Http\Controllers\PromocionController;
 use App\Http\Controllers\ReembolsoController;
 use App\Http\Controllers\ReporteController;
 use App\Http\Controllers\AuthController;
@@ -50,6 +51,9 @@ Route::middleware('auth')->group(function () {
 
         Route::post('/ventas', [VentaController::class, 'store'])
             ->name('ventas.store');
+
+        Route::get('/ventas/buscar-promociones', [VentaProductoController::class, 'buscarPromociones'])
+            ->name('ventas.buscar-promociones');
 
         Route::get('/ventas/buscar-productos', [VentaProductoController::class, 'buscar'])
             ->name('ventas.buscar-productos');
@@ -232,6 +236,12 @@ Route::middleware('auth')->group(function () {
 
         Route::post('/productos/{producto}/presentaciones', [ProductoPresentacionController::class, 'store'])
             ->name('productos.presentaciones.store');
+
+        Route::get('/productos/{producto}/presentaciones/{productoPresentacion}/editar', [ProductoPresentacionController::class, 'edit'])
+            ->name('productos.presentaciones.edit');
+
+        Route::put('/productos/{producto}/presentaciones/{productoPresentacion}', [ProductoPresentacionController::class, 'update'])
+            ->name('productos.presentaciones.update');
     });
 
     Route::middleware('permiso:desactivar_producto')->group(function () {
@@ -387,4 +397,41 @@ Route::middleware('auth')->group(function () {
         Route::get('/reportes', [ReporteController::class, 'index'])
             ->name('reportes.index');
     });
+
+    /*
+    |--------------------------------------------------------------------------
+    | Promociones
+    |--------------------------------------------------------------------------
+    */
+
+    Route::middleware('permiso:ver_promociones')->group(function () {
+        Route::get('/promociones', [PromocionController::class, 'index'])
+            ->name('promociones.index');
+
+        Route::get('/promociones/{promocion}', [PromocionController::class, 'show'])
+            ->name('promociones.show');
+    });
+
+    Route::middleware('permiso:crear_promocion')->group(function () {
+        Route::get('/promociones/crear/nueva', [PromocionController::class, 'create'])
+            ->name('promociones.create');
+
+        Route::post('/promociones', [PromocionController::class, 'store'])
+            ->name('promociones.store');
+
+        Route::get('/promociones/buscar/productos', [PromocionController::class, 'buscarProductos'])
+            ->name('promociones.buscar-productos');
+    });
+
+    Route::middleware('permiso:editar_promocion')->group(function () {
+        Route::get('/promociones/{promocion}/editar', [PromocionController::class, 'edit'])
+            ->name('promociones.edit');
+
+        Route::put('/promociones/{promocion}', [PromocionController::class, 'update'])
+            ->name('promociones.update');
+    });
+
+    Route::delete('/promociones/{promocion}', [PromocionController::class, 'destroy'])
+        ->middleware('permiso:desactivar_promocion')
+        ->name('promociones.destroy');
 });

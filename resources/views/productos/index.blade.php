@@ -2,7 +2,7 @@
 
 @section('title', 'Productos | Santo Remedio')
 @section('page-title', 'Productos')
-@section('page-subtitle', 'Registro y consulta de medicamentos')
+@section('page-subtitle', 'Registro y consulta de productos listos para venta')
 
 @section('content')
 
@@ -49,6 +49,18 @@
                         <option value="inactivo" @selected(($estado ?? '') === 'inactivo')>Inactivo</option>
                     </select>
                 </div>
+                <div class="form-group">
+                    <label>Tipo de producto</label>
+                    <select name="tipo_producto">
+                        <option value="">Todos</option>
+                        <option value="medicamento" @selected(($tipoProducto ?? '') === 'medicamento')>Medicamento</option>
+                        <option value="insumo_medico" @selected(($tipoProducto ?? '') === 'insumo_medico')>Insumo médico</option>
+                        <option value="producto_general" @selected(($tipoProducto ?? '') === 'producto_general')>Producto general</option>
+                        <option value="higiene" @selected(($tipoProducto ?? '') === 'higiene')>Higiene</option>
+                        <option value="bebe" @selected(($tipoProducto ?? '') === 'bebe')>Bebé</option>
+                        <option value="otro" @selected(($tipoProducto ?? '') === 'otro')>Otro</option>
+                    </select>
+                </div>
             </div>
 
             <div style="display: flex; gap: 10px; margin-top: 14px;">
@@ -66,30 +78,94 @@
         <table class="table">
             <thead>
                 <tr>
-                    <th>Nombre comercial</th>
-                    <th>Nombre genérico</th>
-                    <th>Concentración</th>
+                    <th>Producto</th>
+                    <th>Tipo</th>
                     <th>Categoría</th>
-                    <th>Laboratorio</th>
-                    <th>Proveedor</th>
+                    <th>Laboratorio / Marca</th>
+                    <th>Presentación principal</th>
+                    <th>Precio venta</th>
+                    <th>Stock</th>
+                    <th>Presentaciones</th>
                     <th>Estado</th>
                     <th>Acciones</th>
                 </tr>
             </thead>
+
             <tbody>
                 @forelse ($productos as $producto)
+                    @php
+                        $presentacionPrincipal = $producto->presentacionPrincipal;
+                        $stockTotal = $producto->inventarios->sum('stock_actual');
+
+                        $tiposProducto = [
+                            'medicamento' => 'Medicamento',
+                            'insumo_medico' => 'Insumo médico',
+                            'producto_general' => 'Producto general',
+                            'higiene' => 'Higiene',
+                            'bebe' => 'Bebé',
+                            'otro' => 'Otro',
+                        ];
+                    @endphp
+
                     <tr>
-                        <td>{{ $producto->nombre_comercial }}</td>
-                        <td>{{ $producto->nombre_generico ?? '-' }}</td>
-                        <td>{{ $producto->concentracion ?? '-' }}</td>
+                        <td>
+                            <strong>{{ $producto->nombre_comercial }}</strong>
+
+                            @if ($producto->concentracion)
+                                <div style="font-size: 13px; color: #6B7280;">
+                                    {{ $producto->concentracion }}
+                                </div>
+                            @endif
+
+                            @if ($producto->nombre_generico)
+                                <div style="font-size: 13px; color: #6B7280;">
+                                    Genérico: {{ $producto->nombre_generico }}
+                                </div>
+                            @endif
+                        </td>
+
+                        <td>
+                            {{ $tiposProducto[$producto->tipo_producto] ?? 'Sin tipo' }}
+                        </td>
+
                         <td>{{ $producto->categoria->nombre ?? '-' }}</td>
+
                         <td>{{ $producto->laboratorio->nombre ?? '-' }}</td>
-                        <td>{{ $producto->proveedor->nombre ?? '-' }}</td>
+
+                        <td>
+                            @if ($presentacionPrincipal)
+                                <strong>{{ $presentacionPrincipal->nombre_mostrado }}</strong>
+
+                                <div style="font-size: 13px; color: #6B7280;">
+                                    Equivale a {{ $presentacionPrincipal->unidades_equivalentes }} unidad(es)
+                                </div>
+                            @else
+                                <span style="color: #DC2626;">Sin presentación</span>
+                            @endif
+                        </td>
+
+                        <td>
+                            @if ($presentacionPrincipal)
+                                {{ number_format($presentacionPrincipal->precio_venta, 2) }} Bs
+                            @else
+                                -
+                            @endif
+                        </td>
+
+                        <td>
+                            <strong>{{ $stockTotal }}</strong>
+                        </td>
+
+                        <td>
+                            {{ $producto->presentaciones_count }}
+                        </td>
+
                         <td>
                             <span class="badge {{ $producto->estado === 'activo' ? 'badge-success' : 'badge-danger' }}">
                                 {{ ucfirst($producto->estado) }}
                             </span>
                         </td>
+
                         <td>
                             <div style="display: flex; gap: 8px; flex-wrap: wrap;">
                                 @if (auth()->user()->tienePermiso('ver_productos'))
@@ -121,7 +197,7 @@
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="8" style="text-align: center; color: #6B7280;">
+                        <td colspan="10" style="text-align: center; color: #6B7280;">
                             Todavía no hay productos registrados.
                         </td>
                     </tr>

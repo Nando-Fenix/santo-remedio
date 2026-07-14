@@ -53,4 +53,9 @@ class Lote extends Model
     {
         return $this->hasMany(DetalleCambioProducto::class, 'lote_nuevo_id');
     }
+
+    public function promocionItems()
+    {
+        return $this->hasMany(PromocionItem::class, 'lote_id');
+    }
 }

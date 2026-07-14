@@ -77,4 +77,9 @@ class Venta extends Model
     {
         return $this->hasMany(CambioProducto::class);
     }
+
+    public function promociones()
+    {
+        return $this->hasMany(DetalleVentaPromocion::class);
+    }
 }

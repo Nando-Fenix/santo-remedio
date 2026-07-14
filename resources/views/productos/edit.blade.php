@@ -2,7 +2,7 @@
 
 @section('title', 'Editar producto | Santo Remedio')
 @section('page-title', 'Editar producto')
-@section('page-subtitle', 'Modificar datos principales del medicamento')
+@section('page-subtitle', 'Modificar datos generales del producto')
 
 @section('content')
 
@@ -11,7 +11,7 @@
     <div style="margin-bottom: 22px;">
         <h2 style="margin: 0; color: #4C1D95;">Editar producto</h2>
         <p style="margin: 6px 0 0; color: #6B7280;">
-            Modifique los datos principales del medicamento. Las presentaciones y códigos de barras se administran en su sección correspondiente.
+            Modifique los datos generales del producto. Los precios, códigos de barras y formas de venta se administran en presentaciones.
         </p>
     </div>
 
@@ -43,6 +43,8 @@
                     type="text" 
                     name="nombre_comercial" 
                     value="{{ old('nombre_comercial', $producto->nombre_comercial) }}"
+                    placeholder="Ej. Diclofenaco, Cepillo dental Colgate, Biberón Avent"
+                    required
                 >
             </div>
 
@@ -61,6 +63,7 @@
                     type="text" 
                     name="concentracion" 
                     value="{{ old('concentracion', $producto->concentracion) }}"
+                    placeholder="Ej. 500mg, 75mg/3ml, 250ml"
                 >
             </div>
 
@@ -113,13 +116,6 @@
                 </select>
             </div>
 
-            <div class="form-group">
-                <label>Estado</label>
-                <select name="estado">
-                    <option value="activo" @selected(old('estado', $producto->estado) === 'activo')>Activo</option>
-                    <option value="inactivo" @selected(old('estado', $producto->estado) === 'inactivo')>Inactivo</option>
-                </select>
-            </div>
         </div>
 
         <div class="form-group" style="margin-top: 18px;">
@@ -132,6 +128,12 @@
                 <button type="submit" class="btn-primary">
                     Guardar cambios
                 </button>
+            @endif
+
+            @if (auth()->user()->tienePermiso('ver_productos'))
+                <a href="{{ route('productos.presentaciones.index', $producto) }}" class="btn-secondary">
+                    Gestionar presentaciones
+                </a>
             @endif
 
             @if (auth()->user()->tienePermiso('ver_productos'))

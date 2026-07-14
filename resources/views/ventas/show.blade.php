@@ -45,9 +45,11 @@
 
             @endif
 
-            <a href="{{ route('ventas.index') }}" class="btn-secondary">
-                Volver a ventas
-            </a>
+            @if (auth()->user()->tienePermiso('ver_ventas'))
+                <a href="{{ route('ventas.index') }}" class="btn-secondary">
+                    Volver a ventas
+                </a>
+            @endif
         </div>
     </div>
 </div>
@@ -95,12 +97,12 @@
         <table class="table">
             <thead>
                 <tr>
-                    <th>Producto</th>
-                    <th>Presentación</th>
-                    <th>Lote</th>
+                    <th>Producto vendido</th>
+                    <th>Forma</th>
+                    <th>Lote descontado</th>
                     <th>Cantidad</th>
                     <th>Unidades descontadas</th>
-                    <th>Precio</th>
+                    <th>Precio unitario</th>
                     <th>Subtotal</th>
                 </tr>
             </thead>
@@ -108,19 +110,48 @@
                 @foreach ($venta->detalles as $detalle)
                     <tr>
                         <td>
-                            {{ $detalle->producto->nombre_comercial ?? '-' }}
-                            @if($detalle->producto?->concentracion)
+                            <strong>{{ $detalle->productoPresentacion->nombre_mostrado ?? $detalle->producto->nombre_comercial ?? '-' }}</strong>
+
+                            @if($detalle->producto?->laboratorio || $detalle->producto?->concentracion)
                                 <br>
-                                <small style="color: #6B7280;">{{ $detalle->producto->concentracion }}</small>
+                                <small style="color: #6B7280;">
+                                    @if($detalle->producto?->laboratorio)
+                                        {{ $detalle->producto->laboratorio->nombre }}
+                                    @endif
+
+                                    @if($detalle->producto?->laboratorio && $detalle->producto?->concentracion)
+                                        |
+                                    @endif
+
+                                    @if($detalle->producto?->concentracion)
+                                        {{ $detalle->producto->concentracion }}
+                                    @endif
+                                </small>
                             @endif
                         </td>
-                        <td>{{ $detalle->productoPresentacion->nombre_mostrado ?? '-' }}</td>
+
+                        <td>
+                            {{ $detalle->productoPresentacion->presentacion->nombre ?? '-' }}
+
+                            @if($detalle->productoPresentacion?->unidades_equivalentes)
+                                <br>
+                                <small style="color: #6B7280;">
+                                    {{ $detalle->productoPresentacion->unidades_equivalentes }} unidad(es) por cantidad
+                                </small>
+                            @endif
+                        </td>
                         <td>
                             @forelse ($detalle->lotesDescontados as $loteDescontado)
-                                <div>
-                                    {{ $loteDescontado->lote->numero_lote ?? 'Sin lote' }}
+                                <div style="margin-bottom: 4px;">
+                                    <strong>{{ $loteDescontado->lote->numero_lote ?? 'Sin lote' }}</strong>
+
+                                    <br>
                                     <small style="color: #6B7280;">
-                                        ({{ $loteDescontado->unidades_descontadas }} unidades)
+                                        {{ $loteDescontado->unidades_descontadas }} unidad(es)
+
+                                        @if($loteDescontado->lote?->fecha_vencimiento)
+                                            | Vence: {{ $loteDescontado->lote->fecha_vencimiento->format('d/m/Y') }}
+                                        @endif
                                     </small>
                                 </div>
                             @empty
@@ -135,6 +166,98 @@
                 @endforeach
             </tbody>
         </table>
+
+        @if ($venta->promociones->count() > 0)
+            <div class="card" style="margin-top: 22px;">
+                <h3 style="margin-top: 0; color: #4C1D95;">
+                    Promociones vendidas
+                </h3>
+
+                <div class="table-container">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Promoción</th>
+                                <th>Cantidad</th>
+                                <th>Precio unitario</th>
+                                <th>Subtotal</th>
+                                <th>Productos descontados</th>
+                            </tr>
+                        </thead>
+
+                        <tbody>
+                            @foreach ($venta->promociones as $detallePromo)
+                                <tr>
+                                    <td>
+                                        <strong>{{ $detallePromo->promocion->nombre ?? 'Promoción eliminada' }}</strong>
+
+                                        @if ($detallePromo->promocion?->descripcion)
+                                            <br>
+                                            <small style="color: #6B7280;">
+                                                {{ $detallePromo->promocion->descripcion }}
+                                            </small>
+                                        @endif
+                                    </td>
+
+                                    <td>
+                                        {{ $detallePromo->cantidad }}
+                                    </td>
+
+                                    <td>
+                                        {{ number_format($detallePromo->precio_unitario, 2) }} Bs
+                                    </td>
+
+                                    <td>
+                                        <strong>{{ number_format($detallePromo->subtotal, 2) }} Bs</strong>
+                                    </td>
+
+                                    <td>
+                                        @foreach ($detallePromo->items as $item)
+                                            <div style="margin-bottom: 8px;">
+                                                <strong>
+                                                    {{ $item->productoPresentacion->nombre_mostrado ?? $item->producto->nombre_comercial ?? '-' }}
+                                                </strong>
+
+                                                @if ($item->producto?->laboratorio || $item->producto?->concentracion)
+                                                    <br>
+                                                    <small style="color: #6B7280;">
+                                                        @if ($item->producto?->laboratorio)
+                                                            {{ $item->producto->laboratorio->nombre }}
+                                                        @endif
+
+                                                        @if ($item->producto?->laboratorio && $item->producto?->concentracion)
+                                                            |
+                                                        @endif
+
+                                                        @if ($item->producto?->concentracion)
+                                                            {{ $item->producto->concentracion }}
+                                                        @endif
+                                                    </small>
+                                                @endif
+
+                                                <br>
+
+                                                <small style="color: #4C1D95;">
+                                                    Unidades descontadas: {{ $item->unidades_descontadas }}
+
+                                                    @if ($item->lote)
+                                                        | Lote: {{ $item->lote->numero_lote }}
+
+                                                        @if ($item->lote->fecha_vencimiento)
+                                                            | Vence: {{ $item->lote->fecha_vencimiento->format('d/m/Y') }}
+                                                        @endif
+                                                    @endif
+                                                </small>
+                                            </div>
+                                        @endforeach
+                                    </td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        @endif
     </div>
 </div>
 
@@ -275,7 +398,7 @@
 
                             <td>
                                 @if ($detalleCambio)
-                                    <strong>{{ $detalleCambio->productoDevuelto->nombre_comercial ?? '-' }}</strong>
+                                    <strong>{{ $detalleCambio->productoPresentacionDevuelta->nombre_mostrado ?? $detalleCambio->productoDevuelto->nombre_comercial ?? '-' }}</strong>
                                     <br>
                                     <small style="color: #6B7280;">
                                         Cantidad: {{ $detalleCambio->cantidad_devuelta }}
@@ -287,7 +410,7 @@
 
                             <td>
                                 @if ($detalleCambio)
-                                    <strong>{{ $detalleCambio->productoNuevo->nombre_comercial ?? '-' }}</strong>
+                                    <strong>{{ $detalleCambio->productoPresentacionNueva->nombre_mostrado ?? $detalleCambio->productoNuevo->nombre_comercial ?? '-' }}</strong>
                                     <br>
                                     <small style="color: #6B7280;">
                                         Cantidad: {{ $detalleCambio->cantidad_nueva }}

@@ -28,9 +28,11 @@
                 </a>
             @endif
 
-            <a href="{{ route('compras.index') }}" class="btn-secondary">
-                Volver
-            </a>
+            @if (auth()->user()->tienePermiso('ver_compras'))
+                <a href="{{ route('compras.index') }}" class="btn-secondary">
+                    Volver
+                </a>
+            @endif
         </div>
     </div>
 
@@ -102,12 +104,12 @@
         <table class="table">
             <thead>
                 <tr>
-                    <th>Producto</th>
-                    <th>Presentación</th>
+                    <th>Producto comprado</th>
+                    <th>Forma</th>
                     <th>Lote</th>
                     <th>Vencimiento</th>
-                    <th>Cantidad</th>
-                    <th>Unidades ingresadas</th>
+                    <th>Cantidad comprada</th>
+                    <th>Ingresa al inventario</th>
                     <th>Precio compra</th>
                     <th>Subtotal</th>
                 </tr>
@@ -116,19 +118,57 @@
                 @forelse ($compra->detalles as $detalle)
                     <tr>
                         <td>
-                            <strong>{{ $detalle->producto->nombre_comercial ?? '-' }}</strong>
-                            @if ($detalle->producto?->concentracion)
+                            <strong>
+                                {{ $detalle->productoPresentacion->nombre_mostrado ?? $detalle->producto->nombre_comercial ?? '-' }}
+                            </strong>
+
+                            @if ($detalle->producto?->laboratorio || $detalle->producto?->concentracion)
                                 <br>
-                                <small style="color: #6B7280;">{{ $detalle->producto->concentracion }}</small>
+                                <small style="color: #6B7280;">
+                                    @if ($detalle->producto?->laboratorio)
+                                        {{ $detalle->producto->laboratorio->nombre }}
+                                    @endif
+
+                                    @if ($detalle->producto?->laboratorio && $detalle->producto?->concentracion)
+                                        |
+                                    @endif
+
+                                    @if ($detalle->producto?->concentracion)
+                                        {{ $detalle->producto->concentracion }}
+                                    @endif
+                                </small>
                             @endif
                         </td>
-                        <td>{{ $detalle->productoPresentacion->nombre_mostrado ?? '-' }}</td>
-                        <td>{{ $detalle->lote->numero_lote ?? 'Sin lote' }}</td>
+
                         <td>
-                            {{ $detalle->lote?->fecha_vencimiento ? $detalle->lote->fecha_vencimiento->format('d/m/Y') : '-' }}
+                            {{ $detalle->productoPresentacion->presentacion->nombre ?? '-' }}
+
+                            @if ($detalle->productoPresentacion?->unidades_equivalentes)
+                                <br>
+                                <small style="color: #6B7280;">
+                                    {{ $detalle->productoPresentacion->unidades_equivalentes }} unidad(es) por cantidad
+                                </small>
+                            @endif
+                        </td>
+                        <td>
+                            <strong>{{ $detalle->lote->numero_lote ?? 'Sin lote' }}</strong>
+                        </td>
+
+                        <td>
+                            @if ($detalle->lote?->fecha_vencimiento)
+                                {{ $detalle->lote->fecha_vencimiento->format('d/m/Y') }}
+                            @else
+                                -
+                            @endif
                         </td>
                         <td>{{ $detalle->cantidad }}</td>
-                        <td>{{ $detalle->unidades_ingresadas }}</td>
+                        <td>
+                            <strong>{{ $detalle->unidades_ingresadas }}</strong>
+                            <br>
+                            <small style="color: #6B7280;">
+                                {{ $detalle->cantidad }} x {{ $detalle->productoPresentacion->unidades_equivalentes ?? 1 }}
+                            </small>
+                        </td>
                         <td>{{ number_format($detalle->precio_compra, 2) }} Bs</td>
                         <td>{{ number_format($detalle->subtotal, 2) }} Bs</td>
                     </tr>

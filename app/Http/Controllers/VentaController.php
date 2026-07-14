@@ -12,6 +12,10 @@ use App\Models\MetodoPago;
 use App\Models\MovimientoInventario;
 use App\Models\PagoVenta;
 use App\Models\ProductoPresentacion;
+use App\Models\Promocion;
+use App\Models\DetalleVentaPromocion;
+use App\Models\DetalleVentaPromocionItem;
+use Carbon\Carbon;
 use App\Models\Recibo;
 use App\Models\Venta;
 use Illuminate\Http\Request;
@@ -75,9 +79,13 @@ class VentaController extends Controller
     {
         $datos = $request->validate([
             'cliente_id' => ['nullable', 'exists:clientes,id'],
-            'items' => ['required', 'array', 'min:1'],
+            'items' => ['nullable', 'array'],
             'items.*.producto_presentacion_id' => ['required', 'exists:producto_presentaciones,id'],
             'items.*.cantidad' => ['required', 'integer', 'min:1'],
+
+            'promociones' => ['nullable', 'array'],
+            'promociones.*.promocion_id' => ['required', 'exists:promociones,id'],
+            'promociones.*.cantidad' => ['required', 'integer', 'min:1'],
             'descuento_porcentaje' => ['nullable', 'numeric', 'min:0', 'max:100'],
             'metodo_pago_id' => ['required', 'exists:metodos_pago,id'],
             'monto_recibido' => ['required', 'numeric', 'min:0'],
@@ -88,6 +96,17 @@ class VentaController extends Controller
             'metodo_pago_id.required' => 'Seleccione el método de pago.',
             'monto_recibido.required' => 'Ingrese el monto recibido.',
         ]);
+
+        if (
+            empty($datos['items']) &&
+            empty($datos['promociones'])
+        ) {
+            return back()
+                ->withErrors([
+                    'items' => 'Debe agregar al menos un producto o promoción a la venta.',
+                ])
+                ->withInput();
+        }
 
         $user = auth()->user();
 
@@ -116,13 +135,20 @@ class VentaController extends Controller
         $itemsProcesados = [];
         $totalVentaAntesDescuento = 0;
 
-        foreach ($datos['items'] as $item) {
+        $promocionesProcesadas = [];
+        $hoy = Carbon::today();
+
+        foreach (($datos['items'] ?? []) as $item) {
             $productoPresentacion = ProductoPresentacion::with('producto')
+                ->where('estado', 'activo')
+                ->whereHas('producto', function ($query) {
+                    $query->where('estado', 'activo');
+                })
                 ->findOrFail($item['producto_presentacion_id']);
 
             $cantidad = (int) $item['cantidad'];
             $unidadesNecesarias = $cantidad * $productoPresentacion->unidades_equivalentes;
-            $subtotal = $cantidad * $productoPresentacion->precio_venta;
+            $subtotal = round($cantidad * (float) $productoPresentacion->precio_venta, 2);
 
             $stockDisponible = Inventario::where('producto_id', $productoPresentacion->producto_id)
                 ->where('sucursal_id', $sucursal->id)
@@ -146,6 +172,78 @@ class VentaController extends Controller
 
             $totalVentaAntesDescuento += $subtotal;
         }
+
+        foreach (($datos['promociones'] ?? []) as $itemPromo) {
+            $promocion = Promocion::with([
+                    'items.producto',
+                    'items.productoPresentacion',
+                    'items.lote',
+                ])
+                ->where('estado', 'activo')
+                ->where(function ($query) use ($sucursal) {
+                    $query->whereNull('sucursal_id')
+                        ->orWhere('sucursal_id', $sucursal->id);
+                })
+                ->where(function ($query) use ($hoy) {
+                    $query->whereNull('fecha_inicio')
+                        ->orWhereDate('fecha_inicio', '<=', $hoy);
+                })
+                ->where(function ($query) use ($hoy) {
+                    $query->whereNull('fecha_fin')
+                        ->orWhereDate('fecha_fin', '>=', $hoy);
+                })
+                ->findOrFail($itemPromo['promocion_id']);
+
+            $cantidadPromo = (int) $itemPromo['cantidad'];
+
+            if ($cantidadPromo < 1) {
+                $cantidadPromo = 1;
+            }
+
+            foreach ($promocion->items as $promoItem) {
+                if (
+                    $promoItem->lote &&
+                    $promoItem->lote->fecha_vencimiento &&
+                    $promoItem->lote->fecha_vencimiento->lt($hoy)
+                ) {
+                    return back()
+                        ->withErrors([
+                            'promocion' => 'La promoción "' . $promocion->nombre . '" contiene un lote vencido.',
+                        ])
+                        ->withInput();
+                }
+
+                $unidadesNecesarias = $promoItem->unidades_necesarias * $cantidadPromo;
+
+                $stockQuery = Inventario::where('producto_id', $promoItem->producto_id)
+                    ->where('sucursal_id', $sucursal->id)
+                    ->where('estado', 'activo');
+
+                if ($promoItem->lote_id) {
+                    $stockQuery->where('lote_id', $promoItem->lote_id);
+                }
+
+                $stockDisponible = $stockQuery->sum('stock_actual');
+
+                if ($stockDisponible < $unidadesNecesarias) {
+                    return back()
+                        ->withErrors([
+                            'promocion' => 'No hay stock suficiente para la promoción: ' . $promocion->nombre,
+                        ])
+                        ->withInput();
+                }
+            }
+
+            $subtotalPromo = round($cantidadPromo * (float) $promocion->precio_promocional, 2);
+
+            $promocionesProcesadas[] = [
+                'promocion' => $promocion,
+                'cantidad' => $cantidadPromo,
+                'subtotal' => $subtotalPromo,
+            ];
+
+            $totalVentaAntesDescuento += $subtotalPromo;
+        }
         
         $subtotalVenta = round($totalVentaAntesDescuento, 2);
 
@@ -168,7 +266,7 @@ class VentaController extends Controller
 
         $cambio = round($montoRecibido - $totalVenta, 2);
 
-        $venta = DB::transaction(function () use ($datos, $user, $sucursal, $cajaAbierta, $itemsProcesados, $subtotalVenta, $descuentoTotal, $totalVenta, $montoRecibido, $cambio) {
+        $venta = DB::transaction(function () use ($datos, $user, $sucursal, $cajaAbierta, $itemsProcesados, $promocionesProcesadas, $subtotalVenta, $descuentoTotal, $totalVenta, $montoRecibido, $cambio) {
             $numeroVenta = $this->generarNumeroVenta($sucursal->id);
 
             $venta = Venta::create([
@@ -211,7 +309,7 @@ class VentaController extends Controller
                     'lote_id' => null,
                     'cantidad' => $cantidadVendida,
                     'unidades_descontadas' => $item['unidades_necesarias'],
-                    'precio_unitario' => $productoPresentacion->precio_venta,
+                    'precio_unitario' => round((float) $productoPresentacion->precio_venta, 2),
                     'descuento' => 0,
                     'subtotal' => $subtotalItem,
                 ]);
@@ -251,6 +349,81 @@ class VentaController extends Controller
                     ]);
 
                     $unidadesPendientes -= $descontar;
+                }
+            }
+
+            foreach ($promocionesProcesadas as $itemPromoProcesado) {
+                $promocion = $itemPromoProcesado['promocion'];
+                $cantidadPromo = $itemPromoProcesado['cantidad'];
+                $subtotalPromo = $itemPromoProcesado['subtotal'];
+
+                $detalleVentaPromocion = DetalleVentaPromocion::create([
+                    'venta_id' => $venta->id,
+                    'promocion_id' => $promocion->id,
+                    'cantidad' => $cantidadPromo,
+                    'precio_unitario' => round((float) $promocion->precio_promocional, 2),
+                    'subtotal' => $subtotalPromo,
+                ]);
+
+                foreach ($promocion->items as $promoItem) {
+                    $unidadesPendientes = $promoItem->unidades_necesarias * $cantidadPromo;
+
+                    $inventariosQuery = Inventario::with('lote')
+                        ->leftJoin('lotes', 'inventarios.lote_id', '=', 'lotes.id')
+                        ->where('inventarios.producto_id', $promoItem->producto_id)
+                        ->where('inventarios.sucursal_id', $sucursal->id)
+                        ->where('inventarios.estado', 'activo')
+                        ->where('inventarios.stock_actual', '>', 0);
+
+                    if ($promoItem->lote_id) {
+                        $inventariosQuery->where('inventarios.lote_id', $promoItem->lote_id);
+                    }
+
+                    $inventarios = $inventariosQuery
+                        ->orderByRaw('lotes.fecha_vencimiento IS NULL')
+                        ->orderBy('lotes.fecha_vencimiento')
+                        ->select('inventarios.*')
+                        ->get();
+
+                    foreach ($inventarios as $inventario) {
+                        if ($unidadesPendientes <= 0) {
+                            break;
+                        }
+
+                        $stockAnterior = $inventario->stock_actual;
+                        $descontar = min($stockAnterior, $unidadesPendientes);
+                        $stockNuevo = $stockAnterior - $descontar;
+
+                        $inventario->update([
+                            'stock_actual' => $stockNuevo,
+                            'estado' => $stockNuevo <= 0 ? 'agotado' : 'activo',
+                        ]);
+
+                        DetalleVentaPromocionItem::create([
+                            'detalle_venta_promocion_id' => $detalleVentaPromocion->id,
+                            'promocion_item_id' => $promoItem->id,
+                            'producto_id' => $promoItem->producto_id,
+                            'producto_presentacion_id' => $promoItem->producto_presentacion_id,
+                            'lote_id' => $inventario->lote_id,
+                            'unidades_descontadas' => $descontar,
+                        ]);
+
+                        MovimientoInventario::create([
+                            'producto_id' => $promoItem->producto_id,
+                            'sucursal_id' => $sucursal->id,
+                            'lote_id' => $inventario->lote_id,
+                            'usuario_id' => $user->id,
+                            'tipo_movimiento' => 'salida',
+                            'cantidad' => $descontar,
+                            'stock_anterior' => $stockAnterior,
+                            'stock_nuevo' => $stockNuevo,
+                            'motivo' => 'Salida por promoción ' . $promocion->nombre . ' en venta ' . $venta->numero_venta,
+                            'referencia_tipo' => 'venta_promocion',
+                            'referencia_id' => $detalleVentaPromocion->id,
+                        ]);
+
+                        $unidadesPendientes -= $descontar;
+                    }
                 }
             }
 
@@ -472,12 +645,18 @@ class VentaController extends Controller
             'cliente',
             'caja',
             'detalles.producto',
+            'detalles.producto.laboratorio',
             'detalles.productoPresentacion.presentacion',
             'detalles.lotesDescontados.lote',
             'detalles.reembolsos.reembolso',
             'detalles.cambiosProductoDevueltos.cambioProducto',
             'pagos.metodoPago',
             'recibo',
+
+            'promociones.promocion',
+            'promociones.items.producto.laboratorio',
+            'promociones.items.productoPresentacion.presentacion',
+            'promociones.items.lote',
 
             'reembolsos.usuario',
             'reembolsos.detalles.producto',

@@ -34,7 +34,7 @@
         <input
             type="text"
             id="buscador_producto"
-            placeholder="Ej: paracetamol, 500 mg o código de barras"
+            placeholder="Buscar por producto, forma de venta, laboratorio o código de barras"
             autocomplete="off"
         >
     </div>
@@ -51,8 +51,8 @@
                 <table class="table" id="tabla_carrito">
                     <thead>
                         <tr>
-                            <th>Producto</th>
-                            <th>Presentación</th>
+                            <th>Producto seleccionado</th>
+                            <th>Forma</th>
                             <th>Stock</th>
                             <th>Cantidad</th>
                             <th>Precio</th>
@@ -206,6 +206,7 @@
 
 <script>
     const buscarUrl = "{{ route('ventas.buscar-productos') }}";
+    const buscarPromocionesUrl = "{{ route('ventas.buscar-promociones') }}";
 
     const buscador = document.getElementById('buscador_producto');
     const resultados = document.getElementById('resultados_busqueda');
@@ -245,43 +246,114 @@
 
     async function buscarProductos(termino) {
         try {
-            const response = await fetch(`${buscarUrl}?busqueda=${encodeURIComponent(termino)}`);
-            const data = await response.json();
+            const [responseProductos, responsePromociones] = await Promise.all([
+                fetch(`${buscarUrl}?busqueda=${encodeURIComponent(termino)}`),
+                fetch(`${buscarPromocionesUrl}?busqueda=${encodeURIComponent(termino)}`)
+            ]);
 
-            mostrarResultados(data);
+            const productos = await responseProductos.json();
+            const promociones = await responsePromociones.json();
+
+            mostrarResultados(productos, promociones);
         } catch (error) {
             resultados.style.display = 'block';
-            resultados.innerHTML = '<p style="color:#991B1B;">Error al buscar productos.</p>';
+            resultados.innerHTML = '<p style="color:#991B1B;">Error al buscar productos o promociones.</p>';
         }
     }
 
-    function mostrarResultados(productos) {
+    function mostrarResultados(productos, promociones = []) {
         resultados.style.display = 'block';
 
-        if (!Array.isArray(productos) || productos.length === 0) {
-            resultados.innerHTML = '<p style="color:#6B7280;">No se encontraron productos.</p>';
+        const hayProductos = Array.isArray(productos) && productos.length > 0;
+        const hayPromociones = Array.isArray(promociones) && promociones.length > 0;
+
+        if (!hayProductos && !hayPromociones) {
+            resultados.innerHTML = '<p style="color:#6B7280;">No se encontraron productos ni promociones disponibles.</p>';
             return;
         }
 
-        resultados.innerHTML = productos.map(producto => `
-            <div style="display:flex; justify-content:space-between; align-items:center; gap:12px; padding:12px; border-bottom:1px solid #E5E7EB;">
-                <div>
-                    <strong>${producto.nombre}</strong>
-                    <div style="color:#6B7280; font-size:13px;">
-                        ${producto.generico ?? ''} ${producto.concentracion ?? ''}
-                        / ${producto.presentacion}
-                    </div>
-                    <div style="color:#4C1D95; font-size:13px;">
-                        Precio: ${Number(producto.precio_venta).toFixed(2)} Bs —
-                        Stock: ${producto.stock_disponible}
-                    </div>
-                </div>
+        let html = '';
 
-                <button type="button" class="btn-primary" onclick='agregarAlCarrito(${JSON.stringify(producto)})'>
-                    Agregar
-                </button>
-            </div>
-        `).join('');
+        if (hayPromociones) {
+            html += `
+                <div style="padding: 8px 12px; color:#4C1D95; font-weight:bold;">
+                    Promociones disponibles
+                </div>
+            `;
+
+            html += promociones.map(promocion => {
+                const dataPromocion = encodeURIComponent(JSON.stringify(promocion));
+
+                const itemsTexto = promocion.items.map(item => {
+                    return `${item.producto} x${item.cantidad}`;
+                }).join(' + ');
+
+                return `
+                    <div style="display:flex; justify-content:space-between; align-items:center; gap:12px; padding:12px; border-bottom:1px solid #E5E7EB; background:#F5F3FF;">
+                        <div>
+                            <strong>${promocion.nombre}</strong>
+                            <div style="color:#6B7280; font-size:13px; margin-top:3px;">
+                                ${itemsTexto}
+                            </div>
+                            <div style="color:#4C1D95; font-size:13px; margin-top:3px;">
+                                Precio promoción: ${Number(promocion.precio_promocional).toFixed(2)} Bs —
+                                Stock combo: ${Number(promocion.stock_promocion || 0)}
+                            </div>
+                        </div>
+
+                        <button type="button" class="btn-primary" data-promocion="${dataPromocion}" onclick="agregarPromocionDesdeBoton(this)">
+                            Agregar promo
+                        </button>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        if (hayProductos) {
+            html += `
+                <div style="padding: 8px 12px; color:#4C1D95; font-weight:bold;">
+                    Productos
+                </div>
+            `;
+
+            html += productos.map(producto => {
+                const nombreVisible = producto.nombre_mostrado || producto.presentacion || producto.nombre;
+                const laboratorio = producto.laboratorio ? ` | ${producto.laboratorio}` : '';
+                const tipo = producto.tipo_producto ? producto.tipo_producto.replace('_', ' ') : '';
+                const stockBase = Number(producto.stock_disponible || 0);
+                const stockPresentacion = Number(producto.stock_aproximado_presentacion || 0);
+                const unidades = Number(producto.unidades_equivalentes || 1);
+
+                let stockTexto = `Stock: ${stockBase} unidad(es)`;
+
+                if (unidades > 1) {
+                    stockTexto += ` | Aprox: ${stockPresentacion} disponible(s)`;
+                }
+
+                return `
+                    <div style="display:flex; justify-content:space-between; align-items:center; gap:12px; padding:12px; border-bottom:1px solid #E5E7EB;">
+                        <div>
+                            <strong>${nombreVisible}</strong>
+
+                            <div style="color:#6B7280; font-size:13px; margin-top: 3px;">
+                                ${tipo}${laboratorio}
+                            </div>
+
+                            <div style="color:#4C1D95; font-size:13px; margin-top: 3px;">
+                                Precio: ${Number(producto.precio_venta).toFixed(2)} Bs —
+                                ${stockTexto}
+                            </div>
+                        </div>
+
+                        <button type="button" class="btn-primary" onclick='agregarAlCarrito(${JSON.stringify(producto)})'>
+                            Agregar
+                        </button>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        resultados.innerHTML = html;
     }
 
     function agregarAlCarrito(producto) {
@@ -291,16 +363,52 @@
             existente.cantidad += 1;
         } else {
             carrito.push({
-                id: producto.id,
-                producto_id: producto.producto_id,
-                nombre: producto.nombre,
-                generico: producto.generico,
-                concentracion: producto.concentracion,
-                presentacion: producto.presentacion,
-                precio_venta: Number(producto.precio_venta),
-                unidades_equivalentes: Number(producto.unidades_equivalentes),
-                stock_disponible: Number(producto.stock_disponible),
-                cantidad: 1
+            id: producto.id,
+            tipo_item: 'producto',
+            producto_id: producto.producto_id,
+            nombre: producto.nombre,
+            nombre_mostrado: producto.nombre_mostrado || producto.presentacion || producto.nombre,
+            generico: producto.generico,
+            concentracion: producto.concentracion,
+            laboratorio: producto.laboratorio || '',
+            tipo_producto: producto.tipo_producto || '',
+            presentacion: producto.presentacion,
+            precio_venta: Number(producto.precio_venta),
+            unidades_equivalentes: Number(producto.unidades_equivalentes),
+            stock_disponible: Number(producto.stock_disponible),
+            stock_aproximado_presentacion: Number(producto.stock_aproximado_presentacion || 0),
+            cantidad: 1
+        });
+        }
+
+        buscador.value = '';
+        resultados.style.display = 'none';
+        resultados.innerHTML = '';
+
+        renderCarrito();
+    }
+
+    function agregarPromocionAlCarrito(promocion) {
+        const idPromo = 'promo_' + promocion.id;
+
+        const existente = carrito.find(item => item.id === idPromo);
+
+        if (existente) {
+            existente.cantidad += 1;
+        } else {
+            carrito.push({
+                id: idPromo,
+                tipo_item: 'promocion',
+                promocion_id: promocion.id,
+                nombre_mostrado: promocion.nombre,
+                presentacion: 'Promoción',
+                laboratorio: '',
+                concentracion: promocion.items_count + ' producto(s) incluido(s)',
+                precio_venta: Number(promocion.precio_promocional),
+                unidades_equivalentes: 1,
+                stock_disponible: Number(promocion.stock_promocion || 0),
+                cantidad: 1,
+                items_promocion: promocion.items
             });
         }
 
@@ -311,6 +419,22 @@
         renderCarrito();
     }
 
+    function agregarPromocionDesdeBoton(boton) {
+        try {
+            const promocion = JSON.parse(decodeURIComponent(boton.dataset.promocion));
+            agregarPromocionAlCarrito(promocion);
+        } catch (error) {
+            console.error('Error al seleccionar promoción:', error);
+
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: 'No se pudo seleccionar la promoción.',
+                confirmButtonColor: '#6D28D9'
+            });
+        }
+    }
+
     function cambiarCantidad(id, cantidad) {
         cantidad = parseInt(cantidad || 1);
 
@@ -319,6 +443,23 @@
         if (!item) return;
 
         if (cantidad < 1) cantidad = 1;
+
+        if (item.tipo_item === 'promocion') {
+            if (cantidad > item.stock_disponible) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Stock insuficiente',
+                    text: `Solo hay ${item.stock_disponible} promoción(es) disponible(s).`,
+                    confirmButtonColor: '#6D28D9'
+                });
+
+                cantidad = item.stock_disponible;
+            }
+
+            item.cantidad = cantidad;
+            renderCarrito();
+            return;
+        }
 
         const unidadesNecesarias = cantidad * item.unidades_equivalentes;
 
@@ -360,12 +501,21 @@
             tablaCarrito.innerHTML += `
                 <tr>
                     <td>
-                        ${item.nombre}
+                        <strong>${item.nombre_mostrado}</strong>
                         <br>
-                        <small style="color:#6B7280;">${item.concentracion ?? ''}</small>
+                        <small style="color:#6B7280;">
+                            ${item.laboratorio ? item.laboratorio + ' | ' : ''}
+                            ${item.concentracion ?? ''}
+                        </small>
                     </td>
-                    <td>${item.presentacion}</td>
-                    <td>${item.stock_disponible}</td>
+                    <td>${item.presentacion || '-'}</td>
+                    <td>
+                        ${item.stock_disponible}
+                        ${item.unidades_equivalentes > 1
+                            ? `<br><small style="color:#6B7280;">Aprox: ${Math.floor(item.stock_disponible / item.unidades_equivalentes)}</small>`
+                            : ''
+                        }
+                    </td>
                     <td>
                         <input
                             type="number"
@@ -385,10 +535,17 @@
                 </tr>
             `;
 
-            inputsCarrito.innerHTML += `
-                <input type="hidden" name="items[${index}][producto_presentacion_id]" value="${item.id}">
-                <input type="hidden" name="items[${index}][cantidad]" value="${item.cantidad}">
-            `;
+            if (item.tipo_item === 'promocion') {
+                inputsCarrito.innerHTML += `
+                    <input type="hidden" name="promociones[${index}][promocion_id]" value="${item.promocion_id}">
+                    <input type="hidden" name="promociones[${index}][cantidad]" value="${item.cantidad}">
+                `;
+            } else {
+                inputsCarrito.innerHTML += `
+                    <input type="hidden" name="items[${index}][producto_presentacion_id]" value="${item.id}">
+                    <input type="hidden" name="items[${index}][cantidad]" value="${item.cantidad}">
+                `;
+            }
         });
 
         actualizarTotales();

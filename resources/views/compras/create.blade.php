@@ -96,7 +96,7 @@
                 <input
                     type="text"
                     id="buscador_producto_compra"
-                    placeholder="Ej: paracetamol, 500 mg o código de barras"
+                    placeholder="Buscar por producto, forma de compra, laboratorio o código de barras"
                     autocomplete="off"
                 >
             </div>
@@ -123,7 +123,7 @@
                         </button>
                     </div>
 
-                    <div class="grid" style="grid-template-columns: repeat(3, 1fr);">
+                    <div class="grid" style="grid-template-columns: repeat(4, 1fr);">
                         <div class="form-group">
                             <label>Nombre comercial *</label>
                             <input type="text" id="rapido_nombre_comercial" placeholder="Ej: Paracetamol">
@@ -137,6 +137,18 @@
                         <div class="form-group">
                             <label>Concentración</label>
                             <input type="text" id="rapido_concentracion" placeholder="Ej: 500 mg">
+                        </div>
+
+                        <div class="form-group">
+                            <label>Tipo de producto *</label>
+                            <select id="rapido_tipo_producto">
+                                <option value="medicamento">Medicamento</option>
+                                <option value="insumo_medico">Insumo médico</option>
+                                <option value="producto_general">Producto general</option>
+                                <option value="higiene">Higiene</option>
+                                <option value="bebe">Bebé</option>
+                                <option value="otro">Otro</option>
+                            </select>
                         </div>
                     </div>
 
@@ -277,12 +289,12 @@
                 <table class="table" id="tabla_compra">
                     <thead>
                         <tr>
-                            <th>Producto</th>
-                            <th>Presentación</th>
+                            <th>Producto seleccionado</th>
+                            <th>Forma</th>
                             <th>Lote</th>
                             <th>Vencimiento</th>
                             <th>Cantidad</th>
-                            <th>Unidades</th>
+                            <th>Ingresa al inventario</th>
                             <th>Precio compra</th>
                             <th>Subtotal</th>
                             <th>Acción</th>
@@ -413,17 +425,27 @@
         resultadosProductoCompra.innerHTML = productos.map(producto => {
             const dataProducto = JSON.stringify(producto).replace(/'/g, '&#39;');
 
+            const nombreVisible = producto.nombre_mostrado || producto.presentacion || producto.nombre;
+            const laboratorio = producto.laboratorio ? ` | ${producto.laboratorio}` : '';
+            const tipo = producto.tipo_producto ? producto.tipo_producto.replace('_', ' ') : '';
+            const unidades = Number(producto.unidades_equivalentes || 1);
+
             return `
                 <div style="display:flex; justify-content:space-between; align-items:center; gap:12px; padding:12px; border-bottom:1px solid #E5E7EB;">
                     <div>
-                        <strong>${producto.nombre}</strong>
-                        <div style="color:#6B7280; font-size:13px;">
-                            ${producto.generico ?? ''} ${producto.concentracion ?? ''}
-                            / ${producto.presentacion}
+                        <strong>${nombreVisible}</strong>
+
+                        <div style="color:#6B7280; font-size:13px; margin-top: 3px;">
+                            ${tipo}${laboratorio}
                         </div>
-                        <div style="color:#4C1D95; font-size:13px;">
+
+                        <div style="color:#4C1D95; font-size:13px; margin-top: 3px;">
                             Precio compra sugerido: ${Number(producto.precio_compra).toFixed(2)} Bs —
                             Precio venta: ${Number(producto.precio_venta).toFixed(2)} Bs
+                        </div>
+
+                        <div style="color:#6B7280; font-size:13px; margin-top: 3px;">
+                            Cada unidad comprada ingresará ${unidades} unidad(es) al inventario.
                         </div>
                     </div>
 
@@ -441,8 +463,11 @@
         productoPresentacionInput.value = producto.id;
         precioCompraInput.value = Number(producto.precio_compra || 0).toFixed(2);
 
-        productoSeleccionadoNombre.textContent = producto.nombre;
-        productoSeleccionadoDetalle.textContent = `${producto.concentracion ?? ''} / ${producto.presentacion} / Unidades: ${producto.unidades_equivalentes}`;
+        const nombreVisible = producto.nombre_mostrado || producto.presentacion || producto.nombre;
+        const laboratorio = producto.laboratorio ? `${producto.laboratorio} / ` : '';
+
+        productoSeleccionadoNombre.textContent = nombreVisible;
+        productoSeleccionadoDetalle.textContent = `${laboratorio}${producto.concentracion ?? ''} / Ingresa ${producto.unidades_equivalentes} unidad(es) por cada cantidad comprada`;
 
         productoSeleccionadoBox.style.display = 'block';
 
@@ -503,7 +528,9 @@
         const item = {
             producto_presentacion_id: Number(productoSeleccionado.id),
             nombre: productoSeleccionado.nombre,
+            nombre_mostrado: productoSeleccionado.nombre_mostrado || productoSeleccionado.presentacion || productoSeleccionado.nombre,
             concentracion: productoSeleccionado.concentracion || '',
+            laboratorio: productoSeleccionado.laboratorio || '',
             presentacion: productoSeleccionado.presentacion,
             unidades_equivalentes: Number(productoSeleccionado.unidades_equivalentes || 1),
             cantidad: cantidad,
@@ -558,15 +585,24 @@
             tablaCompra.innerHTML += `
                 <tr>
                     <td>
-                        ${item.nombre}
+                        <strong>${item.nombre_mostrado}</strong>
                         <br>
-                        <small style="color:#6B7280;">${item.concentracion}</small>
+                        <small style="color:#6B7280;">
+                            ${item.laboratorio ? item.laboratorio + ' | ' : ''}
+                            ${item.concentracion}
+                        </small>
                     </td>
-                    <td>${item.presentacion}</td>
+                    <td>${item.presentacion || '-'}</td>
                     <td>${item.numero_lote || 'Sin lote'}</td>
                     <td>${item.fecha_vencimiento || '-'}</td>
                     <td>${item.cantidad}</td>
-                    <td>${unidades}</td>
+                    <td>
+                        ${unidades}
+                        <br>
+                        <small style="color:#6B7280;">
+                            ${item.cantidad} x ${item.unidades_equivalentes}
+                        </small>
+                    </td>
                     <td>${item.precio_compra.toFixed(2)} Bs</td>
                     <td>${subtotal.toFixed(2)} Bs</td>
                     <td>
@@ -676,6 +712,7 @@ async function guardarProductoRapido() {
         nombre_comercial: document.getElementById('rapido_nombre_comercial').value.trim(),
         nombre_generico: document.getElementById('rapido_nombre_generico').value.trim(),
         concentracion: document.getElementById('rapido_concentracion').value.trim(),
+        tipo_producto: document.getElementById('rapido_tipo_producto').value,
 
         categoria_id: document.getElementById('rapido_categoria_id').value || null,
         laboratorio_id: document.getElementById('rapido_laboratorio_id').value || null,
@@ -738,8 +775,11 @@ async function guardarProductoRapido() {
             id: resultado.producto.producto_presentacion_id,
             producto_id: resultado.producto.producto_id,
             nombre: resultado.producto.nombre_producto,
+            nombre_mostrado: resultado.producto.nombre_mostrado || resultado.producto.presentacion || resultado.producto.nombre_producto,
             generico: resultado.producto.nombre_generico,
             concentracion: resultado.producto.concentracion,
+            laboratorio: resultado.producto.laboratorio || '',
+            tipo_producto: resultado.producto.tipo_producto || '',
             presentacion: resultado.producto.presentacion,
             unidades_equivalentes: resultado.producto.unidades_equivalentes,
             precio_compra: Number(resultado.producto.precio_compra || 0),
@@ -775,6 +815,7 @@ function limpiarFormularioProductoRapido() {
     document.getElementById('rapido_nombre_comercial').value = '';
     document.getElementById('rapido_nombre_generico').value = '';
     document.getElementById('rapido_concentracion').value = '';
+    document.getElementById('rapido_tipo_producto').value = 'medicamento';
     document.getElementById('rapido_categoria_id').value = '';
     document.getElementById('rapido_laboratorio_id').value = '';
     document.getElementById('rapido_presentacion_id').value = '';
@@ -1226,6 +1267,45 @@ async function crearProveedorRapido() {
         });
     }
 }
+
+function generarNombreMostradoRapido() {
+    const nombre = document.getElementById('rapido_nombre_comercial')?.value.trim() || '';
+    const concentracion = document.getElementById('rapido_concentracion')?.value.trim() || '';
+    const laboratorioSelect = document.getElementById('rapido_laboratorio_id');
+    const presentacionSelect = document.getElementById('rapido_presentacion_id');
+    const nombreMostradoInput = document.getElementById('rapido_nombre_mostrado');
+
+    if (!nombreMostradoInput || nombreMostradoInput.value.trim() !== '') {
+        return;
+    }
+
+    const laboratorio = laboratorioSelect && laboratorioSelect.value
+        ? laboratorioSelect.options[laboratorioSelect.selectedIndex].text.trim()
+        : '';
+
+    const presentacion = presentacionSelect && presentacionSelect.value
+        ? presentacionSelect.options[presentacionSelect.selectedIndex].text.trim()
+        : '';
+
+    const partes = [nombre, concentracion, laboratorio].filter(Boolean);
+
+    let resultado = partes.join(' ');
+
+    if (presentacion) {
+        resultado += resultado ? ' - ' + presentacion : presentacion;
+    }
+
+    nombreMostradoInput.value = resultado;
+}
+
+['rapido_nombre_comercial', 'rapido_concentracion', 'rapido_laboratorio_id', 'rapido_presentacion_id'].forEach(function (id) {
+    const elemento = document.getElementById(id);
+
+    if (elemento) {
+        elemento.addEventListener('change', generarNombreMostradoRapido);
+        elemento.addEventListener('blur', generarNombreMostradoRapido);
+    }
+});
 </script>
 
 @endsection

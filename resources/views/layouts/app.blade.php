@@ -104,6 +104,12 @@
                 </a>
             @endif
 
+            @if (auth()->user()->tienePermiso('ver_promociones'))
+                <a href="{{ route('promociones.index') }}">
+                    Promociones
+                </a>
+            @endif
+
             @if ($user->tienePermiso('ver_deudas_proveedores'))
                 <a href="{{ route('compras.deudas') }}"
                    class="menu-link {{ request()->routeIs('compras.deudas') ? 'active' : '' }}"

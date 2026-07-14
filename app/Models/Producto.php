@@ -92,4 +92,9 @@ class Producto extends Model
         return $this->hasMany(DetalleCambioProducto::class, 'producto_nuevo_id');
     }
 
+    public function promocionItems()
+    {
+        return $this->hasMany(PromocionItem::class);
+    }
+
 }

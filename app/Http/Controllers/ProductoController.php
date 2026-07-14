@@ -6,6 +6,10 @@ use App\Models\Categoria;
 use App\Models\Laboratorio;
 use App\Models\Producto;
 use App\Models\Proveedor;
+use App\Models\CodigoBarra;
+use App\Models\Presentacion;
+use App\Models\ProductoPresentacion;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Request;
 
 class ProductoController extends Controller
@@ -16,7 +20,16 @@ class ProductoController extends Controller
         $estado = $request->get('estado');
         $tipoProducto = $request->get('tipo_producto');
 
-        $productos = Producto::with(['categoria', 'laboratorio', 'proveedor'])
+        $productos = Producto::with([
+            'categoria',
+            'laboratorio',
+            'proveedor',
+            'presentacionPrincipal.presentacion',
+            'inventarios',
+        ])
+        ->withCount(['presentaciones' => function ($query) {
+            $query->where('estado', 'activo');
+        }])
             ->when($buscar, function ($query, $buscar) {
                 $query->where(function ($q) use ($buscar) {
                     $q->where('nombre_comercial', 'like', "%{$buscar}%")
@@ -52,12 +65,26 @@ class ProductoController extends Controller
         $laboratorios = Laboratorio::where('estado', 'activo')->orderBy('nombre')->get();
         $proveedores = Proveedor::where('estado', 'activo')->orderBy('nombre')->get();
 
-        return view('productos.create', compact('categorias', 'laboratorios', 'proveedores'));
+        $presentaciones = Presentacion::where('estado', 'activo')
+            ->orderBy('nombre')
+            ->get();
+
+        return view('productos.create', compact(
+            'categorias',
+            'laboratorios',
+            'proveedores',
+            'presentaciones'
+        ));
     }
 
     public function store(Request $request)
-    {   
+    {
         $datos = $request->validate([
+            /*
+            |--------------------------------------------------------------------------
+            | Datos generales del producto
+            |--------------------------------------------------------------------------
+            */
             'nombre_comercial' => ['required', 'string', 'max:150'],
             'nombre_generico' => ['nullable', 'string', 'max:150'],
             'concentracion' => ['nullable', 'string', 'max:100'],
@@ -66,22 +93,80 @@ class ProductoController extends Controller
             'categoria_id' => ['nullable', 'exists:categorias,id'],
             'laboratorio_id' => ['nullable', 'exists:laboratorios,id'],
             'proveedor_id' => ['nullable', 'exists:proveedores,id'],
+
+            /*
+            |--------------------------------------------------------------------------
+            | Presentación principal
+            |--------------------------------------------------------------------------
+            */
+            'presentacion_id' => ['required', 'exists:presentaciones,id'],
+            'nombre_mostrado' => ['required', 'string', 'max:150'],
+            'unidades_equivalentes' => ['required', 'integer', 'min:1'],
+            'precio_compra' => ['required', 'numeric', 'min:0'],
+            'precio_venta' => ['required', 'numeric', 'min:0'],
+            'codigo_barras' => ['nullable', 'string', 'max:100', 'unique:codigos_barras,codigo'],
         ], [
+            'nombre_comercial.required' => 'El nombre comercial es obligatorio.',
+
             'tipo_producto.required' => 'Seleccione el tipo de producto.',
             'tipo_producto.in' => 'El tipo de producto seleccionado no es válido.',
-            'nombre_comercial.required' => 'El nombre comercial es obligatorio.',
+
             'categoria_id.exists' => 'La categoría seleccionada no es válida.',
             'laboratorio_id.exists' => 'El laboratorio seleccionado no es válido.',
             'proveedor_id.exists' => 'El proveedor seleccionado no es válido.',
+
+            'presentacion_id.required' => 'Seleccione la presentación principal.',
+            'presentacion_id.exists' => 'La presentación seleccionada no es válida.',
+
+            'nombre_mostrado.required' => 'Ingrese el nombre mostrado para venta.',
+            'unidades_equivalentes.required' => 'Ingrese las unidades equivalentes.',
+            'unidades_equivalentes.min' => 'Las unidades equivalentes deben ser al menos 1.',
+
+            'precio_compra.required' => 'Ingrese el precio de compra.',
+            'precio_venta.required' => 'Ingrese el precio de venta.',
+
+            'codigo_barras.unique' => 'Este código de barras ya está registrado.',
         ]);
 
-        $datos['estado'] = 'activo';
+        DB::transaction(function () use ($datos) {
+            $producto = Producto::create([
+                'nombre_comercial' => $datos['nombre_comercial'],
+                'nombre_generico' => $datos['nombre_generico'] ?? null,
+                'concentracion' => $datos['concentracion'] ?? null,
+                'descripcion' => $datos['descripcion'] ?? null,
+                'tipo_producto' => $datos['tipo_producto'],
+                'categoria_id' => $datos['categoria_id'] ?? null,
+                'laboratorio_id' => $datos['laboratorio_id'] ?? null,
+                'proveedor_id' => $datos['proveedor_id'] ?? null,
+                'estado' => 'activo',
+            ]);
 
-        Producto::create($datos);
+            $productoPresentacion = ProductoPresentacion::create([
+                'producto_id' => $producto->id,
+                'presentacion_id' => $datos['presentacion_id'],
+                'nombre_mostrado' => $datos['nombre_mostrado'],
+                'unidades_equivalentes' => (int) $datos['unidades_equivalentes'],
+                'precio_compra' => round((float) $datos['precio_compra'], 2),
+                'precio_venta' => round((float) $datos['precio_venta'], 2),
+                'es_principal' => true,
+                'estado' => 'activo',
+            ]);
+
+            if (!empty($datos['codigo_barras'])) {
+                CodigoBarra::create([
+                    'producto_id' => $producto->id,
+                    'producto_presentacion_id' => $productoPresentacion->id,
+                    'codigo' => $datos['codigo_barras'],
+                    'tipo_codigo' => 'fabricante',
+                    'generado_por_sistema' => false,
+                    'estado' => 'activo',
+                ]);
+            }
+        });
 
         return redirect()
             ->route('productos.index')
-            ->with('success', 'Producto registrado correctamente.');
+            ->with('success', 'Producto registrado correctamente y listo para vender.');
     }
 
     public function edit(Producto $producto)
@@ -104,7 +189,6 @@ class ProductoController extends Controller
             'categoria_id' => ['nullable', 'exists:categorias,id'],
             'laboratorio_id' => ['nullable', 'exists:laboratorios,id'],
             'proveedor_id' => ['nullable', 'exists:proveedores,id'],
-            'estado' => ['required', 'in:activo,inactivo'],
         ], [
             'tipo_producto.required' => 'Seleccione el tipo de producto.',
             'tipo_producto.in' => 'El tipo de producto seleccionado no es válido.',
@@ -112,8 +196,9 @@ class ProductoController extends Controller
             'categoria_id.exists' => 'La categoría seleccionada no es válida.',
             'laboratorio_id.exists' => 'El laboratorio seleccionado no es válido.',
             'proveedor_id.exists' => 'El proveedor seleccionado no es válido.',
-            'estado.required' => 'El estado es obligatorio.',
         ]);
+
+        $datos['estado'] = $producto->estado;
 
         $producto->update($datos);
 

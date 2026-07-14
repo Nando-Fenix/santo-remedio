@@ -1,8 +1,8 @@
 @extends('layouts.app')
 
 @section('title', 'Presentaciones | Santo Remedio')
-@section('page-title', 'Presentaciones del producto')
-@section('page-subtitle', 'Precios, equivalencias y código de barras')
+@section('page-title', 'Formas de venta del producto')
+@section('page-subtitle', 'Presentaciones, precios, equivalencias y códigos de barras')
 
 @section('content')
 
@@ -47,15 +47,20 @@
 
 @if (auth()->user()->tienePermiso('editar_producto'))
     <div class="card" style="margin-bottom: 22px;">
-        <h3 style="margin-top: 0; color: #4C1D95;">Agregar presentación</h3>
+        <h3 style="margin-top: 0; color: #4C1D95;">Agregar forma de venta</h3>
+
+        <p style="color: #6B7280; margin-top: -6px;">
+            Use esta sección solo si el producto se vende, compra o utiliza en más de una forma.
+            Ejemplo: unidad, ampolla, blíster x 10, caja x 100.
+        </p>
 
         <form method="POST" action="{{ route('productos.presentaciones.store', $producto) }}">
             @csrf
 
             <div class="form-grid">
                 <div class="form-group">
-                    <label>Presentación *</label>
-                    <select name="presentacion_id">
+                    <label>Forma de venta *</label>
+                    <select name="presentacion_id" id="presentacion_id">
                         <option value="">Seleccione</option>
                         @foreach ($presentaciones as $presentacion)
                             <option value="{{ $presentacion->id }}" @selected(old('presentacion_id') == $presentacion->id)>
@@ -66,13 +71,27 @@
                 </div>
 
                 <div class="form-group">
-                    <label>Nombre mostrado *</label>
-                    <input type="text" name="nombre_mostrado" value="{{ old('nombre_mostrado') }}" placeholder="Ej: Caja x 100 tabletas">
+                    <label>Nombre que verá el vendedor *</label>
+                    <input 
+                        type="text" 
+                        name="nombre_mostrado" 
+                        id="nombre_mostrado"
+                        value="{{ old('nombre_mostrado') }}" 
+                        placeholder="Ej: Paracetamol 500mg INTI - Caja x 100"
+                    >
                 </div>
 
                 <div class="form-group">
-                    <label>Unidades equivalentes *</label>
-                    <input type="number" min="1" name="unidades_equivalentes" value="{{ old('unidades_equivalentes', 1) }}">
+                    <label>¿Cuántas unidades descuenta? *</label>
+                    <input 
+                        type="number" 
+                        min="1" 
+                        name="unidades_equivalentes" 
+                        value="{{ old('unidades_equivalentes', 1) }}"
+                    >
+                    <small style="color: #6B7280;">
+                        Unidad = 1, blíster x 10 = 10, caja x 100 = 100.
+                    </small>
                 </div>
 
                 <div class="form-group">
@@ -96,23 +115,20 @@
                     >
                 </div>
 
-                <button type="button" class="btn-secondary" onclick="activarEscaner()">
-                    Escanear código
-                </button>
-
-                <script>
-                    function activarEscaner() {
-                        const input = document.getElementById('codigo_barras');
-                        input.focus();
-                        input.select();
-                    }
-                </script>
+                <div class="form-group" style="display: flex; align-items: end;">
+                    <button type="button" class="btn-secondary" onclick="activarEscaner()">
+                        Escanear código
+                    </button>
+                </div>
             </div>
 
             <label class="checkbox-line" style="margin-top: 18px;">
                 <input type="checkbox" name="es_principal" value="1" @checked(old('es_principal'))>
-                Usar como presentación rápida/principal para ventas
+                Usar como forma principal de venta
             </label>
+            <small style="display: block; color: #6B7280; margin-top: 4px;">
+                Esta será la opción que se mostrará como principal en el listado de productos.
+            </small>
 
             <div style="margin-top: 22px;">
                 @if (auth()->user()->tienePermiso('editar_producto'))
@@ -126,17 +142,21 @@
 @endif
 
 <div class="card">
-    <h3 style="margin-top: 0; color: #4C1D95;">Presentaciones registradas</h3>
+    <h3 style="margin-top: 0; color: #4C1D95;">Formas de venta registradas</h3>
+
+    <p style="color: #6B7280; margin-top: -6px;">
+        Estas son las opciones disponibles para vender, comprar o usar este producto.
+    </p>
 
     <div class="table-container">
         <table class="table">
             <thead>
                 <tr>
-                    <th>Presentación</th>
-                    <th>Nombre mostrado</th>
-                    <th>Equivalencia</th>
-                    <th>Compra</th>
-                    <th>Venta</th>
+                    <th>Forma</th>
+                    <th>Nombre visible</th>
+                    <th>Descuenta</th>
+                    <th>Precio compra</th>
+                    <th>Precio venta</th>
                     <th>Códigos</th>
                     <th>Principal</th>
                     <th>Estado</th>
@@ -148,7 +168,7 @@
                     <tr>
                         <td>{{ $item->presentacion->nombre ?? '-' }}</td>
                         <td>{{ $item->nombre_mostrado }}</td>
-                        <td>{{ $item->unidades_equivalentes }}</td>
+                        <td>{{ $item->unidades_equivalentes }} unidad(es)</td>
                         <td>{{ number_format($item->precio_compra, 2) }} Bs</td>
                         <td>{{ number_format($item->precio_venta, 2) }} Bs</td>
                         <td>
@@ -171,20 +191,30 @@
                             </span>
                         </td>
                         <td>
-                            @if ($item->estado === 'activo' && auth()->user()->tienePermiso('desactivar_producto'))
-                                <form method="POST"
-                                    action="{{ route('productos.presentaciones.destroy', [$producto, $item]) }}"
-                                    onsubmit="return confirmarFormulario(event,'¿Desactivar esta presentación?')">
-                                    @csrf
-                                    @method('DELETE')
+                            <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                                @if ($item->estado === 'activo' && auth()->user()->tienePermiso('editar_producto'))
+                                    <a href="{{ route('productos.presentaciones.edit', [$producto, $item]) }}" class="btn-secondary">
+                                        Editar
+                                    </a>
+                                @endif
 
-                                    <button class="btn-danger" type="submit">
-                                        Desactivar
-                                    </button>
-                                </form>
-                            @else
-                                -
-                            @endif
+                                @if ($item->estado === 'activo' && auth()->user()->tienePermiso('desactivar_producto'))
+                                    <form method="POST"
+                                        action="{{ route('productos.presentaciones.destroy', [$producto, $item]) }}"
+                                        onsubmit="return confirmarFormulario(event,'¿Desactivar esta forma de venta?')">
+                                        @csrf
+                                        @method('DELETE')
+
+                                        <button class="btn-danger" type="submit">
+                                            Desactivar
+                                        </button>
+                                    </form>
+                                @endif
+
+                                @if ($item->estado !== 'activo')
+                                    -
+                                @endif
+                            </div>
                         </td>
                     </tr>
                 @empty
@@ -198,5 +228,50 @@
         </table>
     </div>
 </div>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const presentacionSelect = document.getElementById('presentacion_id');
+    const nombreMostrado = document.getElementById('nombre_mostrado');
 
+    const productoBase = @json(
+        trim(
+            $producto->nombre_comercial . ' ' .
+            ($producto->concentracion ?? '') . ' ' .
+            ($producto->laboratorio->nombre ?? '')
+        )
+    );
+
+    function obtenerTextoSelect(select) {
+        if (!select || !select.value) {
+            return '';
+        }
+
+        return select.options[select.selectedIndex].text.trim();
+    }
+
+    function generarNombreMostrado() {
+        if (!nombreMostrado || nombreMostrado.value.trim() !== '') {
+            return;
+        }
+
+        const presentacionTexto = obtenerTextoSelect(presentacionSelect);
+
+        if (!presentacionTexto || presentacionTexto === 'Seleccione') {
+            return;
+        }
+
+        nombreMostrado.value = productoBase + ' - ' + presentacionTexto;
+    }
+
+    if (presentacionSelect) {
+        presentacionSelect.addEventListener('change', generarNombreMostrado);
+    }
+});
+
+function activarEscaner() {
+    const input = document.getElementById('codigo_barras');
+    input.focus();
+    input.select();
+}
+</script>
 @endsection
