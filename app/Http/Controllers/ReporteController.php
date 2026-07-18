@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use App\Models\Inventario;
 use App\Models\Venta;
 use Carbon\Carbon;
+use App\Models\DetalleVentaPromocion;
+use App\Models\DetalleVentaPromocionItem;
 use Illuminate\Http\Request;
 
 class ReporteController extends Controller
@@ -80,6 +82,74 @@ class ReporteController extends Controller
             'productosAgotados',
             'productosPorVencer',
             'ultimasVentas'
+        ));
+    }
+
+    public function promociones(Request $request)
+    {
+        $fechaInicio = $request->get('fecha_inicio', now()->startOfMonth()->format('Y-m-d'));
+        $fechaFin = $request->get('fecha_fin', now()->format('Y-m-d'));
+
+        $promocionesVendidas = DetalleVentaPromocion::with([
+                'venta.sucursal',
+                'venta.usuario',
+                'promocion',
+                'items.producto.laboratorio',
+                'items.productoPresentacion.presentacion',
+                'items.lote',
+            ])
+            ->whereHas('venta', function ($query) use ($fechaInicio, $fechaFin) {
+                $query->where('estado', 'completada')
+                    ->whereDate('fecha_hora', '>=', $fechaInicio)
+                    ->whereDate('fecha_hora', '<=', $fechaFin);
+            })
+            ->latest()
+            ->get();
+
+        $resumenPromociones = DetalleVentaPromocion::selectRaw('
+                promocion_id,
+                SUM(cantidad) as cantidad_vendida,
+                SUM(subtotal) as total_generado
+            ')
+            ->with('promocion')
+            ->whereHas('venta', function ($query) use ($fechaInicio, $fechaFin) {
+                $query->where('estado', 'completada')
+                    ->whereDate('fecha_hora', '>=', $fechaInicio)
+                    ->whereDate('fecha_hora', '<=', $fechaFin);
+            })
+            ->groupBy('promocion_id')
+            ->orderByDesc('total_generado')
+            ->get();
+
+        $productosDescontados = DetalleVentaPromocionItem::selectRaw('
+                producto_id,
+                producto_presentacion_id,
+                SUM(unidades_descontadas) as total_unidades_descontadas
+            ')
+            ->with([
+                'producto.laboratorio',
+                'productoPresentacion.presentacion',
+            ])
+            ->whereHas('detalleVentaPromocion.venta', function ($query) use ($fechaInicio, $fechaFin) {
+                $query->where('estado', 'completada')
+                    ->whereDate('fecha_hora', '>=', $fechaInicio)
+                    ->whereDate('fecha_hora', '<=', $fechaFin);
+            })
+            ->groupBy('producto_id', 'producto_presentacion_id')
+            ->orderByDesc('total_unidades_descontadas')
+            ->get();
+
+        $totalGenerado = $promocionesVendidas->sum('subtotal');
+        $totalPromocionesVendidas = $promocionesVendidas->sum('cantidad');
+
+        return view('reportes.promociones', compact(
+            'fechaInicio',
+            'fechaFin',
+            'promocionesVendidas',
+            'resumenPromociones',
+            'productosDescontados',
+            'totalGenerado',
+            'totalPromocionesVendidas'
         ));
     }
 }

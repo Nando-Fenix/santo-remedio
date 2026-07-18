@@ -32,6 +32,14 @@ class CambioProductoController extends Controller
             'cambiosProducto.detalles',
         ]);
 
+        $venta->loadCount('promociones');
+
+        if ($venta->promociones_count > 0) {
+            return redirect()
+                ->route('ventas.show', $venta)
+                ->with('error', 'Esta venta contiene promociones. No se permite cambio parcial. Debe anularse la venta completa.');
+        }
+
         if ($venta->estado !== 'completada') {
             return redirect()
                 ->route('ventas.show', $venta)
@@ -152,6 +160,14 @@ class CambioProductoController extends Controller
             'motivo.required' => 'Debe ingresar el motivo del cambio.',
             'motivo.min' => 'El motivo debe tener al menos 5 caracteres.',
         ]);
+
+        $venta->loadCount('promociones');
+
+        if ($venta->promociones_count > 0) {
+            return redirect()
+                ->route('ventas.show', $venta)
+                ->with('error', 'Esta venta contiene promociones. No se permite cambio parcial. Debe anularse la venta completa.');
+        }
 
         if ($venta->estado !== 'completada') {
             return redirect()

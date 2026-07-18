@@ -39,7 +39,9 @@
                     <select name="proveedor_id" id="proveedor_id" required>
                         <option value="">Seleccione proveedor...</option>
                         @foreach ($proveedores as $proveedor)
-                            <option value="{{ $proveedor->id }}">{{ $proveedor->nombre }}</option>
+                            <option value="{{ $proveedor->id }}" @selected(old('proveedor_id') == $proveedor->id)>
+                                {{ $proveedor->nombre }}
+                            </option>
                         @endforeach
                     </select>
 
@@ -343,7 +345,29 @@
         </div>
     </form>
 </div>
+@php
+    $itemsAntiguosCompra = collect(old('items', []))->map(function ($item) {
+        return [
+            'producto_presentacion_id' => $item['producto_presentacion_id'] ?? null,
+            'producto_id' => $item['producto_id'] ?? null,
 
+            'nombre' => $item['nombre'] ?? 'Producto seleccionado',
+            'nombre_mostrado' => $item['nombre_mostrado'] ?? 'Producto seleccionado',
+            'concentracion' => $item['concentracion'] ?? '',
+            'laboratorio' => $item['laboratorio'] ?? '',
+            'presentacion' => $item['presentacion'] ?? '',
+
+            'unidades_equivalentes' => max((int) ($item['unidades_equivalentes'] ?? 1), 1),
+            'cantidad' => max((int) ($item['cantidad'] ?? 1), 1),
+            'precio_compra' => (float) ($item['precio_compra'] ?? 0),
+
+            'numero_lote' => $item['numero_lote'] ?? '',
+            'fecha_vencimiento' => $item['fecha_vencimiento'] ?? '',
+        ];
+    })->filter(function ($item) {
+        return !empty($item['producto_presentacion_id']);
+    })->values();
+@endphp
 <script>
     const buscarProductosCompraUrl = "{{ route('compras.buscar-productos') }}";
 
@@ -370,7 +394,9 @@
     const montoPagadoText = document.getElementById('monto_pagado_text');
     const saldoPendienteText = document.getElementById('saldo_pendiente');
 
-    let compraItems = [];
+    let itemsAntiguosCompra = @json($itemsAntiguosCompra);
+    let compraItems = itemsAntiguosCompra.length ? itemsAntiguosCompra : [];
+
     let productoSeleccionado = null;
     let timeoutBusquedaCompra = null;
 
@@ -423,7 +449,7 @@
         }
 
         resultadosProductoCompra.innerHTML = productos.map(producto => {
-            const dataProducto = JSON.stringify(producto).replace(/'/g, '&#39;');
+            const dataProducto = encodeURIComponent(JSON.stringify(producto));
 
             const nombreVisible = producto.nombre_mostrado || producto.presentacion || producto.nombre;
             const laboratorio = producto.laboratorio ? ` | ${producto.laboratorio}` : '';
@@ -449,12 +475,28 @@
                         </div>
                     </div>
 
-                    <button type="button" class="btn-primary" onclick='seleccionarProductoCompra(${dataProducto})'>
+                    <button type="button" class="btn-primary" data-producto="${dataProducto}" onclick="seleccionarProductoCompraDesdeBoton(this)">
                         Seleccionar
                     </button>
                 </div>
             `;
         }).join('');
+    }
+
+    function seleccionarProductoCompraDesdeBoton(boton) {
+        try {
+            const producto = JSON.parse(decodeURIComponent(boton.dataset.producto));
+            seleccionarProductoCompra(producto);
+        } catch (error) {
+            console.error('Error al seleccionar producto:', error);
+
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: 'No se pudo seleccionar el producto.',
+                confirmButtonColor: '#6D28D9'
+            });
+        }
     }
 
     function seleccionarProductoCompra(producto) {
@@ -527,14 +569,18 @@
 
         const item = {
             producto_presentacion_id: Number(productoSeleccionado.id),
-            nombre: productoSeleccionado.nombre,
+            producto_id: Number(productoSeleccionado.producto_id || 0),
+
+            nombre: productoSeleccionado.nombre || '',
             nombre_mostrado: productoSeleccionado.nombre_mostrado || productoSeleccionado.presentacion || productoSeleccionado.nombre,
             concentracion: productoSeleccionado.concentracion || '',
             laboratorio: productoSeleccionado.laboratorio || '',
-            presentacion: productoSeleccionado.presentacion,
+            presentacion: productoSeleccionado.presentacion || '',
+
             unidades_equivalentes: Number(productoSeleccionado.unidades_equivalentes || 1),
             cantidad: cantidad,
             precio_compra: precioCompra,
+
             numero_lote: numeroLoteInput.value,
             fecha_vencimiento: fechaVencimientoInput.value
         };
@@ -615,10 +661,19 @@
 
             inputsCompra.innerHTML += `
                 <input type="hidden" name="items[${index}][producto_presentacion_id]" value="${item.producto_presentacion_id}">
+                <input type="hidden" name="items[${index}][producto_id]" value="${item.producto_id || ''}">
+
+                <input type="hidden" name="items[${index}][nombre]" value="${item.nombre || ''}">
+                <input type="hidden" name="items[${index}][nombre_mostrado]" value="${item.nombre_mostrado || ''}">
+                <input type="hidden" name="items[${index}][concentracion]" value="${item.concentracion || ''}">
+                <input type="hidden" name="items[${index}][laboratorio]" value="${item.laboratorio || ''}">
+                <input type="hidden" name="items[${index}][presentacion]" value="${item.presentacion || ''}">
+                <input type="hidden" name="items[${index}][unidades_equivalentes]" value="${item.unidades_equivalentes || 1}">
+
                 <input type="hidden" name="items[${index}][cantidad]" value="${item.cantidad}">
                 <input type="hidden" name="items[${index}][precio_compra]" value="${item.precio_compra}">
-                <input type="hidden" name="items[${index}][numero_lote]" value="${item.numero_lote}">
-                <input type="hidden" name="items[${index}][fecha_vencimiento]" value="${item.fecha_vencimiento}">
+                <input type="hidden" name="items[${index}][numero_lote]" value="${item.numero_lote || ''}">
+                <input type="hidden" name="items[${index}][fecha_vencimiento]" value="${item.fecha_vencimiento || ''}">
             `;
         });
 
@@ -672,640 +727,642 @@
         }
     });
 
-function mostrarFormularioProductoRapido() {
-    if (!puedeCrearRapidoCompras) {
-        Swal.fire({
-            icon: 'warning',
-            title: 'Sin permiso',
-            text: 'No tiene permiso para crear productos rápidos desde compras.',
-            confirmButtonColor: '#6D28D9'
-        });
-
-        return;
-    }
-
-    const modal = document.getElementById('modal_producto_rapido');
-
-    if (!modal) {
-        Swal.fire({
-            icon: 'error',
-            title: 'Modal no encontrado',
-            text: 'No existe el contenedor modal_producto_rapido en la vista.',
-            confirmButtonColor: '#6D28D9'
-        });
-        return;
-    }
-
-    modal.style.display = 'flex';
-
-    setTimeout(() => {
-        document.getElementById('rapido_nombre_comercial')?.focus();
-    }, 100);
-}
-
-function ocultarFormularioProductoRapido() {
-    document.getElementById('modal_producto_rapido').style.display = 'none';
-}
-
-async function guardarProductoRapido() {
-    const datos = {
-        nombre_comercial: document.getElementById('rapido_nombre_comercial').value.trim(),
-        nombre_generico: document.getElementById('rapido_nombre_generico').value.trim(),
-        concentracion: document.getElementById('rapido_concentracion').value.trim(),
-        tipo_producto: document.getElementById('rapido_tipo_producto').value,
-
-        categoria_id: document.getElementById('rapido_categoria_id').value || null,
-        laboratorio_id: document.getElementById('rapido_laboratorio_id').value || null,
-        presentacion_id: document.getElementById('rapido_presentacion_id').value,
-
-        nombre_mostrado: document.getElementById('rapido_nombre_mostrado').value.trim(),
-        unidades_equivalentes: document.getElementById('rapido_unidades_equivalentes').value,
-
-        precio_compra: document.getElementById('rapido_precio_compra').value,
-        precio_venta: document.getElementById('rapido_precio_venta').value,
-
-        codigo_barra: document.getElementById('rapido_codigo_barra').value.trim(),
-    };
-
-    if (!datos.nombre_comercial || !datos.presentacion_id || !datos.unidades_equivalentes) {
-        Swal.fire({
-            icon: 'warning',
-            title: 'Datos incompletos',
-            text: 'Debe ingresar nombre comercial, presentación y unidades equivalentes.',
-            confirmButtonColor: '#6D28D9'
-        });
-        return;
-    }
-
-    try {
-        const respuesta = await fetch(`{{ route('compras.producto-rapido') }}`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
-                'Accept': 'application/json',
-            },
-            body: JSON.stringify(datos),
-        });
-
-        const resultado = await respuesta.json();
-
-        if (!respuesta.ok) {
-            let mensaje = 'No se pudo crear el producto.';
-
-            if (resultado.errors) {
-                mensaje = Object.values(resultado.errors).flat().join('\n');
-            }
-
+    function mostrarFormularioProductoRapido() {
+        if (!puedeCrearRapidoCompras) {
             Swal.fire({
-                icon: 'error',
-                title: 'Error',
-                text: mensaje,
+                icon: 'warning',
+                title: 'Sin permiso',
+                text: 'No tiene permiso para crear productos rápidos desde compras.',
                 confirmButtonColor: '#6D28D9'
             });
 
             return;
         }
 
-        /*
-         * Adaptamos la respuesta del producto rápido al mismo formato
-         * que ya usa seleccionarProductoCompra(producto).
-         */
-        const productoCreado = {
-            id: resultado.producto.producto_presentacion_id,
-            producto_id: resultado.producto.producto_id,
-            nombre: resultado.producto.nombre_producto,
-            nombre_mostrado: resultado.producto.nombre_mostrado || resultado.producto.presentacion || resultado.producto.nombre_producto,
-            generico: resultado.producto.nombre_generico,
-            concentracion: resultado.producto.concentracion,
-            laboratorio: resultado.producto.laboratorio || '',
-            tipo_producto: resultado.producto.tipo_producto || '',
-            presentacion: resultado.producto.presentacion,
-            unidades_equivalentes: resultado.producto.unidades_equivalentes,
-            precio_compra: Number(resultado.producto.precio_compra || 0),
-            precio_venta: Number(resultado.producto.precio_venta || 0),
-            stock_disponible: 0,
-        };
-
-        seleccionarProductoCompra(productoCreado);
-
-        limpiarFormularioProductoRapido();
-        ocultarFormularioProductoRapido();
-
-        Swal.fire({
-            icon: 'success',
-            title: 'Producto creado',
-            text: 'El producto fue creado y seleccionado para la compra.',
-            confirmButtonColor: '#6D28D9'
-        });
-
-    } catch (error) {
-        console.error('Error producto rápido:', error);
-
-        Swal.fire({
-            icon: 'error',
-            title: 'Error inesperado',
-            text: error.message,
-            confirmButtonColor: '#6D28D9'
-        });
-    }
-}
-
-function limpiarFormularioProductoRapido() {
-    document.getElementById('rapido_nombre_comercial').value = '';
-    document.getElementById('rapido_nombre_generico').value = '';
-    document.getElementById('rapido_concentracion').value = '';
-    document.getElementById('rapido_tipo_producto').value = 'medicamento';
-    document.getElementById('rapido_categoria_id').value = '';
-    document.getElementById('rapido_laboratorio_id').value = '';
-    document.getElementById('rapido_presentacion_id').value = '';
-    document.getElementById('rapido_nombre_mostrado').value = '';
-    document.getElementById('rapido_unidades_equivalentes').value = 1;
-    document.getElementById('rapido_precio_compra').value = 0;
-    document.getElementById('rapido_precio_venta').value = 0;
-    document.getElementById('rapido_codigo_barra').value = '';
-}
-async function crearLaboratorioRapido() {
-    const { value: nombre } = await Swal.fire({
-        title: 'Nuevo laboratorio',
-        input: 'text',
-        inputLabel: 'Nombre del laboratorio',
-        inputPlaceholder: 'Ej: INTI, COFAR, Bagó...',
-        showCancelButton: true,
-        confirmButtonText: 'Guardar',
-        cancelButtonText: 'Cancelar',
-        confirmButtonColor: '#6D28D9',
-        inputValidator: (value) => {
-            if (!value || !value.trim()) {
-                return 'Debe ingresar el nombre del laboratorio.';
-            }
-        }
-    });
-
-    if (!nombre) {
-        return;
-    }
-
-    try {
-        const respuesta = await fetch(`{{ route('compras.laboratorio-rapido') }}`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
-                'Accept': 'application/json',
-            },
-            body: JSON.stringify({
-                nombre: nombre.trim(),
-            }),
-        });
-
-        const textoRespuesta = await respuesta.text();
-
-        let resultado = null;
-
-        try {
-            resultado = JSON.parse(textoRespuesta);
-        } catch (e) {
-            console.error('Respuesta no JSON:', textoRespuesta);
-
-            Swal.fire({
-                icon: 'error',
-                title: 'Respuesta inválida',
-                text: 'Laravel devolvió una respuesta no válida.',
-                confirmButtonColor: '#6D28D9'
-            });
-
-            return;
-        }
-
-        if (!respuesta.ok) {
-            let mensaje = 'No se pudo crear el laboratorio.';
-
-            if (resultado.errors) {
-                mensaje = Object.values(resultado.errors).flat().join('\n');
-            } else if (resultado.message) {
-                mensaje = resultado.message;
-            }
-
-            Swal.fire({
-                icon: 'error',
-                title: 'Error',
-                text: mensaje,
-                confirmButtonColor: '#6D28D9'
-            });
-
-            return;
-        }
-
-        const selectLaboratorio = document.getElementById('rapido_laboratorio_id');
-
-        const option = document.createElement('option');
-        option.value = resultado.laboratorio.id;
-        option.textContent = resultado.laboratorio.nombre;
-        option.selected = true;
-
-        selectLaboratorio.appendChild(option);
-
-        Swal.fire({
-            icon: 'success',
-            title: 'Laboratorio creado',
-            text: 'El laboratorio fue creado y seleccionado.',
-            confirmButtonColor: '#6D28D9'
-        });
-
-    } catch (error) {
-        console.error('Error laboratorio rápido:', error);
-
-        Swal.fire({
-            icon: 'error',
-            title: 'Error inesperado',
-            text: error.message,
-            confirmButtonColor: '#6D28D9'
-        });
-    }
-}
-
-document.addEventListener('keydown', function (event) {
-    if (event.key === 'Escape') {
         const modal = document.getElementById('modal_producto_rapido');
 
-        if (modal && modal.style.display === 'flex') {
-            ocultarFormularioProductoRapido();
+        if (!modal) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Modal no encontrado',
+                text: 'No existe el contenedor modal_producto_rapido en la vista.',
+                confirmButtonColor: '#6D28D9'
+            });
+            return;
         }
-    }
-});
 
-async function crearPresentacionRapida() {
-    const { value: nombre } = await Swal.fire({
-        title: 'Nueva presentación',
-        input: 'text',
-        inputLabel: 'Nombre de la presentación',
-        inputPlaceholder: 'Ej: Tableta, Caja, Frasco, Ampolla, Sachet...',
-        showCancelButton: true,
-        confirmButtonText: 'Guardar',
-        cancelButtonText: 'Cancelar',
-        confirmButtonColor: '#6D28D9',
-        inputValidator: (value) => {
-            if (!value || !value.trim()) {
-                return 'Debe ingresar el nombre de la presentación.';
-            }
-        }
-    });
+        modal.style.display = 'flex';
 
-    if (!nombre) {
-        return;
+        setTimeout(() => {
+            document.getElementById('rapido_nombre_comercial')?.focus();
+        }, 100);
     }
 
-    try {
-        const respuesta = await fetch(`{{ route('compras.presentacion-rapida') }}`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
-                'Accept': 'application/json',
-            },
-            body: JSON.stringify({
-                nombre: nombre.trim(),
-            }),
-        });
+    function ocultarFormularioProductoRapido() {
+        document.getElementById('modal_producto_rapido').style.display = 'none';
+    }
 
-        const textoRespuesta = await respuesta.text();
+    async function guardarProductoRapido() {
+        const datos = {
+            nombre_comercial: document.getElementById('rapido_nombre_comercial').value.trim(),
+            nombre_generico: document.getElementById('rapido_nombre_generico').value.trim(),
+            concentracion: document.getElementById('rapido_concentracion').value.trim(),
+            tipo_producto: document.getElementById('rapido_tipo_producto').value,
 
-        let resultado = null;
+            categoria_id: document.getElementById('rapido_categoria_id').value || null,
+            laboratorio_id: document.getElementById('rapido_laboratorio_id').value || null,
+            presentacion_id: document.getElementById('rapido_presentacion_id').value,
+
+            nombre_mostrado: document.getElementById('rapido_nombre_mostrado').value.trim(),
+            unidades_equivalentes: document.getElementById('rapido_unidades_equivalentes').value,
+
+            precio_compra: document.getElementById('rapido_precio_compra').value,
+            precio_venta: document.getElementById('rapido_precio_venta').value,
+
+            codigo_barra: document.getElementById('rapido_codigo_barra').value.trim(),
+        };
+
+        if (!datos.nombre_comercial || !datos.presentacion_id || !datos.unidades_equivalentes) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Datos incompletos',
+                text: 'Debe ingresar nombre comercial, presentación y unidades equivalentes.',
+                confirmButtonColor: '#6D28D9'
+            });
+            return;
+        }
 
         try {
-            resultado = JSON.parse(textoRespuesta);
-        } catch (e) {
-            console.error('Respuesta no JSON:', textoRespuesta);
-
-            Swal.fire({
-                icon: 'error',
-                title: 'Respuesta inválida',
-                text: 'Laravel devolvió una respuesta no válida.',
-                confirmButtonColor: '#6D28D9'
+            const respuesta = await fetch(`{{ route('compras.producto-rapido') }}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                    'Accept': 'application/json',
+                },
+                body: JSON.stringify(datos),
             });
 
-            return;
-        }
+            const resultado = await respuesta.json();
 
-        if (!respuesta.ok) {
-            let mensaje = 'No se pudo crear la presentación.';
+            if (!respuesta.ok) {
+                let mensaje = 'No se pudo crear el producto.';
 
-            if (resultado.errors) {
-                mensaje = Object.values(resultado.errors).flat().join('\n');
-            } else if (resultado.message) {
-                mensaje = resultado.message;
+                if (resultado.errors) {
+                    mensaje = Object.values(resultado.errors).flat().join('\n');
+                }
+
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: mensaje,
+                    confirmButtonColor: '#6D28D9'
+                });
+
+                return;
             }
 
-            Swal.fire({
-                icon: 'error',
-                title: 'Error',
-                text: mensaje,
-                confirmButtonColor: '#6D28D9'
-            });
-
-            return;
-        }
-
-        const selectPresentacion = document.getElementById('rapido_presentacion_id');
-
-        const option = document.createElement('option');
-        option.value = resultado.presentacion.id;
-        option.textContent = resultado.presentacion.nombre;
-        option.selected = true;
-
-        selectPresentacion.appendChild(option);
-
-        Swal.fire({
-            icon: 'success',
-            title: 'Presentación creada',
-            text: 'La presentación fue creada y seleccionada.',
-            confirmButtonColor: '#6D28D9'
-        });
-
-    } catch (error) {
-        console.error('Error presentación rápida:', error);
-
-        Swal.fire({
-            icon: 'error',
-            title: 'Error inesperado',
-            text: error.message,
-            confirmButtonColor: '#6D28D9'
-        });
-    }
-}
-
-async function crearCategoriaRapida() {
-    const { value: nombre } = await Swal.fire({
-        title: 'Nueva categoría',
-        input: 'text',
-        inputLabel: 'Nombre de la categoría',
-        inputPlaceholder: 'Ej: Analgésicos, Antibióticos, Jarabes...',
-        showCancelButton: true,
-        confirmButtonText: 'Guardar',
-        cancelButtonText: 'Cancelar',
-        confirmButtonColor: '#6D28D9',
-        inputValidator: (value) => {
-            if (!value || !value.trim()) {
-                return 'Debe ingresar el nombre de la categoría.';
-            }
-        }
-    });
-
-    if (!nombre) {
-        return;
-    }
-
-    try {
-        const respuesta = await fetch(`{{ route('compras.categoria-rapida') }}`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
-                'Accept': 'application/json',
-            },
-            body: JSON.stringify({
-                nombre: nombre.trim(),
-            }),
-        });
-
-        const textoRespuesta = await respuesta.text();
-
-        let resultado = null;
-
-        try {
-            resultado = JSON.parse(textoRespuesta);
-        } catch (e) {
-            console.error('Respuesta no JSON:', textoRespuesta);
-
-            Swal.fire({
-                icon: 'error',
-                title: 'Respuesta inválida',
-                text: 'Laravel devolvió una respuesta no válida.',
-                confirmButtonColor: '#6D28D9'
-            });
-
-            return;
-        }
-
-        if (!respuesta.ok) {
-            let mensaje = 'No se pudo crear la categoría.';
-
-            if (resultado.errors) {
-                mensaje = Object.values(resultado.errors).flat().join('\n');
-            } else if (resultado.message) {
-                mensaje = resultado.message;
-            }
-
-            Swal.fire({
-                icon: 'error',
-                title: 'Error',
-                text: mensaje,
-                confirmButtonColor: '#6D28D9'
-            });
-
-            return;
-        }
-
-        const selectCategoria = document.getElementById('rapido_categoria_id');
-
-        const option = document.createElement('option');
-        option.value = resultado.categoria.id;
-        option.textContent = resultado.categoria.nombre;
-        option.selected = true;
-
-        selectCategoria.appendChild(option);
-
-        Swal.fire({
-            icon: 'success',
-            title: 'Categoría creada',
-            text: 'La categoría fue creada y seleccionada.',
-            confirmButtonColor: '#6D28D9'
-        });
-
-    } catch (error) {
-        console.error('Error categoría rápida:', error);
-
-        Swal.fire({
-            icon: 'error',
-            title: 'Error inesperado',
-            text: error.message,
-            confirmButtonColor: '#6D28D9'
-        });
-    }
-}
-
-async function crearProveedorRapido() {
-    const { value: formValues } = await Swal.fire({
-        title: 'Nuevo proveedor',
-        width: 620,
-        html: `
-            <div class="swal-form-grid">
-                <div class="swal-form-group swal-form-full">
-                    <label>Nombre del proveedor *</label>
-                    <input id="swal_proveedor_nombre" class="swal-input-custom" placeholder="Ej: Distribuidora Farma">
-                </div>
-
-                <div class="swal-form-group">
-                    <label>Teléfono</label>
-                    <input id="swal_proveedor_telefono" class="swal-input-custom" placeholder="Ej: 76543210">
-                </div>
-
-                <div class="swal-form-group">
-                    <label>Contacto</label>
-                    <input id="swal_proveedor_contacto" class="swal-input-custom" placeholder="Ej: Juan Pérez">
-                </div>
-
-                <div class="swal-form-group swal-form-full">
-                    <label>Dirección</label>
-                    <input id="swal_proveedor_direccion" class="swal-input-custom" placeholder="Ej: Av. Principal #123">
-                </div>
-            </div>
-        `,
-        showCancelButton: true,
-        confirmButtonText: 'Guardar',
-        cancelButtonText: 'Cancelar',
-        confirmButtonColor: '#6D28D9',
-        focusConfirm: false,
-        didOpen: () => {
-            document.getElementById('swal_proveedor_nombre').focus();
-        },
-        preConfirm: () => {
-            const nombre = document.getElementById('swal_proveedor_nombre').value.trim();
-
-            if (!nombre) {
-                Swal.showValidationMessage('Debe ingresar el nombre del proveedor.');
-                return false;
-            }
-
-            return {
-                nombre: nombre,
-                telefono: document.getElementById('swal_proveedor_telefono').value.trim(),
-                contacto: document.getElementById('swal_proveedor_contacto').value.trim(),
-                direccion: document.getElementById('swal_proveedor_direccion').value.trim(),
+            /*
+            * Adaptamos la respuesta del producto rápido al mismo formato
+            * que ya usa seleccionarProductoCompra(producto).
+            */
+            const productoCreado = {
+                id: resultado.producto.producto_presentacion_id,
+                producto_id: resultado.producto.producto_id,
+                nombre: resultado.producto.nombre_producto,
+                nombre_mostrado: resultado.producto.nombre_mostrado || resultado.producto.presentacion || resultado.producto.nombre_producto,
+                generico: resultado.producto.nombre_generico,
+                concentracion: resultado.producto.concentracion,
+                laboratorio: resultado.producto.laboratorio || '',
+                tipo_producto: resultado.producto.tipo_producto || '',
+                presentacion: resultado.producto.presentacion,
+                unidades_equivalentes: resultado.producto.unidades_equivalentes,
+                precio_compra: Number(resultado.producto.precio_compra || 0),
+                precio_venta: Number(resultado.producto.precio_venta || 0),
+                stock_disponible: 0,
             };
+
+            seleccionarProductoCompra(productoCreado);
+
+            limpiarFormularioProductoRapido();
+            ocultarFormularioProductoRapido();
+
+            Swal.fire({
+                icon: 'success',
+                title: 'Producto creado',
+                text: 'El producto fue creado y seleccionado para la compra.',
+                confirmButtonColor: '#6D28D9'
+            });
+
+        } catch (error) {
+            console.error('Error producto rápido:', error);
+
+            Swal.fire({
+                icon: 'error',
+                title: 'Error inesperado',
+                text: error.message,
+                confirmButtonColor: '#6D28D9'
+            });
+        }
+    }
+
+    function limpiarFormularioProductoRapido() {
+        document.getElementById('rapido_nombre_comercial').value = '';
+        document.getElementById('rapido_nombre_generico').value = '';
+        document.getElementById('rapido_concentracion').value = '';
+        document.getElementById('rapido_tipo_producto').value = 'medicamento';
+        document.getElementById('rapido_categoria_id').value = '';
+        document.getElementById('rapido_laboratorio_id').value = '';
+        document.getElementById('rapido_presentacion_id').value = '';
+        document.getElementById('rapido_nombre_mostrado').value = '';
+        document.getElementById('rapido_unidades_equivalentes').value = 1;
+        document.getElementById('rapido_precio_compra').value = 0;
+        document.getElementById('rapido_precio_venta').value = 0;
+        document.getElementById('rapido_codigo_barra').value = '';
+    }
+    async function crearLaboratorioRapido() {
+        const { value: nombre } = await Swal.fire({
+            title: 'Nuevo laboratorio',
+            input: 'text',
+            inputLabel: 'Nombre del laboratorio',
+            inputPlaceholder: 'Ej: INTI, COFAR, Bagó...',
+            showCancelButton: true,
+            confirmButtonText: 'Guardar',
+            cancelButtonText: 'Cancelar',
+            confirmButtonColor: '#6D28D9',
+            inputValidator: (value) => {
+                if (!value || !value.trim()) {
+                    return 'Debe ingresar el nombre del laboratorio.';
+                }
+            }
+        });
+
+        if (!nombre) {
+            return;
+        }
+
+        try {
+            const respuesta = await fetch(`{{ route('compras.laboratorio-rapido') }}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                    'Accept': 'application/json',
+                },
+                body: JSON.stringify({
+                    nombre: nombre.trim(),
+                }),
+            });
+
+            const textoRespuesta = await respuesta.text();
+
+            let resultado = null;
+
+            try {
+                resultado = JSON.parse(textoRespuesta);
+            } catch (e) {
+                console.error('Respuesta no JSON:', textoRespuesta);
+
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Respuesta inválida',
+                    text: 'Laravel devolvió una respuesta no válida.',
+                    confirmButtonColor: '#6D28D9'
+                });
+
+                return;
+            }
+
+            if (!respuesta.ok) {
+                let mensaje = 'No se pudo crear el laboratorio.';
+
+                if (resultado.errors) {
+                    mensaje = Object.values(resultado.errors).flat().join('\n');
+                } else if (resultado.message) {
+                    mensaje = resultado.message;
+                }
+
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: mensaje,
+                    confirmButtonColor: '#6D28D9'
+                });
+
+                return;
+            }
+
+            const selectLaboratorio = document.getElementById('rapido_laboratorio_id');
+
+            const option = document.createElement('option');
+            option.value = resultado.laboratorio.id;
+            option.textContent = resultado.laboratorio.nombre;
+            option.selected = true;
+
+            selectLaboratorio.appendChild(option);
+
+            Swal.fire({
+                icon: 'success',
+                title: 'Laboratorio creado',
+                text: 'El laboratorio fue creado y seleccionado.',
+                confirmButtonColor: '#6D28D9'
+            });
+
+        } catch (error) {
+            console.error('Error laboratorio rápido:', error);
+
+            Swal.fire({
+                icon: 'error',
+                title: 'Error inesperado',
+                text: error.message,
+                confirmButtonColor: '#6D28D9'
+            });
+        }
+    }
+
+    document.addEventListener('keydown', function (event) {
+        if (event.key === 'Escape') {
+            const modal = document.getElementById('modal_producto_rapido');
+
+            if (modal && modal.style.display === 'flex') {
+                ocultarFormularioProductoRapido();
+            }
         }
     });
 
-    if (!formValues) {
-        return;
-    }
-
-    try {
-        const respuesta = await fetch(`{{ route('compras.proveedor-rapido') }}`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
-                'Accept': 'application/json',
-            },
-            body: JSON.stringify(formValues),
+    async function crearPresentacionRapida() {
+        const { value: nombre } = await Swal.fire({
+            title: 'Nueva presentación',
+            input: 'text',
+            inputLabel: 'Nombre de la presentación',
+            inputPlaceholder: 'Ej: Tableta, Caja, Frasco, Ampolla, Sachet...',
+            showCancelButton: true,
+            confirmButtonText: 'Guardar',
+            cancelButtonText: 'Cancelar',
+            confirmButtonColor: '#6D28D9',
+            inputValidator: (value) => {
+                if (!value || !value.trim()) {
+                    return 'Debe ingresar el nombre de la presentación.';
+                }
+            }
         });
 
-        const textoRespuesta = await respuesta.text();
-
-        let resultado = null;
+        if (!nombre) {
+            return;
+        }
 
         try {
-            resultado = JSON.parse(textoRespuesta);
-        } catch (e) {
-            console.error('Respuesta no JSON:', textoRespuesta);
-
-            Swal.fire({
-                icon: 'error',
-                title: 'Respuesta inválida',
-                text: 'Laravel devolvió una respuesta no válida.',
-                confirmButtonColor: '#6D28D9'
+            const respuesta = await fetch(`{{ route('compras.presentacion-rapida') }}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                    'Accept': 'application/json',
+                },
+                body: JSON.stringify({
+                    nombre: nombre.trim(),
+                }),
             });
 
-            return;
-        }
+            const textoRespuesta = await respuesta.text();
 
-        if (!respuesta.ok) {
-            let mensaje = 'No se pudo crear el proveedor.';
+            let resultado = null;
 
-            if (resultado.errors) {
-                mensaje = Object.values(resultado.errors).flat().join('\n');
-            } else if (resultado.message) {
-                mensaje = resultado.message;
+            try {
+                resultado = JSON.parse(textoRespuesta);
+            } catch (e) {
+                console.error('Respuesta no JSON:', textoRespuesta);
+
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Respuesta inválida',
+                    text: 'Laravel devolvió una respuesta no válida.',
+                    confirmButtonColor: '#6D28D9'
+                });
+
+                return;
             }
 
+            if (!respuesta.ok) {
+                let mensaje = 'No se pudo crear la presentación.';
+
+                if (resultado.errors) {
+                    mensaje = Object.values(resultado.errors).flat().join('\n');
+                } else if (resultado.message) {
+                    mensaje = resultado.message;
+                }
+
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: mensaje,
+                    confirmButtonColor: '#6D28D9'
+                });
+
+                return;
+            }
+
+            const selectPresentacion = document.getElementById('rapido_presentacion_id');
+
+            const option = document.createElement('option');
+            option.value = resultado.presentacion.id;
+            option.textContent = resultado.presentacion.nombre;
+            option.selected = true;
+
+            selectPresentacion.appendChild(option);
+
             Swal.fire({
-                icon: 'error',
-                title: 'Error',
-                text: mensaje,
+                icon: 'success',
+                title: 'Presentación creada',
+                text: 'La presentación fue creada y seleccionada.',
                 confirmButtonColor: '#6D28D9'
             });
 
+        } catch (error) {
+            console.error('Error presentación rápida:', error);
+
+            Swal.fire({
+                icon: 'error',
+                title: 'Error inesperado',
+                text: error.message,
+                confirmButtonColor: '#6D28D9'
+            });
+        }
+    }
+
+    async function crearCategoriaRapida() {
+        const { value: nombre } = await Swal.fire({
+            title: 'Nueva categoría',
+            input: 'text',
+            inputLabel: 'Nombre de la categoría',
+            inputPlaceholder: 'Ej: Analgésicos, Antibióticos, Jarabes...',
+            showCancelButton: true,
+            confirmButtonText: 'Guardar',
+            cancelButtonText: 'Cancelar',
+            confirmButtonColor: '#6D28D9',
+            inputValidator: (value) => {
+                if (!value || !value.trim()) {
+                    return 'Debe ingresar el nombre de la categoría.';
+                }
+            }
+        });
+
+        if (!nombre) {
             return;
         }
 
-        const selectProveedor = document.getElementById('proveedor_id');
+        try {
+            const respuesta = await fetch(`{{ route('compras.categoria-rapida') }}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                    'Accept': 'application/json',
+                },
+                body: JSON.stringify({
+                    nombre: nombre.trim(),
+                }),
+            });
 
-        const option = document.createElement('option');
-        option.value = resultado.proveedor.id;
-        option.textContent = resultado.proveedor.nombre;
-        option.selected = true;
+            const textoRespuesta = await respuesta.text();
 
-        selectProveedor.appendChild(option);
+            let resultado = null;
 
-        Swal.fire({
-            icon: 'success',
-            title: 'Proveedor creado',
-            text: 'El proveedor fue creado y seleccionado.',
-            confirmButtonColor: '#6D28D9'
+            try {
+                resultado = JSON.parse(textoRespuesta);
+            } catch (e) {
+                console.error('Respuesta no JSON:', textoRespuesta);
+
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Respuesta inválida',
+                    text: 'Laravel devolvió una respuesta no válida.',
+                    confirmButtonColor: '#6D28D9'
+                });
+
+                return;
+            }
+
+            if (!respuesta.ok) {
+                let mensaje = 'No se pudo crear la categoría.';
+
+                if (resultado.errors) {
+                    mensaje = Object.values(resultado.errors).flat().join('\n');
+                } else if (resultado.message) {
+                    mensaje = resultado.message;
+                }
+
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: mensaje,
+                    confirmButtonColor: '#6D28D9'
+                });
+
+                return;
+            }
+
+            const selectCategoria = document.getElementById('rapido_categoria_id');
+
+            const option = document.createElement('option');
+            option.value = resultado.categoria.id;
+            option.textContent = resultado.categoria.nombre;
+            option.selected = true;
+
+            selectCategoria.appendChild(option);
+
+            Swal.fire({
+                icon: 'success',
+                title: 'Categoría creada',
+                text: 'La categoría fue creada y seleccionada.',
+                confirmButtonColor: '#6D28D9'
+            });
+
+        } catch (error) {
+            console.error('Error categoría rápida:', error);
+
+            Swal.fire({
+                icon: 'error',
+                title: 'Error inesperado',
+                text: error.message,
+                confirmButtonColor: '#6D28D9'
+            });
+        }
+    }
+
+    async function crearProveedorRapido() {
+        const { value: formValues } = await Swal.fire({
+            title: 'Nuevo proveedor',
+            width: 620,
+            html: `
+                <div class="swal-form-grid">
+                    <div class="swal-form-group swal-form-full">
+                        <label>Nombre del proveedor *</label>
+                        <input id="swal_proveedor_nombre" class="swal-input-custom" placeholder="Ej: Distribuidora Farma">
+                    </div>
+
+                    <div class="swal-form-group">
+                        <label>Teléfono</label>
+                        <input id="swal_proveedor_telefono" class="swal-input-custom" placeholder="Ej: 76543210">
+                    </div>
+
+                    <div class="swal-form-group">
+                        <label>Contacto</label>
+                        <input id="swal_proveedor_contacto" class="swal-input-custom" placeholder="Ej: Juan Pérez">
+                    </div>
+
+                    <div class="swal-form-group swal-form-full">
+                        <label>Dirección</label>
+                        <input id="swal_proveedor_direccion" class="swal-input-custom" placeholder="Ej: Av. Principal #123">
+                    </div>
+                </div>
+            `,
+            showCancelButton: true,
+            confirmButtonText: 'Guardar',
+            cancelButtonText: 'Cancelar',
+            confirmButtonColor: '#6D28D9',
+            focusConfirm: false,
+            didOpen: () => {
+                document.getElementById('swal_proveedor_nombre').focus();
+            },
+            preConfirm: () => {
+                const nombre = document.getElementById('swal_proveedor_nombre').value.trim();
+
+                if (!nombre) {
+                    Swal.showValidationMessage('Debe ingresar el nombre del proveedor.');
+                    return false;
+                }
+
+                return {
+                    nombre: nombre,
+                    telefono: document.getElementById('swal_proveedor_telefono').value.trim(),
+                    contacto: document.getElementById('swal_proveedor_contacto').value.trim(),
+                    direccion: document.getElementById('swal_proveedor_direccion').value.trim(),
+                };
+            }
         });
 
-    } catch (error) {
-        console.error('Error proveedor rápido:', error);
+        if (!formValues) {
+            return;
+        }
 
-        Swal.fire({
-            icon: 'error',
-            title: 'Error inesperado',
-            text: error.message,
-            confirmButtonColor: '#6D28D9'
-        });
+        try {
+            const respuesta = await fetch(`{{ route('compras.proveedor-rapido') }}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                    'Accept': 'application/json',
+                },
+                body: JSON.stringify(formValues),
+            });
+
+            const textoRespuesta = await respuesta.text();
+
+            let resultado = null;
+
+            try {
+                resultado = JSON.parse(textoRespuesta);
+            } catch (e) {
+                console.error('Respuesta no JSON:', textoRespuesta);
+
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Respuesta inválida',
+                    text: 'Laravel devolvió una respuesta no válida.',
+                    confirmButtonColor: '#6D28D9'
+                });
+
+                return;
+            }
+
+            if (!respuesta.ok) {
+                let mensaje = 'No se pudo crear el proveedor.';
+
+                if (resultado.errors) {
+                    mensaje = Object.values(resultado.errors).flat().join('\n');
+                } else if (resultado.message) {
+                    mensaje = resultado.message;
+                }
+
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: mensaje,
+                    confirmButtonColor: '#6D28D9'
+                });
+
+                return;
+            }
+
+            const selectProveedor = document.getElementById('proveedor_id');
+
+            const option = document.createElement('option');
+            option.value = resultado.proveedor.id;
+            option.textContent = resultado.proveedor.nombre;
+            option.selected = true;
+
+            selectProveedor.appendChild(option);
+
+            Swal.fire({
+                icon: 'success',
+                title: 'Proveedor creado',
+                text: 'El proveedor fue creado y seleccionado.',
+                confirmButtonColor: '#6D28D9'
+            });
+
+        } catch (error) {
+            console.error('Error proveedor rápido:', error);
+
+            Swal.fire({
+                icon: 'error',
+                title: 'Error inesperado',
+                text: error.message,
+                confirmButtonColor: '#6D28D9'
+            });
+        }
     }
-}
 
-function generarNombreMostradoRapido() {
-    const nombre = document.getElementById('rapido_nombre_comercial')?.value.trim() || '';
-    const concentracion = document.getElementById('rapido_concentracion')?.value.trim() || '';
-    const laboratorioSelect = document.getElementById('rapido_laboratorio_id');
-    const presentacionSelect = document.getElementById('rapido_presentacion_id');
-    const nombreMostradoInput = document.getElementById('rapido_nombre_mostrado');
+    function generarNombreMostradoRapido() {
+        const nombre = document.getElementById('rapido_nombre_comercial')?.value.trim() || '';
+        const concentracion = document.getElementById('rapido_concentracion')?.value.trim() || '';
+        const laboratorioSelect = document.getElementById('rapido_laboratorio_id');
+        const presentacionSelect = document.getElementById('rapido_presentacion_id');
+        const nombreMostradoInput = document.getElementById('rapido_nombre_mostrado');
 
-    if (!nombreMostradoInput || nombreMostradoInput.value.trim() !== '') {
-        return;
+        if (!nombreMostradoInput || nombreMostradoInput.value.trim() !== '') {
+            return;
+        }
+
+        const laboratorio = laboratorioSelect && laboratorioSelect.value
+            ? laboratorioSelect.options[laboratorioSelect.selectedIndex].text.trim()
+            : '';
+
+        const presentacion = presentacionSelect && presentacionSelect.value
+            ? presentacionSelect.options[presentacionSelect.selectedIndex].text.trim()
+            : '';
+
+        const partes = [nombre, concentracion, laboratorio].filter(Boolean);
+
+        let resultado = partes.join(' ');
+
+        if (presentacion) {
+            resultado += resultado ? ' - ' + presentacion : presentacion;
+        }
+
+        nombreMostradoInput.value = resultado;
     }
 
-    const laboratorio = laboratorioSelect && laboratorioSelect.value
-        ? laboratorioSelect.options[laboratorioSelect.selectedIndex].text.trim()
-        : '';
+    ['rapido_nombre_comercial', 'rapido_concentracion', 'rapido_laboratorio_id', 'rapido_presentacion_id'].forEach(function (id) {
+        const elemento = document.getElementById(id);
 
-    const presentacion = presentacionSelect && presentacionSelect.value
-        ? presentacionSelect.options[presentacionSelect.selectedIndex].text.trim()
-        : '';
+        if (elemento) {
+            elemento.addEventListener('change', generarNombreMostradoRapido);
+            elemento.addEventListener('blur', generarNombreMostradoRapido);
+        }
+    });
 
-    const partes = [nombre, concentracion, laboratorio].filter(Boolean);
-
-    let resultado = partes.join(' ');
-
-    if (presentacion) {
-        resultado += resultado ? ' - ' + presentacion : presentacion;
-    }
-
-    nombreMostradoInput.value = resultado;
-}
-
-['rapido_nombre_comercial', 'rapido_concentracion', 'rapido_laboratorio_id', 'rapido_presentacion_id'].forEach(function (id) {
-    const elemento = document.getElementById(id);
-
-    if (elemento) {
-        elemento.addEventListener('change', generarNombreMostradoRapido);
-        elemento.addEventListener('blur', generarNombreMostradoRapido);
-    }
-});
+    renderCompra();
 </script>
 
 @endsection

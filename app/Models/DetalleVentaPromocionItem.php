@@ -6,6 +6,8 @@ use Illuminate\Database\Eloquent\Model;
 
 class DetalleVentaPromocionItem extends Model
 {
+    protected $table = 'detalle_venta_promocion_items';
+    
     protected $fillable = [
         'detalle_venta_promocion_id',
         'promocion_item_id',

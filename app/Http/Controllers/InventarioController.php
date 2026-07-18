@@ -8,6 +8,7 @@ use App\Models\MovimientoInventario;
 use App\Models\Producto;
 use App\Models\Sucursal;
 use Illuminate\Http\Request;
+use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 
 class InventarioController extends Controller
@@ -189,6 +190,94 @@ class InventarioController extends Controller
             'buscar',
             'sucursalId',
             'tipoMovimiento'
+        ));
+    }
+
+    public function proximosVencer(Request $request)
+    {
+        $dias = (int) $request->get('dias', 30);
+        $buscar = $request->get('buscar');
+
+        if ($dias < 1) {
+            $dias = 30;
+        }
+
+        $hoy = Carbon::today();
+        $fechaLimite = Carbon::today()->addDays($dias);
+
+        $inventarios = Inventario::with([
+                'producto.laboratorio',
+                'sucursal',
+                'lote',
+            ])
+            ->where('stock_actual', '>', 0)
+            ->whereHas('lote', function ($query) use ($hoy, $fechaLimite) {
+                $query->whereNotNull('fecha_vencimiento')
+                    ->whereDate('fecha_vencimiento', '>=', $hoy)
+                    ->whereDate('fecha_vencimiento', '<=', $fechaLimite);
+            })
+            ->when($buscar, function ($query, $buscar) {
+                $query->whereHas('producto', function ($q) use ($buscar) {
+                    $q->where('nombre_comercial', 'like', "%{$buscar}%")
+                        ->orWhere('nombre_generico', 'like', "%{$buscar}%")
+                        ->orWhere('concentracion', 'like', "%{$buscar}%")
+                        ->orWhereHas('laboratorio', function ($lab) use ($buscar) {
+                            $lab->where('nombre', 'like', "%{$buscar}%");
+                        });
+                });
+            })
+            ->orderBy(
+                Lote::select('fecha_vencimiento')
+                    ->whereColumn('lotes.id', 'inventarios.lote_id')
+            )
+            ->paginate(15)
+            ->withQueryString();
+
+        return view('inventario.proximos-vencer', compact(
+            'inventarios',
+            'dias',
+            'buscar',
+            'hoy'
+        ));
+    }
+
+    public function productosVencidos(Request $request)
+    {
+        $buscar = $request->get('buscar');
+
+        $hoy = Carbon::today();
+
+        $inventarios = Inventario::with([
+                'producto.laboratorio',
+                'sucursal',
+                'lote',
+            ])
+            ->where('stock_actual', '>', 0)
+            ->whereHas('lote', function ($query) use ($hoy) {
+                $query->whereNotNull('fecha_vencimiento')
+                    ->whereDate('fecha_vencimiento', '<', $hoy);
+            })
+            ->when($buscar, function ($query, $buscar) {
+                $query->whereHas('producto', function ($q) use ($buscar) {
+                    $q->where('nombre_comercial', 'like', "%{$buscar}%")
+                        ->orWhere('nombre_generico', 'like', "%{$buscar}%")
+                        ->orWhere('concentracion', 'like', "%{$buscar}%")
+                        ->orWhereHas('laboratorio', function ($lab) use ($buscar) {
+                            $lab->where('nombre', 'like', "%{$buscar}%");
+                        });
+                });
+            })
+            ->orderBy(
+                Lote::select('fecha_vencimiento')
+                    ->whereColumn('lotes.id', 'inventarios.lote_id')
+            )
+            ->paginate(15)
+            ->withQueryString();
+
+        return view('inventario.productos-vencidos', compact(
+            'inventarios',
+            'buscar',
+            'hoy'
         ));
     }
 }

@@ -45,13 +45,36 @@ class PromocionController extends Controller
         ));
     }
 
-    public function create()
+    public function create(Request $request)
     {
+        $user = auth()->user();
+
+        $sucursalUsuario = $user->sucursalPrincipal()->first()
+            ?? $user->sucursales()->wherePivot('estado', 'activo')->first();
+
         $sucursales = Sucursal::where('estado', 'activo')
             ->orderBy('nombre')
             ->get();
 
-        return view('promociones.create', compact('sucursales'));
+        $inventarioSeleccionado = null;
+
+        if ($request->filled('inventario_id') && $sucursalUsuario) {
+            $inventarioSeleccionado = Inventario::with([
+                    'producto.laboratorio',
+                    'producto.presentacionPrincipal.presentacion',
+                    'lote',
+                    'sucursal',
+                ])
+                ->where('sucursal_id', $sucursalUsuario->id)
+                ->where('stock_actual', '>', 0)
+                ->find($request->inventario_id);
+        }
+
+        return view('promociones.create', compact(
+            'sucursales',
+            'sucursalUsuario',
+            'inventarioSeleccionado'
+        ));
     }
 
     public function store(Request $request)
@@ -164,12 +187,108 @@ class PromocionController extends Controller
 
     public function edit(Promocion $promocion)
     {
-        return view('promociones.edit', compact('promocion'));
+        $promocion->load([
+            'items.producto.laboratorio',
+            'items.productoPresentacion.presentacion',
+            'items.lote',
+        ]);
+
+        $sucursales = Sucursal::where('estado', 'activo')
+            ->orderBy('nombre')
+            ->get();
+
+        return view('promociones.edit', compact('promocion', 'sucursales'));
     }
 
     public function update(Request $request, Promocion $promocion)
     {
-        return back()->with('success', 'Pendiente: aquí actualizaremos la promoción.');
+        if ($promocion->estado !== 'activo') {
+            return redirect()
+                ->route('promociones.show', $promocion)
+                ->with('error', 'No se puede editar una promoción inactiva.');
+        }
+
+        $datos = $request->validate([
+            'nombre' => ['required', 'string', 'max:150'],
+            'descripcion' => ['nullable', 'string'],
+            'tipo' => ['required', 'in:producto_individual,combo,por_vencimiento'],
+            'precio_promocional' => ['required', 'numeric', 'min:0'],
+            'sucursal_id' => ['nullable', 'exists:sucursales,id'],
+            'fecha_inicio' => ['nullable', 'date'],
+            'fecha_fin' => ['nullable', 'date', 'after_or_equal:fecha_inicio'],
+            'motivo' => ['nullable', 'string', 'max:255'],
+
+            'items' => ['required', 'array', 'min:1'],
+            'items.*.producto_id' => ['required', 'exists:productos,id'],
+            'items.*.producto_presentacion_id' => ['required', 'exists:producto_presentaciones,id'],
+            'items.*.lote_id' => ['nullable', 'exists:lotes,id'],
+            'items.*.cantidad' => ['required', 'integer', 'min:1'],
+            'items.*.unidades_necesarias' => ['required', 'integer', 'min:1'],
+            'items.*.precio_referencia' => ['required', 'numeric', 'min:0'],
+        ], [
+            'nombre.required' => 'El nombre de la promoción es obligatorio.',
+            'tipo.required' => 'Seleccione el tipo de promoción.',
+            'precio_promocional.required' => 'Ingrese el precio promocional.',
+            'fecha_fin.after_or_equal' => 'La fecha fin no puede ser anterior a la fecha inicio.',
+            'items.required' => 'Debe agregar al menos un producto a la promoción.',
+            'items.min' => 'Debe agregar al menos un producto a la promoción.',
+        ]);
+
+        if ($datos['tipo'] === 'producto_individual' && count($datos['items']) !== 1) {
+            return back()
+                ->withErrors([
+                    'items' => 'Una promoción individual debe tener exactamente un producto.',
+                ])
+                ->withInput();
+        }
+
+        if ($datos['tipo'] === 'combo' && count($datos['items']) < 2) {
+            return back()
+                ->withErrors([
+                    'items' => 'Una promoción tipo combo debe tener dos o más productos.',
+                ])
+                ->withInput();
+        }
+
+        DB::transaction(function () use ($datos, $promocion) {
+            $promocion->update([
+                'sucursal_id' => $datos['sucursal_id'] ?? null,
+                'nombre' => $datos['nombre'],
+                'descripcion' => $datos['descripcion'] ?? null,
+                'tipo' => $datos['tipo'],
+                'precio_promocional' => round((float) $datos['precio_promocional'], 2),
+                'fecha_inicio' => $datos['fecha_inicio'] ?? null,
+                'fecha_fin' => $datos['fecha_fin'] ?? null,
+                'motivo' => $datos['motivo'] ?? null,
+            ]);
+
+            $promocion->items()->delete();
+
+            foreach ($datos['items'] as $item) {
+                $productoPresentacion = ProductoPresentacion::where('id', $item['producto_presentacion_id'])
+                    ->where('producto_id', $item['producto_id'])
+                    ->where('estado', 'activo')
+                    ->firstOrFail();
+
+                $cantidad = (int) $item['cantidad'];
+                $unidadesEquivalentes = max((int) $productoPresentacion->unidades_equivalentes, 1);
+                $unidadesNecesarias = $cantidad * $unidadesEquivalentes;
+
+                PromocionItem::create([
+                    'promocion_id' => $promocion->id,
+                    'producto_id' => $productoPresentacion->producto_id,
+                    'producto_presentacion_id' => $productoPresentacion->id,
+                    'lote_id' => $item['lote_id'] ?? null,
+                    'cantidad' => $cantidad,
+                    'unidades_necesarias' => $unidadesNecesarias,
+                    'precio_referencia' => round((float) $item['precio_referencia'], 2),
+                ]);
+            }
+        });
+
+        return redirect()
+            ->route('promociones.show', $promocion)
+            ->with('success', 'Promoción actualizada correctamente.');
     }
 
     public function destroy(Promocion $promocion)

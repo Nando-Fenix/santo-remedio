@@ -150,10 +150,15 @@ class VentaController extends Controller
             $unidadesNecesarias = $cantidad * $productoPresentacion->unidades_equivalentes;
             $subtotal = round($cantidad * (float) $productoPresentacion->precio_venta, 2);
 
-            $stockDisponible = Inventario::where('producto_id', $productoPresentacion->producto_id)
-                ->where('sucursal_id', $sucursal->id)
-                ->where('estado', 'activo')
-                ->sum('stock_actual');
+            $stockDisponible = Inventario::leftJoin('lotes', 'inventarios.lote_id', '=', 'lotes.id')
+                ->where('inventarios.producto_id', $productoPresentacion->producto_id)
+                ->where('inventarios.sucursal_id', $sucursal->id)
+                ->where('inventarios.estado', 'activo')
+                ->where(function ($query) {
+                    $query->whereNull('lotes.fecha_vencimiento')
+                        ->orWhereDate('lotes.fecha_vencimiento', '>=', now()->toDateString());
+                })
+                ->sum('inventarios.stock_actual');
 
             if ($stockDisponible < $unidadesNecesarias) {
                 return back()
@@ -215,15 +220,20 @@ class VentaController extends Controller
 
                 $unidadesNecesarias = $promoItem->unidades_necesarias * $cantidadPromo;
 
-                $stockQuery = Inventario::where('producto_id', $promoItem->producto_id)
-                    ->where('sucursal_id', $sucursal->id)
-                    ->where('estado', 'activo');
+                $stockQuery = Inventario::leftJoin('lotes', 'inventarios.lote_id', '=', 'lotes.id')
+                    ->where('inventarios.producto_id', $promoItem->producto_id)
+                    ->where('inventarios.sucursal_id', $sucursal->id)
+                    ->where('inventarios.estado', 'activo')
+                    ->where(function ($query) {
+                        $query->whereNull('lotes.fecha_vencimiento')
+                            ->orWhereDate('lotes.fecha_vencimiento', '>=', now()->toDateString());
+                    });
 
                 if ($promoItem->lote_id) {
-                    $stockQuery->where('lote_id', $promoItem->lote_id);
+                    $stockQuery->where('inventarios.lote_id', $promoItem->lote_id);
                 }
 
-                $stockDisponible = $stockQuery->sum('stock_actual');
+                $stockDisponible = $stockQuery->sum('inventarios.stock_actual');
 
                 if ($stockDisponible < $unidadesNecesarias) {
                     return back()
@@ -297,6 +307,10 @@ class VentaController extends Controller
                     ->where('inventarios.sucursal_id', $sucursal->id)
                     ->where('inventarios.estado', 'activo')
                     ->where('inventarios.stock_actual', '>', 0)
+                    ->where(function ($query) {
+                        $query->whereNull('lotes.fecha_vencimiento')
+                            ->orWhereDate('lotes.fecha_vencimiento', '>=', now()->toDateString());
+                    })
                     ->orderByRaw('lotes.fecha_vencimiento IS NULL')
                     ->orderBy('lotes.fecha_vencimiento')
                     ->select('inventarios.*')
@@ -373,7 +387,11 @@ class VentaController extends Controller
                         ->where('inventarios.producto_id', $promoItem->producto_id)
                         ->where('inventarios.sucursal_id', $sucursal->id)
                         ->where('inventarios.estado', 'activo')
-                        ->where('inventarios.stock_actual', '>', 0);
+                        ->where('inventarios.stock_actual', '>', 0)
+                        ->where(function ($query) {
+                            $query->whereNull('lotes.fecha_vencimiento')
+                                ->orWhereDate('lotes.fecha_vencimiento', '>=', now()->toDateString());
+                        });
 
                     if ($promoItem->lote_id) {
                         $inventariosQuery->where('inventarios.lote_id', $promoItem->lote_id);
@@ -491,6 +509,12 @@ class VentaController extends Controller
             'detalles.producto',
             'detalles.productoPresentacion.presentacion',
             'detalles.lotesDescontados.lote',
+
+            'promociones.promocion',
+            'promociones.items.producto.laboratorio',
+            'promociones.items.productoPresentacion.presentacion',
+            'promociones.items.lote',
+
             'pagos.metodoPago',
             'caja',
         ]);
@@ -548,6 +572,12 @@ class VentaController extends Controller
         DB::transaction(function () use ($venta, $datos, $user, $cajaAbierta) {
             $venta->load([
                 'detalles.lotesDescontados',
+
+                'promociones.items',
+                'promociones.items.lote',
+                'promociones.items.producto',
+                'promociones.items.productoPresentacion',
+
                 'pagos.metodoPago',
             ]);
 
@@ -589,6 +619,48 @@ class VentaController extends Controller
                         'motivo' => 'Devolución de stock por anulación de venta ' . $venta->numero_venta,
                         'referencia_tipo' => 'anulacion_venta',
                         'referencia_id' => $venta->id,
+                    ]);
+                }
+            }
+
+            foreach ($venta->promociones as $detallePromocion) {
+                foreach ($detallePromocion->items as $itemPromocion) {
+                    $inventario = Inventario::where('producto_id', $itemPromocion->producto_id)
+                        ->where('sucursal_id', $venta->sucursal_id)
+                        ->where('lote_id', $itemPromocion->lote_id)
+                        ->first();
+
+                    if (!$inventario) {
+                        $inventario = Inventario::create([
+                            'producto_id' => $itemPromocion->producto_id,
+                            'sucursal_id' => $venta->sucursal_id,
+                            'lote_id' => $itemPromocion->lote_id,
+                            'stock_actual' => 0,
+                            'stock_minimo' => 5,
+                            'estado' => 'activo',
+                        ]);
+                    }
+
+                    $stockAnterior = $inventario->stock_actual;
+                    $stockNuevo = $stockAnterior + $itemPromocion->unidades_descontadas;
+
+                    $inventario->update([
+                        'stock_actual' => $stockNuevo,
+                        'estado' => 'activo',
+                    ]);
+
+                    MovimientoInventario::create([
+                        'producto_id' => $itemPromocion->producto_id,
+                        'sucursal_id' => $venta->sucursal_id,
+                        'lote_id' => $itemPromocion->lote_id,
+                        'usuario_id' => $user->id,
+                        'tipo_movimiento' => 'entrada',
+                        'cantidad' => $itemPromocion->unidades_descontadas,
+                        'stock_anterior' => $stockAnterior,
+                        'stock_nuevo' => $stockNuevo,
+                        'motivo' => 'Devolución de stock por anulación de promoción en venta ' . $venta->numero_venta,
+                        'referencia_tipo' => 'anulacion_venta_promocion',
+                        'referencia_id' => $detallePromocion->id,
                     ]);
                 }
             }

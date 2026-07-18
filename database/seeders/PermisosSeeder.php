@@ -89,6 +89,22 @@ class PermisosSeeder extends Seeder
                 'descripcion' => 'Vender promociones',
                 'modulo' => 'Promociones',
             ],
+
+            [
+                'nombre' => 'ver_bajas_inventario',
+                'modulo' => 'Inventario',
+                'descripcion' => 'Ver bajas de inventario.',
+            ],
+            [
+                'nombre' => 'registrar_baja_inventario',
+                'modulo' => 'Inventario',
+                'descripcion' => 'Registrar bajas de productos del inventario.',
+            ],
+            [
+                'nombre' => 'anular_baja_inventario',
+                'modulo' => 'Inventario',
+                'descripcion' => 'Anular bajas de inventario.',
+            ],
         ];
 
         foreach ($permisos as $permiso) {

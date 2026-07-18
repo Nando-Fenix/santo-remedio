@@ -97,4 +97,9 @@ class Producto extends Model
         return $this->hasMany(PromocionItem::class);
     }
 
+    public function bajasInventario()
+    {
+        return $this->hasMany(BajaInventario::class);
+    }
+
 }

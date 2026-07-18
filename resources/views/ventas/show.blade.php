@@ -11,6 +11,11 @@
         {{ session('success') }}
     </div>
 @endif
+@if (session('error'))
+    <div class="alert-danger">
+        {{ session('error') }}
+    </div>
+@endif
 
 <div class="card" style="margin-bottom: 22px;">
     <div style="display: flex; justify-content: space-between; align-items: center; gap: 16px;">
@@ -25,25 +30,47 @@
         <div style="display: flex; gap: 10px; flex-wrap: wrap;">
             @if ($venta->estado === 'completada' && $venta->caja?->estado === 'abierta')
 
-                @if (auth()->user()->tienePermiso('reembolsar_venta'))
+            @if (auth()->user()->tienePermiso('reembolsar_venta'))
+                @if ($venta->promociones->count() > 0)
+                    <button type="button" class="btn-primary" onclick="Swal.fire({
+                        icon: 'info',
+                        title: 'Venta con promoción',
+                        text: 'Esta venta contiene promociones. Para evitar errores de stock y precio promocional, debe anularse la venta completa.',
+                        confirmButtonColor: '#6D28D9'
+                    })">
+                        Registrar reembolso
+                    </button>
+                @else
                     <a href="{{ route('reembolsos.create', $venta) }}" class="btn-primary">
                         Registrar reembolso
                     </a>
                 @endif
+            @endif
 
-                @if (auth()->user()->tienePermiso('cambiar_producto'))
+            @if (auth()->user()->tienePermiso('cambiar_producto'))
+                @if ($venta->promociones->count() > 0)
+                    <button type="button" class="btn-primary" onclick="Swal.fire({
+                        icon: 'info',
+                        title: 'Venta con promoción',
+                        text: 'Esta venta contiene promociones. Para evitar errores, no se permite cambio parcial. Debe anularse la venta completa.',
+                        confirmButtonColor: '#6D28D9'
+                    })">
+                        Cambio de producto
+                    </button>
+                @else
                     <a href="{{ route('cambios-producto.create', $venta) }}" class="btn-primary">
                         Cambio de producto
                     </a>
                 @endif
-
-                @if (auth()->user()->tienePermiso('anular_venta'))
-                    <a href="{{ route('ventas.anular.create', $venta) }}" class="btn-danger">
-                        Anular venta
-                    </a>
-                @endif
-
             @endif
+
+            @if (auth()->user()->tienePermiso('anular_venta'))
+                <a href="{{ route('ventas.anular.create', $venta) }}" class="btn-danger">
+                    Anular venta
+                </a>
+            @endif
+
+        @endif
 
             @if (auth()->user()->tienePermiso('ver_ventas'))
                 <a href="{{ route('ventas.index') }}" class="btn-secondary">

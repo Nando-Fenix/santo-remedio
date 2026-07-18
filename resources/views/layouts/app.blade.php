@@ -84,6 +84,30 @@
                 </a>
             @endif
 
+            @if (auth()->user()->tienePermiso('ver_inventario'))
+                <a href="{{ route('inventario.proximos-vencer') }}">
+                    Próximos a vencer
+                </a>
+            @endif
+
+            @if (auth()->user()->tienePermiso('ver_inventario'))
+                <a href="{{ route('inventario.productos-vencidos') }}">
+                    Productos vencidos
+                </a>
+            @endif
+
+            @if (auth()->user()->tienePermiso('ver_bajas_inventario'))
+                <a href="{{ route('bajas-inventario.index') }}">
+                    Bajas de inventario
+                </a>
+            @endif
+
+            @if (auth()->user()->tienePermiso('registrar_baja_inventario'))
+                <a href="{{ route('bajas-inventario.create') }}" class="btn-primary">
+                    Registrar baja
+                </a>
+            @endif
+
             <div class="menu-section">Administración</div>
 
             @if ($user->tienePermiso('ver_productos'))
@@ -251,6 +275,6 @@
         return false;
     }
 </script>
-
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 </body>
 </html>

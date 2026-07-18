@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\BajaInventarioController;
 use App\Http\Controllers\CajaController;
 use App\Http\Controllers\CambioProductoController;
 use App\Http\Controllers\CompraController;
@@ -195,6 +196,12 @@ Route::middleware('auth')->group(function () {
     Route::middleware('permiso:ver_inventario')->group(function () {
         Route::get('/inventario', [InventarioController::class, 'index'])
             ->name('inventario.index');
+
+        Route::get('/inventario/proximos-vencer', [InventarioController::class, 'proximosVencer'])
+            ->name('inventario.proximos-vencer');
+
+        Route::get('/inventario/productos-vencidos', [InventarioController::class, 'productosVencidos'])
+            ->name('inventario.productos-vencidos');
     });
 
     Route::middleware('permiso:ver_movimientos_inventario')->group(function () {
@@ -396,6 +403,9 @@ Route::middleware('auth')->group(function () {
     Route::middleware('permiso:ver_reportes')->group(function () {
         Route::get('/reportes', [ReporteController::class, 'index'])
             ->name('reportes.index');
+
+        Route::get('/reportes/promociones', [ReporteController::class, 'promociones'])
+            ->name('reportes.promociones');
     });
 
     /*
@@ -434,4 +444,37 @@ Route::middleware('auth')->group(function () {
     Route::delete('/promociones/{promocion}', [PromocionController::class, 'destroy'])
         ->middleware('permiso:desactivar_promocion')
         ->name('promociones.destroy');
+        
+    /*
+    |--------------------------------------------------------------------------
+    | Bajas inventario
+    |--------------------------------------------------------------------------
+    */
+
+        Route::middleware('permiso:ver_bajas_inventario')->group(function () {
+            Route::get('/inventario/bajas', [BajaInventarioController::class, 'index'])
+                ->name('bajas-inventario.index');
+
+            Route::get('/inventario/bajas/{bajaInventario}', [BajaInventarioController::class, 'show'])
+                ->name('bajas-inventario.show');
+        });
+
+        Route::middleware('permiso:registrar_baja_inventario')->group(function () {
+            Route::get('/inventario/bajas/registrar/nueva', [BajaInventarioController::class, 'create'])
+                ->name('bajas-inventario.create');
+
+            Route::post('/inventario/bajas', [BajaInventarioController::class, 'store'])
+                ->name('bajas-inventario.store');
+
+            Route::get('/inventario/bajas/buscar/productos', [BajaInventarioController::class, 'buscarProductos'])
+                ->name('bajas-inventario.buscar-productos');
+        });
+
+        Route::middleware('permiso:anular_baja_inventario')->group(function () {
+            Route::get('/inventario/bajas/{bajaInventario}/anular', [BajaInventarioController::class, 'anularCreate'])
+                ->name('bajas-inventario.anular.create');
+
+            Route::post('/inventario/bajas/{bajaInventario}/anular', [BajaInventarioController::class, 'anularStore'])
+                ->name('bajas-inventario.anular.store');
+        });
 });

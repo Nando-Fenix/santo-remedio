@@ -23,6 +23,28 @@
                 </a>
             @endif
 
+            @if (auth()->user()->tienePermiso('ver_inventario'))
+                <a href="{{ route('inventario.proximos-vencer') }}" class="btn-secondary">
+                    Próximos a vencer
+                </a>
+
+                <a href="{{ route('inventario.productos-vencidos') }}" class="btn-danger">
+                    Productos vencidos
+                </a>
+            @endif
+            
+            @if (auth()->user()->tienePermiso('ver_bajas_inventario'))
+                <a href="{{ route('bajas-inventario.index') }}" class="btn-secondary">
+                    Bajas de inventario
+                </a>
+            @endif
+
+            @if (auth()->user()->tienePermiso('registrar_baja_inventario'))
+                <a href="{{ route('bajas-inventario.create') }}" class="btn-primary">
+                    Registrar baja
+                </a>
+            @endif
+
             @if (auth()->user()->tienePermiso('ajustar_inventario'))
                 <a href="{{ route('inventario.create') }}" class="btn-primary">
                     + Entrada de inventario

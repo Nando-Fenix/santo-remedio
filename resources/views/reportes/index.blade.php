@@ -113,6 +113,8 @@
 @if (auth()->user()->tienePermiso('ver_inventario'))
 <div class="grid" style="grid-template-columns: repeat(2, 1fr);">
     <div class="card">
+
+    
         <h3 style="margin-top: 0; color: #4C1D95;">Stock bajo</h3>
 
         <div class="table-container">
@@ -154,6 +156,30 @@
             </table>
         </div>
     </div>
+
+    <div class="card">
+        <h3 style="margin-top: 0; color: #4C1D95;">Promociones</h3>
+        <p style="color: #6B7280;">
+            Consulte promociones vendidas, ingresos generados y productos descontados.
+        </p>
+
+        <a href="{{ route('reportes.promociones') }}" class="btn-primary">
+            Ver reporte
+        </a>
+    </div>
+
+    @if (auth()->user()->tienePermiso('ver_bajas_inventario'))
+        <div class="card">
+            <h3 style="margin-top: 0; color: #4C1D95;">Bajas de inventario</h3>
+            <p style="color: #6B7280;">
+                Consulte productos retirados por vencimiento, daño, pérdida o ajuste autorizado.
+            </p>
+
+            <a href="{{ route('bajas-inventario.index') }}" class="btn-primary">
+                Ver bajas
+            </a>
+        </div>
+    @endif
 
     <div class="card">
         <h3 style="margin-top: 0; color: #4C1D95;">Productos próximos a vencer</h3>

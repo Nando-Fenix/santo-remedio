@@ -137,10 +137,15 @@ class VentaProductoController extends Controller
 
     private function stockDisponible(int $productoId, int $sucursalId): int
     {
-        return Inventario::where('producto_id', $productoId)
-            ->where('sucursal_id', $sucursalId)
-            ->where('estado', 'activo')
-            ->sum('stock_actual');
+        return (int) Inventario::leftJoin('lotes', 'inventarios.lote_id', '=', 'lotes.id')
+            ->where('inventarios.producto_id', $productoId)
+            ->where('inventarios.sucursal_id', $sucursalId)
+            ->where('inventarios.estado', 'activo')
+            ->where(function ($query) {
+                $query->whereNull('lotes.fecha_vencimiento')
+                    ->orWhereDate('lotes.fecha_vencimiento', '>=', now()->toDateString());
+            })
+            ->sum('inventarios.stock_actual');
     }
 
     public function buscarPromociones(Request $request)
@@ -199,15 +204,20 @@ class VentaProductoController extends Controller
                         return null;
                     }
 
-                    $stockQuery = Inventario::where('producto_id', $item->producto_id)
-                        ->where('sucursal_id', $sucursal->id)
-                        ->where('estado', 'activo');
+                    $stockQuery = Inventario::leftJoin('lotes', 'inventarios.lote_id', '=', 'lotes.id')
+                        ->where('inventarios.producto_id', $item->producto_id)
+                        ->where('inventarios.sucursal_id', $sucursal->id)
+                        ->where('inventarios.estado', 'activo')
+                        ->where(function ($query) {
+                            $query->whereNull('lotes.fecha_vencimiento')
+                                ->orWhereDate('lotes.fecha_vencimiento', '>=', now()->toDateString());
+                        });
 
                     if ($item->lote_id) {
-                        $stockQuery->where('lote_id', $item->lote_id);
+                        $stockQuery->where('inventarios.lote_id', $item->lote_id);
                     }
 
-                    $stockDisponible = (int) $stockQuery->sum('stock_actual');
+                    $stockDisponible = (int) $stockQuery->sum('inventarios.stock_actual');
 
                     $unidadesNecesarias = max((int) $item->unidades_necesarias, 1);
 

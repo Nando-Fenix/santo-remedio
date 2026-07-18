@@ -110,7 +110,7 @@
                     <select name="metodo_pago_id" required>
                         <option value="">Seleccione método</option>
                         @foreach ($metodosPago as $metodo)
-                            <option value="{{ $metodo->id }}">
+                            <option value="{{ $metodo->id }}" @selected(old('metodo_pago_id') == $metodo->id)>
                                 {{ $metodo->nombre }}
                             </option>
                         @endforeach
@@ -153,7 +153,7 @@
                         min="0"
                         name="monto_recibido"
                         id="monto_recibido"
-                        value="0"
+                        value="{{ old('monto_recibido', 0) }}"
                         required
                     >
                 </div>
@@ -184,7 +184,7 @@
 
         <div class="form-group" style="margin-top: 18px;">
             <label>Observación</label>
-            <textarea name="observacion" rows="3" placeholder="Opcional"></textarea>
+            <textarea name="observacion" rows="3" placeholder="Opcional">{{ old('observacion') }}</textarea>
         </div>
 
         <div id="inputs_carrito"></div>
@@ -203,7 +203,55 @@
     </form>
 
 </div>
+@php
+    $itemsAntiguosVenta = collect(old('items', []))->map(function ($item) {
+        return [
+            'id' => $item['producto_presentacion_id'] ?? null,
+            'tipo_item' => 'producto',
+            'producto_id' => $item['producto_id'] ?? null,
 
+            'nombre' => $item['nombre'] ?? 'Producto seleccionado',
+            'nombre_mostrado' => $item['nombre_mostrado'] ?? 'Producto seleccionado',
+            'generico' => $item['generico'] ?? '',
+            'concentracion' => $item['concentracion'] ?? '',
+            'laboratorio' => $item['laboratorio'] ?? '',
+            'tipo_producto' => $item['tipo_producto'] ?? '',
+            'presentacion' => $item['presentacion'] ?? '',
+
+            'precio_venta' => (float) ($item['precio_venta'] ?? 0),
+            'unidades_equivalentes' => max((int) ($item['unidades_equivalentes'] ?? 1), 1),
+            'stock_disponible' => (int) ($item['stock_disponible'] ?? 0),
+            'stock_aproximado_presentacion' => (int) ($item['stock_aproximado_presentacion'] ?? 0),
+            'cantidad' => max((int) ($item['cantidad'] ?? 1), 1),
+        ];
+    })->filter(function ($item) {
+        return !empty($item['id']);
+    })->values();
+
+    $promocionesAntiguasVenta = collect(old('promociones', []))->map(function ($item) {
+        return [
+            'id' => 'promo_' . ($item['promocion_id'] ?? ''),
+            'tipo_item' => 'promocion',
+            'promocion_id' => $item['promocion_id'] ?? null,
+
+            'nombre_mostrado' => $item['nombre_mostrado'] ?? 'Promoción seleccionada',
+            'presentacion' => 'Promoción',
+            'laboratorio' => '',
+            'concentracion' => $item['concentracion'] ?? '',
+            'precio_venta' => (float) ($item['precio_venta'] ?? 0),
+            'unidades_equivalentes' => 1,
+            'stock_disponible' => (int) ($item['stock_disponible'] ?? 0),
+            'cantidad' => max((int) ($item['cantidad'] ?? 1), 1),
+            'items_promocion' => $item['items_promocion'] ?? [],
+        ];
+    })->filter(function ($item) {
+        return !empty($item['promocion_id']);
+    })->values();
+
+    $carritoAntiguoVenta = $itemsAntiguosVenta
+        ->concat($promocionesAntiguasVenta)
+        ->values();
+@endphp
 <script>
     const buscarUrl = "{{ route('ventas.buscar-productos') }}";
     const buscarPromocionesUrl = "{{ route('ventas.buscar-promociones') }}";
@@ -224,7 +272,8 @@
     const subtotalVentaText = document.getElementById('subtotal_venta');
     const descuentoVentaText = document.getElementById('descuento_venta');
 
-    let carrito = [];
+    let carritoAntiguoVenta = @json($carritoAntiguoVenta);
+    let carrito = carritoAntiguoVenta.length ? carritoAntiguoVenta : [];
 
     let timeoutBusqueda = null;
 
@@ -330,6 +379,8 @@
                     stockTexto += ` | Aprox: ${stockPresentacion} disponible(s)`;
                 }
 
+                const dataProducto = encodeURIComponent(JSON.stringify(producto));
+
                 return `
                     <div style="display:flex; justify-content:space-between; align-items:center; gap:12px; padding:12px; border-bottom:1px solid #E5E7EB;">
                         <div>
@@ -345,7 +396,7 @@
                             </div>
                         </div>
 
-                        <button type="button" class="btn-primary" onclick='agregarAlCarrito(${JSON.stringify(producto)})'>
+                        <button type="button" class="btn-primary" data-producto="${dataProducto}" onclick="agregarProductoDesdeBoton(this)">
                             Agregar
                         </button>
                     </div>
@@ -356,8 +407,24 @@
         resultados.innerHTML = html;
     }
 
+    function agregarProductoDesdeBoton(boton) {
+        try {
+            const producto = JSON.parse(decodeURIComponent(boton.dataset.producto));
+            agregarAlCarrito(producto);
+        } catch (error) {
+            console.error('Error al seleccionar producto:', error);
+
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: 'No se pudo seleccionar el producto.',
+                confirmButtonColor: '#6D28D9'
+            });
+        }
+    }
+
     function agregarAlCarrito(producto) {
-        const existente = carrito.find(item => item.id === producto.id);
+        const existente = carrito.find(item => String(item.id) === String(producto.id));
 
         if (existente) {
             existente.cantidad += 1;
@@ -438,7 +505,7 @@
     function cambiarCantidad(id, cantidad) {
         cantidad = parseInt(cantidad || 1);
 
-        const item = carrito.find(producto => producto.id === id);
+        const item = carrito.find(producto => String(producto.id) === String(id));
 
         if (!item) return;
 
@@ -478,7 +545,7 @@
     }
 
     function quitarProducto(id) {
-        carrito = carrito.filter(item => item.id !== id);
+        carrito = carrito.filter(item => String(item.id) !== String(id));
         renderCarrito();
     }
 
@@ -522,13 +589,13 @@
                             min="1"
                             value="${item.cantidad}"
                             style="width:80px;"
-                            onchange="cambiarCantidad(${item.id}, this.value)"
+                            onchange="cambiarCantidad('${item.id}', this.value)"
                         >
                     </td>
                     <td>${item.precio_venta.toFixed(2)} Bs</td>
                     <td>${subtotal.toFixed(2)} Bs</td>
                     <td>
-                        <button type="button" class="btn-danger" onclick="quitarProducto(${item.id})">
+                        <button type="button" class="btn-danger" onclick="quitarProducto('${item.id}')">
                             Quitar
                         </button>
                     </td>
@@ -539,10 +606,29 @@
                 inputsCarrito.innerHTML += `
                     <input type="hidden" name="promociones[${index}][promocion_id]" value="${item.promocion_id}">
                     <input type="hidden" name="promociones[${index}][cantidad]" value="${item.cantidad}">
+
+                    <input type="hidden" name="promociones[${index}][nombre_mostrado]" value="${item.nombre_mostrado || ''}">
+                    <input type="hidden" name="promociones[${index}][concentracion]" value="${item.concentracion || ''}">
+                    <input type="hidden" name="promociones[${index}][precio_venta]" value="${item.precio_venta || 0}">
+                    <input type="hidden" name="promociones[${index}][stock_disponible]" value="${item.stock_disponible || 0}">
                 `;
             } else {
                 inputsCarrito.innerHTML += `
                     <input type="hidden" name="items[${index}][producto_presentacion_id]" value="${item.id}">
+                    <input type="hidden" name="items[${index}][producto_id]" value="${item.producto_id || ''}">
+
+                    <input type="hidden" name="items[${index}][nombre]" value="${item.nombre || ''}">
+                    <input type="hidden" name="items[${index}][nombre_mostrado]" value="${item.nombre_mostrado || ''}">
+                    <input type="hidden" name="items[${index}][generico]" value="${item.generico || ''}">
+                    <input type="hidden" name="items[${index}][concentracion]" value="${item.concentracion || ''}">
+                    <input type="hidden" name="items[${index}][laboratorio]" value="${item.laboratorio || ''}">
+                    <input type="hidden" name="items[${index}][tipo_producto]" value="${item.tipo_producto || ''}">
+                    <input type="hidden" name="items[${index}][presentacion]" value="${item.presentacion || ''}">
+
+                    <input type="hidden" name="items[${index}][precio_venta]" value="${item.precio_venta || 0}">
+                    <input type="hidden" name="items[${index}][unidades_equivalentes]" value="${item.unidades_equivalentes || 1}">
+                    <input type="hidden" name="items[${index}][stock_disponible]" value="${item.stock_disponible || 0}">
+                    <input type="hidden" name="items[${index}][stock_aproximado_presentacion]" value="${item.stock_aproximado_presentacion || 0}">
                     <input type="hidden" name="items[${index}][cantidad]" value="${item.cantidad}">
                 `;
             }
@@ -602,6 +688,8 @@
             });
         }
     });
+
+    renderCarrito();
 </script>
 
 @endsection

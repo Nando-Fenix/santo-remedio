@@ -29,6 +29,14 @@ class ReembolsoController extends Controller
             'reembolsos.detalles',
         ]);
 
+        $venta->loadCount('promociones');
+
+        if ($venta->promociones_count > 0) {
+            return redirect()
+                ->route('ventas.show', $venta)
+                ->with('error', 'Esta venta contiene promociones. Debe anularse la venta completa.');
+        }
+
         if ($venta->estado !== 'completada') {
             return redirect()
                 ->route('ventas.show', $venta)
@@ -72,6 +80,14 @@ class ReembolsoController extends Controller
             'motivo.min' => 'El motivo debe tener al menos 5 caracteres.',
             'items.required' => 'Debe seleccionar al menos un producto para reembolsar.',
         ]);
+
+        $venta->loadCount('promociones');
+
+        if ($venta->promociones_count > 0) {
+            return redirect()
+                ->route('ventas.show', $venta)
+                ->with('error', 'Esta venta contiene promociones. Debe anularse la venta completa.');
+        }
 
         if ($venta->estado !== 'completada') {
             return redirect()
