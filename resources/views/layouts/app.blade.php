@@ -55,6 +55,27 @@
                 </a>
             @endif
 
+            @if (auth()->user()->tienePermiso('ver_servicios_farmacia'))
+                <a href="{{ route('servicios-farmacia.index') }}"
+                class="nav-link {{ request()->routeIs('servicios-farmacia.*') ? 'active' : '' }}">
+                    Servicios de farmacia
+                </a>
+            @endif
+
+            @if (auth()->user()->tienePermiso('ver_atenciones_servicio'))
+                <a href="{{ route('atenciones-servicio.index') }}"
+                class="nav-link {{ request()->routeIs('atenciones-servicio.*') ? 'active' : '' }}">
+                    Atenciones de servicio
+                </a>
+            @endif
+
+            @if (auth()->user()->tienePermiso('registrar_atencion_servicio'))
+                <a href="{{ route('atenciones-servicio.create') }}"
+                class="nav-link {{ request()->routeIs('atenciones-servicio.create') ? 'active' : '' }}">
+                    Registrar atención
+                </a>
+            @endif
+
             <div class="menu-section">Operación</div>
 
             @if ($user->tienePermiso('ver_caja'))

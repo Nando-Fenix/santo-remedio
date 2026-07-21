@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\AtencionServicioController;
 use App\Http\Controllers\BajaInventarioController;
 use App\Http\Controllers\CajaController;
 use App\Http\Controllers\CambioProductoController;
@@ -16,6 +17,7 @@ use App\Http\Controllers\ProveedorController;
 use App\Http\Controllers\PromocionController;
 use App\Http\Controllers\ReembolsoController;
 use App\Http\Controllers\ReporteController;
+use App\Http\Controllers\ServicioFarmaciaController;
 use App\Http\Controllers\AuthController;
 use Illuminate\Support\Facades\Route;
 
@@ -140,6 +142,12 @@ Route::middleware('auth')->group(function () {
 
         Route::post('/caja/cerrar', [CajaController::class, 'cierreStore'])
             ->name('caja.cierre.store');
+
+        Route::get('/caja/cerrar/exportar-csv', [CajaController::class, 'cierreExportarCsv'])
+            ->name('caja.cierre.exportar-csv');
+
+        Route::get('/caja/cerrar/exportar-excel', [CajaController::class, 'cierreExportarExcel'])
+            ->name('caja.cierre.exportar-excel');
     });
 
     Route::middleware('permiso:registrar_egreso')->group(function () {
@@ -406,6 +414,27 @@ Route::middleware('auth')->group(function () {
 
         Route::get('/reportes/promociones', [ReporteController::class, 'promociones'])
             ->name('reportes.promociones');
+
+        Route::get('/reportes/servicios/exportar-csv', [ReporteController::class, 'serviciosExportarCsv'])
+            ->name('reportes.servicios.exportar-csv');
+
+        Route::get('/reportes/servicios/exportar-insumos-csv', [ReporteController::class, 'serviciosInsumosExportarCsv'])
+            ->name('reportes.servicios.exportar-insumos-csv');
+
+        Route::get('/reportes/servicios', [ReporteController::class, 'servicios'])
+            ->name('reportes.servicios');
+        
+        Route::get('/reportes/caja-diaria', [ReporteController::class, 'cajaDiaria'])
+            ->name('reportes.caja-diaria');
+        
+        Route::get('/reportes/caja-diaria/exportar-csv', [ReporteController::class, 'cajaDiariaExportarCsv'])
+            ->name('reportes.caja-diaria.exportar-csv');
+
+        Route::get('/reportes/ingresos-diarios/exportar-csv', [ReporteController::class, 'ingresosDiariosExportarCsv'])
+            ->name('reportes.ingresos-diarios.exportar-csv');
+
+        Route::get('/reportes/ingresos-diarios', [ReporteController::class, 'ingresosDiarios'])
+            ->name('reportes.ingresos-diarios');
     });
 
     /*
@@ -476,5 +505,74 @@ Route::middleware('auth')->group(function () {
 
             Route::post('/inventario/bajas/{bajaInventario}/anular', [BajaInventarioController::class, 'anularStore'])
                 ->name('bajas-inventario.anular.store');
+        });
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | servicios farmacia
+        |--------------------------------------------------------------------------
+        */
+
+        Route::middleware('permiso:ver_servicios_farmacia')->group(function () {
+            Route::get('/servicios-farmacia', [ServicioFarmaciaController::class, 'index'])
+                ->name('servicios-farmacia.index');
+
+            Route::get('/servicios-farmacia/{servicioFarmacia}', [ServicioFarmaciaController::class, 'show'])
+                ->name('servicios-farmacia.show');
+        });
+
+        Route::middleware('permiso:crear_servicio_farmacia')->group(function () {
+            Route::get('/servicios-farmacia/crear/nuevo', [ServicioFarmaciaController::class, 'create'])
+                ->name('servicios-farmacia.create');
+
+            Route::post('/servicios-farmacia', [ServicioFarmaciaController::class, 'store'])
+                ->name('servicios-farmacia.store');
+        });
+
+        Route::middleware('permiso:editar_servicio_farmacia')->group(function () {
+            Route::get('/servicios-farmacia/{servicioFarmacia}/editar', [ServicioFarmaciaController::class, 'edit'])
+                ->name('servicios-farmacia.edit');
+
+            Route::put('/servicios-farmacia/{servicioFarmacia}', [ServicioFarmaciaController::class, 'update'])
+                ->name('servicios-farmacia.update');
+
+            Route::get('/servicios-farmacia/buscar/productos', [ServicioFarmaciaController::class, 'buscarProductos'])
+                ->name('servicios-farmacia.buscar-productos');
+        });
+
+        Route::delete('/servicios-farmacia/{servicioFarmacia}', [ServicioFarmaciaController::class, 'destroy'])
+            ->middleware('permiso:desactivar_servicio_farmacia')
+            ->name('servicios-farmacia.destroy');
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | Atenciones de servicios farmacia
+        |--------------------------------------------------------------------------
+        */
+
+        Route::middleware('permiso:ver_atenciones_servicio')->group(function () {
+            Route::get('/atenciones-servicio', [AtencionServicioController::class, 'index'])
+                ->name('atenciones-servicio.index');
+
+            Route::get('/atenciones-servicio/{atencionServicio}', [AtencionServicioController::class, 'show'])
+                ->name('atenciones-servicio.show');
+        });
+
+        Route::middleware('permiso:registrar_atencion_servicio')->group(function () {
+            Route::get('/atenciones-servicio/registrar/nueva', [AtencionServicioController::class, 'create'])
+                ->name('atenciones-servicio.create');
+
+            Route::post('/atenciones-servicio', [AtencionServicioController::class, 'store'])
+                ->name('atenciones-servicio.store');
+        });
+
+        Route::middleware('permiso:anular_atencion_servicio')->group(function () {
+            Route::get('/atenciones-servicio/{atencionServicio}/anular', [AtencionServicioController::class, 'anularCreate'])
+                ->name('atenciones-servicio.anular.create');
+
+            Route::post('/atenciones-servicio/{atencionServicio}/anular', [AtencionServicioController::class, 'anularStore'])
+                ->name('atenciones-servicio.anular.store');
         });
 });

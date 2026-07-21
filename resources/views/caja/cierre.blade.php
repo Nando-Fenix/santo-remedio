@@ -87,6 +87,49 @@
         </div>
     </div>
 
+    <div class="card" style="background:#F5F3FF; margin-bottom:22px;">
+        <h3 style="margin-top:0; color:#4C1D95;">Resumen de ingresos de caja</h3>
+
+        <div class="grid" style="grid-template-columns: repeat(4, 1fr); margin-bottom:0;">
+            <div class="stat-card">
+                <span>Ventas efectivo</span>
+                <h3>{{ number_format($ventasEfectivo ?? 0, 2) }} Bs</h3>
+            </div>
+
+            <div class="stat-card">
+                <span>Ventas QR</span>
+                <h3>{{ number_format($ventasQr ?? 0, 2) }} Bs</h3>
+            </div>
+
+            <div class="stat-card">
+                <span>Servicios efectivo</span>
+                <h3>{{ number_format($serviciosEfectivo ?? 0, 2) }} Bs</h3>
+            </div>
+
+            <div class="stat-card">
+                <span>Servicios QR</span>
+                <h3>{{ number_format($serviciosQr ?? 0, 2) }} Bs</h3>
+            </div>
+        </div>
+    </div>
+
+    <div class="grid" style="grid-template-columns: repeat(3, 1fr); margin-bottom:22px;">
+        <div class="stat-card">
+            <span>Total ventas</span>
+            <h3>{{ number_format($ingresosVentas ?? 0, 2) }} Bs</h3>
+        </div>
+
+        <div class="stat-card">
+            <span>Total servicios</span>
+            <h3>{{ number_format($ingresosServicios ?? 0, 2) }} Bs</h3>
+        </div>
+
+        <div class="stat-card">
+            <span>Total ingresos válidos</span>
+            <h3>{{ number_format(($ingresosVentas ?? 0) + ($ingresosServicios ?? 0), 2) }} Bs</h3>
+        </div>
+    </div>
+
     <form method="POST" action="{{ route('caja.cierre.store') }}" onsubmit="return confirmarFormulario(event, '¿Confirmar cierre de caja?')">
         @csrf
 
@@ -198,6 +241,13 @@
 
         <div style="display: flex; gap: 12px; margin-top: 24px;">
             @if (auth()->user()->tienePermiso('cerrar_caja'))
+
+                <a href="{{ route('caja.cierre.exportar-csv') }}" class="btn-secondary">
+                    Exportar Excel
+                </a>
+                <a href="{{ route('caja.cierre.exportar-excel') }}" class="btn-secondary">
+                    Exportar Excel visual
+                </a>
                 <button type="submit" class="btn-primary">
                     Cerrar caja
                 </button>

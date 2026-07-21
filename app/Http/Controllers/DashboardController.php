@@ -2,11 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\AtencionServicio;
 use App\Models\Caja;
 use App\Models\Inventario;
 use App\Models\Venta;
 use Carbon\Carbon;
-use Illuminate\Http\Request;
 
 class DashboardController extends Controller
 {
@@ -27,6 +27,11 @@ class DashboardController extends Controller
                 'productosAgotadosCantidad' => 0,
                 'productosPorVencerCantidad' => 0,
                 'ultimasVentas' => collect(),
+                'ingresosServiciosHoy' => 0,
+                'atencionesServiciosHoy' => 0,
+                'serviciosAnuladosHoy' => 0,
+                'ingresosTotalesHoy' => 0,
+                'ultimasAtencionesServicio' => collect(),
             ])->with('error', 'El usuario no tiene una sucursal asignada.');
         }
 
@@ -47,38 +52,55 @@ class DashboardController extends Controller
         | Ventas del día
         |--------------------------------------------------------------------------
         */
+
         $inicioDia = Carbon::now()->startOfDay();
         $finDia = Carbon::now()->endOfDay();
 
-        $ventasQuery = Venta::where('estado', 'completada')
+        $ventasDelDia = Venta::where('estado', 'completada')
             ->where('sucursal_id', $sucursal->id)
-            ->whereBetween('fecha_hora', [$inicioDia, $finDia]);
-
-        /*
-        | Si quieres que el dashboard muestre solo ventas de la caja abierta,
-        | dejamos este filtro. Si prefieres todas las ventas del día de la sucursal,
-        | puedes borrar este bloque.
-        */
-
-        $ventasDelDia = $ventasQuery->get();
+            ->whereBetween('fecha_hora', [$inicioDia, $finDia])
+            ->get();
 
         $totalVentasDia = round($ventasDelDia->sum('total'), 2);
         $cantidadVentasDia = $ventasDelDia->count();
 
         /*
         |--------------------------------------------------------------------------
+        | Servicios del día
+        |--------------------------------------------------------------------------
+        */
+
+        $serviciosCompletadosHoyQuery = AtencionServicio::where('sucursal_id', $sucursal->id)
+            ->whereDate('fecha_hora', now()->toDateString())
+            ->where('estado', 'completada');
+
+        $ingresosServiciosHoy = round((clone $serviciosCompletadosHoyQuery)->sum('total'), 2);
+        $atencionesServiciosHoy = (clone $serviciosCompletadosHoyQuery)->count();
+
+        $serviciosAnuladosHoy = AtencionServicio::where('sucursal_id', $sucursal->id)
+            ->whereDate('fecha_hora', now()->toDateString())
+            ->where('estado', 'anulada')
+            ->count();
+
+        $ingresosTotalesHoy = round($totalVentasDia + $ingresosServiciosHoy, 2);
+
+        /*
+        |--------------------------------------------------------------------------
         | Alertas de inventario
         |--------------------------------------------------------------------------
         */
-        $stockBajoQuery = Inventario::whereColumn('stock_actual', '<=', 'stock_minimo')
+
+        $stockBajoCantidad = Inventario::whereColumn('stock_actual', '<=', 'stock_minimo')
             ->where('stock_actual', '>', 0)
             ->where('estado', 'activo')
-            ->where('sucursal_id', $sucursal->id);
+            ->where('sucursal_id', $sucursal->id)
+            ->count();
 
-        $agotadosQuery = Inventario::where('stock_actual', '<=', 0)
-            ->where('sucursal_id', $sucursal->id);
+        $productosAgotadosCantidad = Inventario::where('stock_actual', '<=', 0)
+            ->where('sucursal_id', $sucursal->id)
+            ->count();
 
-        $porVencerQuery = Inventario::whereHas('lote', function ($query) {
+        $productosPorVencerCantidad = Inventario::whereHas('lote', function ($query) {
                 $query->whereNotNull('fecha_vencimiento')
                     ->whereBetween('fecha_vencimiento', [
                         now()->toDateString(),
@@ -87,22 +109,25 @@ class DashboardController extends Controller
             })
             ->where('stock_actual', '>', 0)
             ->where('estado', 'activo')
-            ->where('sucursal_id', $sucursal->id);
-
-        $stockBajoQuery->where('sucursal_id', $sucursal->id);
-        $agotadosQuery->where('sucursal_id', $sucursal->id);
-        $porVencerQuery->where('sucursal_id', $sucursal->id);
-
-        $stockBajoCantidad = $stockBajoQuery->count();
-        $productosAgotadosCantidad = $agotadosQuery->count();
-        $productosPorVencerCantidad = $porVencerQuery->count();
+            ->where('sucursal_id', $sucursal->id)
+            ->count();
 
         /*
         |--------------------------------------------------------------------------
-        | Últimas ventas
+        | Últimos movimientos operativos
         |--------------------------------------------------------------------------
         */
+
         $ultimasVentas = Venta::with(['usuario', 'sucursal', 'pagos.metodoPago'])
+            ->where('sucursal_id', $sucursal->id)
+            ->latest('fecha_hora')
+            ->limit(5)
+            ->get();
+
+        $ultimasAtencionesServicio = AtencionServicio::with([
+                'servicio',
+                'cliente',
+            ])
             ->where('sucursal_id', $sucursal->id)
             ->latest('fecha_hora')
             ->limit(5)
@@ -116,7 +141,12 @@ class DashboardController extends Controller
             'stockBajoCantidad',
             'productosAgotadosCantidad',
             'productosPorVencerCantidad',
-            'ultimasVentas'
+            'ultimasVentas',
+            'ingresosServiciosHoy',
+            'ultimasAtencionesServicio',
+            'atencionesServiciosHoy',
+            'serviciosAnuladosHoy',
+            'ingresosTotalesHoy'
         ));
     }
 }

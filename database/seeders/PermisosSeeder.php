@@ -105,6 +105,42 @@ class PermisosSeeder extends Seeder
                 'modulo' => 'Inventario',
                 'descripcion' => 'Anular bajas de inventario.',
             ],
+
+            [
+                'nombre' => 'ver_servicios_farmacia',
+                'modulo' => 'Servicios',
+                'descripcion' => 'Ver servicios de farmacia.',
+            ],
+            [
+                'nombre' => 'crear_servicio_farmacia',
+                'modulo' => 'Servicios',
+                'descripcion' => 'Crear servicios de farmacia.',
+            ],
+            [
+                'nombre' => 'editar_servicio_farmacia',
+                'modulo' => 'Servicios',
+                'descripcion' => 'Editar servicios de farmacia.',
+            ],
+            [
+                'nombre' => 'desactivar_servicio_farmacia',
+                'modulo' => 'Servicios',
+                'descripcion' => 'Desactivar servicios de farmacia.',
+            ],
+            [
+                'nombre' => 'ver_atenciones_servicio',
+                'modulo' => 'Servicios',
+                'descripcion' => 'Ver atenciones de servicios de farmacia.',
+            ],
+            [
+                'nombre' => 'registrar_atencion_servicio',
+                'modulo' => 'Servicios',
+                'descripcion' => 'Registrar atenciones de servicios de farmacia.',
+            ],
+            [
+                'nombre' => 'anular_atencion_servicio',
+                'modulo' => 'Servicios',
+                'descripcion' => 'Anular atenciones de servicios de farmacia.',
+            ],
         ];
 
         foreach ($permisos as $permiso) {

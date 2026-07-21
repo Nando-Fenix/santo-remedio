@@ -69,4 +69,14 @@ class ProductoPresentacion extends Model
     {
         return $this->hasMany(PromocionItem::class);
     }
+
+    public function servicioFarmaciaInsumos()
+    {
+        return $this->hasMany(ServicioFarmaciaInsumo::class);
+    }
+
+    public function atencionServicioInsumos()
+    {
+        return $this->hasMany(AtencionServicioInsumo::class);
+    }
 }

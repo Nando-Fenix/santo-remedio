@@ -182,6 +182,39 @@
     @endif
 
     <div class="card">
+        <h3 style="margin-top:0; color:#4C1D95;">Servicios de farmacia</h3>
+        <p style="color:#6B7280;">
+            Ingresos por servicios, atenciones realizadas e insumos consumidos.
+        </p>
+
+        <a href="{{ route('reportes.servicios') }}" class="btn-primary">
+            Ver reporte
+        </a>
+    </div>
+
+    <div class="card">
+        <h3 style="margin-top:0; color:#4C1D95;">Ingresos diarios</h3>
+        <p style="color:#6B7280;">
+            Resumen general de ingresos por ventas y servicios de farmacia.
+        </p>
+
+        <a href="{{ route('reportes.ingresos-diarios') }}" class="btn-primary">
+            Ver reporte
+        </a>
+    </div>
+
+    <div class="card">
+        <h3 style="margin-top:0; color:#4C1D95;">Caja diaria</h3>
+        <p style="color:#6B7280;">
+            Resumen de ventas, servicios, egresos, reembolsos y anulaciones por caja.
+        </p>
+
+        <a href="{{ route('reportes.caja-diaria') }}" class="btn-primary">
+            Ver reporte
+        </a>
+    </div>
+
+    <div class="card">
         <h3 style="margin-top: 0; color: #4C1D95;">Productos próximos a vencer</h3>
 
         <div class="table-container">

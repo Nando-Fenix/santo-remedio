@@ -270,7 +270,50 @@ class CajaController extends Controller
                 ->with('error', 'No existe una caja abierta en esta sucursal para cerrar.');
         }
 
-        return view('caja.cierre', compact('sucursal', 'cajaAbierta'));
+        $movimientos = $cajaAbierta->movimientos;
+
+        $ventasEfectivo = \App\Models\MovimientoCaja::join('metodos_pago', 'movimientos_caja.metodo_pago_id', '=', 'metodos_pago.id')
+            ->where('movimientos_caja.caja_id', $cajaAbierta->id)
+            ->where('movimientos_caja.tipo_movimiento', 'ingreso')
+            ->where('movimientos_caja.descripcion', 'like', '%venta%')
+            ->where('metodos_pago.tipo', 'efectivo')
+            ->sum('movimientos_caja.monto');
+
+        $ventasQr = \App\Models\MovimientoCaja::join('metodos_pago', 'movimientos_caja.metodo_pago_id', '=', 'metodos_pago.id')
+            ->where('movimientos_caja.caja_id', $cajaAbierta->id)
+            ->where('movimientos_caja.tipo_movimiento', 'ingreso')
+            ->where('movimientos_caja.descripcion', 'like', '%venta%')
+            ->where('metodos_pago.tipo', '!=', 'efectivo')
+            ->sum('movimientos_caja.monto');
+
+        $serviciosEfectivo = \App\Models\MovimientoCaja::join('metodos_pago', 'movimientos_caja.metodo_pago_id', '=', 'metodos_pago.id')
+            ->where('movimientos_caja.caja_id', $cajaAbierta->id)
+            ->where('movimientos_caja.tipo_movimiento', 'ingreso')
+            ->where('movimientos_caja.descripcion', 'like', '%servicio%')
+            ->where('metodos_pago.tipo', 'efectivo')
+            ->sum('movimientos_caja.monto');
+
+        $serviciosQr = \App\Models\MovimientoCaja::join('metodos_pago', 'movimientos_caja.metodo_pago_id', '=', 'metodos_pago.id')
+            ->where('movimientos_caja.caja_id', $cajaAbierta->id)
+            ->where('movimientos_caja.tipo_movimiento', 'ingreso')
+            ->where('movimientos_caja.descripcion', 'like', '%servicio%')
+            ->where('metodos_pago.tipo', '!=', 'efectivo')
+            ->sum('movimientos_caja.monto');
+
+        $ingresosServicios = $serviciosEfectivo + $serviciosQr;
+        $ingresosVentas = $ventasEfectivo + $ventasQr;
+
+        return view('caja.cierre', compact(
+            'sucursal',
+            'cajaAbierta',
+            'movimientos',
+            'ventasEfectivo',
+            'ventasQr',
+            'serviciosEfectivo',
+            'serviciosQr',
+            'ingresosVentas',
+            'ingresosServicios'
+        ));
     }
 
     public function cierreStore(Request $request)
@@ -388,5 +431,187 @@ class CajaController extends Controller
         return redirect()
             ->route('caja.index')
             ->with('success', 'Caja cerrada correctamente.');
+    }
+
+    public function cierreExportarCsv()
+    {
+        $sucursal = $this->obtenerSucursalActual();
+
+        if (!$sucursal) {
+            return redirect()
+                ->route('dashboard')
+                ->with('error', 'El usuario no tiene una sucursal asignada.');
+        }
+
+        $cajaAbierta = Caja::with(['turno', 'movimientos'])
+            ->where('sucursal_id', $sucursal->id)
+            ->where('estado', 'abierta')
+            ->latest('fecha_apertura')
+            ->first();
+
+        if (!$cajaAbierta) {
+            return redirect()
+                ->route('caja.index')
+                ->with('error', 'No existe una caja abierta en esta sucursal para exportar.');
+        }
+
+        $ventasEfectivo = \App\Models\MovimientoCaja::join('metodos_pago', 'movimientos_caja.metodo_pago_id', '=', 'metodos_pago.id')
+            ->where('movimientos_caja.caja_id', $cajaAbierta->id)
+            ->where('movimientos_caja.tipo_movimiento', 'ingreso')
+            ->where('movimientos_caja.descripcion', 'like', '%venta%')
+            ->where('metodos_pago.tipo', 'efectivo')
+            ->sum('movimientos_caja.monto');
+
+        $ventasQr = \App\Models\MovimientoCaja::join('metodos_pago', 'movimientos_caja.metodo_pago_id', '=', 'metodos_pago.id')
+            ->where('movimientos_caja.caja_id', $cajaAbierta->id)
+            ->where('movimientos_caja.tipo_movimiento', 'ingreso')
+            ->where('movimientos_caja.descripcion', 'like', '%venta%')
+            ->where('metodos_pago.tipo', '!=', 'efectivo')
+            ->sum('movimientos_caja.monto');
+
+        $serviciosEfectivo = \App\Models\MovimientoCaja::join('metodos_pago', 'movimientos_caja.metodo_pago_id', '=', 'metodos_pago.id')
+            ->where('movimientos_caja.caja_id', $cajaAbierta->id)
+            ->where('movimientos_caja.tipo_movimiento', 'ingreso')
+            ->where('movimientos_caja.descripcion', 'like', '%servicio%')
+            ->where('metodos_pago.tipo', 'efectivo')
+            ->sum('movimientos_caja.monto');
+
+        $serviciosQr = \App\Models\MovimientoCaja::join('metodos_pago', 'movimientos_caja.metodo_pago_id', '=', 'metodos_pago.id')
+            ->where('movimientos_caja.caja_id', $cajaAbierta->id)
+            ->where('movimientos_caja.tipo_movimiento', 'ingreso')
+            ->where('movimientos_caja.descripcion', 'like', '%servicio%')
+            ->where('metodos_pago.tipo', '!=', 'efectivo')
+            ->sum('movimientos_caja.monto');
+
+        $nombreArchivo = 'cierre_caja_' . $cajaAbierta->id . '_' . now()->format('Y-m-d_H-i') . '.csv';
+
+        $headers = [
+            'Content-Type' => 'text/csv; charset=UTF-8',
+            'Content-Disposition' => "attachment; filename=\"{$nombreArchivo}\"",
+        ];
+
+        return response()->stream(function () use ($cajaAbierta, $sucursal, $ventasEfectivo, $ventasQr, $serviciosEfectivo, $serviciosQr) {
+            $archivo = fopen('php://output', 'w');
+
+            fprintf($archivo, chr(0xEF).chr(0xBB).chr(0xBF));
+
+            fputcsv($archivo, ['CIERRE DE CAJA'], ';');
+            fputcsv($archivo, ['Caja ID', $cajaAbierta->id], ';');
+            fputcsv($archivo, ['Sucursal', $sucursal->nombre], ';');
+            fputcsv($archivo, ['Turno', $cajaAbierta->turno->nombre ?? 'Sin turno'], ';');
+            fputcsv($archivo, ['Fecha apertura', $cajaAbierta->fecha_apertura?->format('d/m/Y H:i')], ';');
+            fputcsv($archivo, ['Estado', $cajaAbierta->estado], ';');
+            fputcsv($archivo, [], ';');
+
+            fputcsv($archivo, ['RESUMEN'], ';');
+            fputcsv($archivo, ['Monto inicial', number_format($cajaAbierta->monto_inicial, 2, '.', '')], ';');
+            fputcsv($archivo, ['Ventas efectivo', number_format($ventasEfectivo, 2, '.', '')], ';');
+            fputcsv($archivo, ['Ventas QR', number_format($ventasQr, 2, '.', '')], ';');
+            fputcsv($archivo, ['Servicios efectivo', number_format($serviciosEfectivo, 2, '.', '')], ';');
+            fputcsv($archivo, ['Servicios QR', number_format($serviciosQr, 2, '.', '')], ';');
+            fputcsv($archivo, ['Total efectivo caja', number_format($cajaAbierta->total_efectivo, 2, '.', '')], ';');
+            fputcsv($archivo, ['Total QR caja', number_format($cajaAbierta->total_qr, 2, '.', '')], ';');
+            fputcsv($archivo, ['Total egresos', number_format($cajaAbierta->total_egresos, 2, '.', '')], ';');
+            fputcsv($archivo, ['Total reembolsos', number_format($cajaAbierta->total_reembolsos, 2, '.', '')], ';');
+            fputcsv($archivo, ['Total final', number_format($cajaAbierta->total_final, 2, '.', '')], ';');
+            fputcsv($archivo, [], ';');
+
+            fputcsv($archivo, ['MOVIMIENTOS DE CAJA'], ';');
+            fputcsv($archivo, [
+                'Fecha',
+                'Tipo',
+                'Descripcion',
+                'Monto',
+                'Metodo pago',
+                'Usuario ID',
+            ], ';');
+
+            foreach ($cajaAbierta->movimientos as $movimiento) {
+                fputcsv($archivo, [
+                    $movimiento->created_at?->format('d/m/Y H:i'),
+                    $movimiento->tipo_movimiento,
+                    $movimiento->descripcion,
+                    number_format($movimiento->monto, 2, '.', ''),
+                    $movimiento->metodo_pago_id,
+                    $movimiento->usuario_id,
+                ], ';');
+            }
+
+            fclose($archivo);
+        }, 200, $headers);
+    }
+
+    public function cierreExportarExcel()
+    {
+        $sucursal = $this->obtenerSucursalActual();
+
+        if (!$sucursal) {
+            return redirect()
+                ->route('dashboard')
+                ->with('error', 'El usuario no tiene una sucursal asignada.');
+        }
+
+        $cajaAbierta = Caja::with(['turno', 'movimientos'])
+            ->where('sucursal_id', $sucursal->id)
+            ->where('estado', 'abierta')
+            ->latest('fecha_apertura')
+            ->first();
+
+        if (!$cajaAbierta) {
+            return redirect()
+                ->route('caja.index')
+                ->with('error', 'No existe una caja abierta en esta sucursal para exportar.');
+        }
+
+        $ventasEfectivo = \App\Models\MovimientoCaja::join('metodos_pago', 'movimientos_caja.metodo_pago_id', '=', 'metodos_pago.id')
+            ->where('movimientos_caja.caja_id', $cajaAbierta->id)
+            ->where('movimientos_caja.tipo_movimiento', 'ingreso')
+            ->where('movimientos_caja.descripcion', 'like', '%venta%')
+            ->where('metodos_pago.tipo', 'efectivo')
+            ->sum('movimientos_caja.monto');
+
+        $ventasQr = \App\Models\MovimientoCaja::join('metodos_pago', 'movimientos_caja.metodo_pago_id', '=', 'metodos_pago.id')
+            ->where('movimientos_caja.caja_id', $cajaAbierta->id)
+            ->where('movimientos_caja.tipo_movimiento', 'ingreso')
+            ->where('movimientos_caja.descripcion', 'like', '%venta%')
+            ->where('metodos_pago.tipo', '!=', 'efectivo')
+            ->sum('movimientos_caja.monto');
+
+        $serviciosEfectivo = \App\Models\MovimientoCaja::join('metodos_pago', 'movimientos_caja.metodo_pago_id', '=', 'metodos_pago.id')
+            ->where('movimientos_caja.caja_id', $cajaAbierta->id)
+            ->where('movimientos_caja.tipo_movimiento', 'ingreso')
+            ->where('movimientos_caja.descripcion', 'like', '%servicio%')
+            ->where('metodos_pago.tipo', 'efectivo')
+            ->sum('movimientos_caja.monto');
+
+        $serviciosQr = \App\Models\MovimientoCaja::join('metodos_pago', 'movimientos_caja.metodo_pago_id', '=', 'metodos_pago.id')
+            ->where('movimientos_caja.caja_id', $cajaAbierta->id)
+            ->where('movimientos_caja.tipo_movimiento', 'ingreso')
+            ->where('movimientos_caja.descripcion', 'like', '%servicio%')
+            ->where('metodos_pago.tipo', '!=', 'efectivo')
+            ->sum('movimientos_caja.monto');
+
+        $ingresosVentas = $ventasEfectivo + $ventasQr;
+        $ingresosServicios = $serviciosEfectivo + $serviciosQr;
+        $ingresosValidos = $ingresosVentas + $ingresosServicios;
+
+        $nombreArchivo = 'cierre_caja_' . $cajaAbierta->id . '_' . now()->format('Y-m-d_H-i') . '.xls';
+
+        return response()
+            ->view('caja.exports.cierre-excel', compact(
+                'sucursal',
+                'cajaAbierta',
+                'ventasEfectivo',
+                'ventasQr',
+                'serviciosEfectivo',
+                'serviciosQr',
+                'ingresosVentas',
+                'ingresosServicios',
+                'ingresosValidos'
+            ))
+            ->header('Content-Type', 'application/vnd.ms-excel; charset=UTF-8')
+            ->header('Content-Disposition', "attachment; filename=\"{$nombreArchivo}\"")
+            ->header('Pragma', 'no-cache')
+            ->header('Expires', '0');
     }
 }
