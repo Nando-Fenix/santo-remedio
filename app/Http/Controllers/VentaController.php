@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Caja;
 use App\Models\Cliente;
+use App\Models\Configuracion;
 use App\Models\MovimientoCaja;
 use App\Models\DetalleVenta;
 use App\Models\DetalleVentaLote;
@@ -23,13 +24,65 @@ use Illuminate\Support\Facades\DB;
 
 class VentaController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $ventas = Venta::with(['usuario', 'sucursal', 'cliente', 'pagos.metodoPago'])
-            ->latest('fecha_hora')
-            ->paginate(15);
+        $buscar = $request->get('buscar');
+        $estado = $request->get('estado');
+        $fechaInicio = $request->get('fecha_inicio');
+        $fechaFin = $request->get('fecha_fin');
 
-        return view('ventas.index', compact('ventas'));
+        $ventas = Venta::with([
+                'usuario',
+                'sucursal',
+                'cliente',
+                'pagos.metodoPago',
+                'detalles.producto',
+                'detalles.productoPresentacion',
+                'promociones.promocion',
+            ])
+            ->when($buscar, function ($query, $buscar) {
+                $query->where(function ($q) use ($buscar) {
+                    $q->where('numero_venta', 'like', "%{$buscar}%")
+                        ->orWhereHas('cliente', function ($clienteQuery) use ($buscar) {
+                            $clienteQuery->where('nombre', 'like', "%{$buscar}%")
+                                ->orWhere('ci_nit', 'like', "%{$buscar}%");
+                        })
+                        ->orWhereHas('pagos.metodoPago', function ($metodoQuery) use ($buscar) {
+                            $metodoQuery->where('nombre', 'like', "%{$buscar}%");
+                        })
+                        ->orWhereHas('detalles.producto', function ($productoQuery) use ($buscar) {
+                            $productoQuery->where('nombre_comercial', 'like', "%{$buscar}%")
+                                ->orWhere('nombre_generico', 'like', "%{$buscar}%")
+                                ->orWhere('concentracion', 'like', "%{$buscar}%");
+                        })
+                        ->orWhereHas('detalles.productoPresentacion', function ($presentacionQuery) use ($buscar) {
+                            $presentacionQuery->where('nombre_mostrado', 'like', "%{$buscar}%");
+                        })
+                        ->orWhereHas('promociones.promocion', function ($promocionQuery) use ($buscar) {
+                            $promocionQuery->where('nombre', 'like', "%{$buscar}%");
+                        });
+                });
+            })
+            ->when($estado, function ($query, $estado) {
+                $query->where('estado', $estado);
+            })
+            ->when($fechaInicio, function ($query, $fechaInicio) {
+                $query->whereDate('fecha_hora', '>=', $fechaInicio);
+            })
+            ->when($fechaFin, function ($query, $fechaFin) {
+                $query->whereDate('fecha_hora', '<=', $fechaFin);
+            })
+            ->latest('fecha_hora')
+            ->paginate(15)
+            ->withQueryString();
+
+        return view('ventas.index', compact(
+            'ventas',
+            'buscar',
+            'estado',
+            'fechaInicio',
+            'fechaFin'
+        ));
     }
 
     public function create()
@@ -751,5 +804,30 @@ class VentaController extends Controller
         $correlativo = Venta::where('sucursal_id', $sucursalId)->count() + 1;
 
         return 'SR-' . str_pad($sucursalId, 2, '0', STR_PAD_LEFT) . '-' . str_pad($correlativo, 6, '0', STR_PAD_LEFT);
+    }
+
+    public function recibo(Venta $venta)
+    {
+        $venta->load([
+            'cliente',
+            'usuario',
+            'sucursal',
+            'detalles.producto',
+            'detalles.productoPresentacion.presentacion',
+            'pagos.metodoPago',
+            'promociones.promocion',
+            'promociones.items.producto',
+            'promociones.items.productoPresentacion.presentacion',
+        ]);
+
+        $configuracion = Configuracion::firstOrCreate(
+            ['id' => 1],
+            [
+                'nombre_farmacia' => 'Santo Remedio',
+                'moneda' => 'Bs',
+            ]
+        );
+
+        return view('ventas.recibo', compact('venta', 'configuracion'));
     }
 }

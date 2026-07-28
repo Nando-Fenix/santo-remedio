@@ -36,6 +36,10 @@
                 </a>
             @endif
 
+            <a href="{{ route('bajas-inventario.recibo', $bajaInventario) }}" class="btn-primary" target="_blank">
+                Imprimir comprobante
+            </a>
+
             @if (auth()->user()->tienePermiso('ver_bajas_inventario'))
                 <a href="{{ route('bajas-inventario.index') }}" class="btn-secondary">
                     Volver

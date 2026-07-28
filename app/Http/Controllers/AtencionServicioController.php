@@ -6,6 +6,7 @@ use App\Models\AtencionServicio;
 use App\Models\AtencionServicioInsumo;
 use App\Models\Caja;
 use App\Models\Cliente;
+use App\Models\Configuracion;
 use App\Models\Inventario;
 use App\Models\MetodoPago;
 use App\Models\MovimientoCaja;
@@ -31,12 +32,15 @@ class AtencionServicioController extends Controller
                 'metodoPago',
             ])
             ->when($buscar, function ($query, $buscar) {
-                $query->whereHas('servicio', function ($q) use ($buscar) {
-                    $q->where('nombre', 'like', "%{$buscar}%");
-                })
-                ->orWhereHas('cliente', function ($q) use ($buscar) {
-                    $q->where('nombre', 'like', "%{$buscar}%")
-                        ->orWhere('ci_nit', 'like', "%{$buscar}%");
+                $query->where(function ($q) use ($buscar) {
+                    $q->where('numero_atencion', 'like', "%{$buscar}%")
+                        ->orWhereHas('servicio', function ($servicioQuery) use ($buscar) {
+                            $servicioQuery->where('nombre', 'like', "%{$buscar}%");
+                        })
+                        ->orWhereHas('cliente', function ($clienteQuery) use ($buscar) {
+                            $clienteQuery->where('nombre', 'like', "%{$buscar}%")
+                                ->orWhere('ci_nit', 'like', "%{$buscar}%");
+                        });
                 });
             })
             ->when($estado, function ($query, $estado) {
@@ -222,6 +226,7 @@ class AtencionServicioController extends Controller
         }
 
         $atencion = DB::transaction(function () use ($datos, $user, $sucursal, $cajaAbierta, $servicio, $insumosADescontar, $cantidad, $precioUnitario, $subtotal, $descuento, $total) {            $atencion = AtencionServicio::create([
+                'numero_atencion' => null,
                 'servicio_farmacia_id' => $servicio->id,
                 'sucursal_id' => $sucursal->id,
                 'usuario_id' => $user->id,
@@ -236,6 +241,10 @@ class AtencionServicioController extends Controller
                 'total' => $total,
                 'estado' => 'completada',
                 'observacion' => $datos['observacion'] ?? null,
+            ]);
+
+            $atencion->update([
+                'numero_atencion' => 'SER-' . str_pad($atencion->id, 6, '0', STR_PAD_LEFT),
             ]);
 
             foreach ($insumosADescontar as $insumo) {
@@ -499,5 +508,32 @@ class AtencionServicioController extends Controller
         return redirect()
             ->route('atenciones-servicio.show', $atencionServicio)
             ->with('success', 'Atención de servicio anulada correctamente.');
+    }
+
+    public function recibo(AtencionServicio $atencionServicio)
+    {
+        $atencionServicio->load([
+            'servicio',
+            'sucursal',
+            'usuario',
+            'cliente',
+            'metodoPago',
+            'insumos.producto',
+            'insumos.productoPresentacion.presentacion',
+            'insumos.lote',
+        ]);
+
+        $configuracion = Configuracion::firstOrCreate(
+            ['id' => 1],
+            [
+                'nombre_farmacia' => 'Santo Remedio',
+                'moneda' => 'Bs',
+            ]
+        );
+
+        return view('atenciones_servicio.recibo', compact(
+            'atencionServicio',
+            'configuracion'
+        ));
     }
 }

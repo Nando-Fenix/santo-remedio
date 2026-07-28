@@ -13,6 +13,11 @@
             <p style="margin:6px 0 0; color:#6B7280;">
                 Control de ingresos por ventas y servicios en una fecha específica.
             </p>
+
+            <p style="margin:6px 0 0; color:#4B5563;">
+                Sucursal:
+                <strong>{{ $sucursal?->nombre ?? 'Sin sucursal' }}</strong>
+            </p>
         </div>
 
         <div style="display:flex; gap:10px; flex-wrap:wrap;">

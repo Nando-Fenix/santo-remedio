@@ -6,96 +6,182 @@
 
 @section('content')
 
-<div class="card">
-
-    <div style="margin-bottom: 22px;">
-        <h2 style="margin: 0; color: #4C1D95;">Registrar atención de servicio</h2>
-        <p style="margin: 6px 0 0; color: #6B7280;">
-            Sucursal: <strong>{{ $sucursal->nombre }}</strong>.
-            Caja: <strong>{{ $cajaAbierta->turno->nombre ?? 'Sin turno' }}</strong>
-            abierta desde <strong>{{ $cajaAbierta->fecha_apertura->format('d/m/Y H:i') }}</strong>.
-        </p>
+@if ($errors->any())
+    <div class="alert-danger">
+        <strong>Revise los siguientes errores:</strong>
+        <ul style="margin-bottom: 0;">
+            @foreach ($errors->all() as $error)
+                <li>{{ $error }}</li>
+            @endforeach
+        </ul>
     </div>
+@endif
 
-    @if ($errors->any())
-        <div class="alert-danger">
-            <strong>Revise los siguientes errores:</strong>
-            <ul style="margin-bottom: 0;">
-                @foreach ($errors->all() as $error)
-                    <li>{{ $error }}</li>
-                @endforeach
-            </ul>
-        </div>
-    @endif
+<form method="POST" action="{{ route('atenciones-servicio.store') }}" id="form_atencion_servicio" class="service-attention-form">
+    @csrf
 
-    <form method="POST" action="{{ route('atenciones-servicio.store') }}" id="form_atencion_servicio">
-        @csrf
+    <div class="service-attention-layout">
 
-        <div class="card" style="background:#FAFAFA; margin-bottom:22px;">
-            <h3 style="margin-top: 0; color:#4C1D95;">Datos del servicio</h3>
+        <section class="service-attention-main">
 
-            <div class="form-grid">
-                <div class="form-group">
-                    <label>Servicio *</label>
-                    <select name="servicio_farmacia_id" id="servicio_farmacia_id" required>
-                        <option value="">Seleccione servicio...</option>
+            <div class="service-attention-header-card">
+                <div>
+                    <h2>
+                        <i class="bi bi-heart-pulse"></i>
+                        Registrar atención de servicio
+                    </h2>
 
-                        @foreach ($servicios as $servicio)
-                            @php
-                                $insumosServicio = $servicio->insumos->map(function ($insumo) {
-                                    return [
-                                        "id" => $insumo->id,
-                                        "nombre" => $insumo->productoPresentacion->nombre_mostrado
-                                            ?? $insumo->producto->nombre_comercial
-                                            ?? "Insumo",
-                                        "cantidad" => $insumo->cantidad,
-                                        "unidades_necesarias" => $insumo->unidades_necesarias,
-                                        "presentacion" => $insumo->productoPresentacion->presentacion->nombre ?? "",
-                                        "stock_disponible" => $insumo->stock_disponible ?? 0,
-                                        "stock_aproximado_presentacion" => $insumo->stock_aproximado_presentacion ?? 0,
-                                    ];
-                                })->values();
-                            @endphp
+                    <p>
+                        Sucursal: <strong>{{ $sucursal->nombre }}</strong> ·
+                        Caja: <strong>{{ $cajaAbierta->turno->nombre ?? 'Sin turno' }}</strong> ·
+                        Apertura: <strong>{{ $cajaAbierta->fecha_apertura->format('d/m/Y H:i') }}</strong>
+                    </p>
+                </div>
+            </div>
 
-                            <option
-                                value="{{ $servicio->id }}"
-                                data-precio="{{ $servicio->precio }}"
-                                data-insumos='@json($insumosServicio)'
-                                @selected(old('servicio_farmacia_id') == $servicio->id)
-                            >
-                                {{ $servicio->nombre }} - {{ number_format($servicio->precio, 2) }} Bs
-                            </option>
-                        @endforeach
-                    </select>
+            <div class="service-attention-card">
+                <div class="service-section-head">
+                    <div>
+                        <h3>
+                            <i class="bi bi-clipboard2-pulse"></i>
+                            Datos del servicio
+                        </h3>
+                        <small>Seleccione el servicio, cliente y cantidad</small>
+                    </div>
                 </div>
 
-                <div class="form-group">
-                    <label>Cliente</label>
-                    <select name="cliente_id">
-                        <option value="">Consumidor final</option>
+                <div class="service-attention-grid">
+                    <div class="form-group service-full">
+                        <label>Servicio *</label>
+                        <select name="servicio_farmacia_id" id="servicio_farmacia_id" required>
+                            <option value="">Seleccione servicio...</option>
 
-                        @foreach ($clientes as $cliente)
-                            <option value="{{ $cliente->id }}" @selected(old('cliente_id') == $cliente->id)>
-                                {{ $cliente->nombre }}
-                                @if ($cliente->ci_nit)
-                                    - CI/NIT: {{ $cliente->ci_nit }}
-                                @endif
-                            </option>
-                        @endforeach
-                    </select>
+                            @foreach ($servicios as $servicio)
+                                @php
+                                    $insumosServicio = $servicio->insumos->map(function ($insumo) {
+                                        return [
+                                            "id" => $insumo->id,
+                                            "nombre" => $insumo->productoPresentacion->nombre_mostrado
+                                                ?? $insumo->producto->nombre_comercial
+                                                ?? "Insumo",
+                                            "cantidad" => $insumo->cantidad,
+                                            "unidades_necesarias" => $insumo->unidades_necesarias,
+                                            "presentacion" => $insumo->productoPresentacion->presentacion->nombre ?? "",
+                                            "stock_disponible" => $insumo->stock_disponible ?? 0,
+                                            "stock_aproximado_presentacion" => $insumo->stock_aproximado_presentacion ?? 0,
+                                        ];
+                                    })->values();
+                                @endphp
+
+                                <option
+                                    value="{{ $servicio->id }}"
+                                    data-precio="{{ $servicio->precio }}"
+                                    data-insumos='@json($insumosServicio)'
+                                    @selected(old('servicio_farmacia_id') == $servicio->id)
+                                >
+                                    {{ $servicio->nombre }} - {{ number_format($servicio->precio, 2) }} Bs
+                                </option>
+                            @endforeach
+                        </select>
+                    </div>
+
+                    <div class="form-group service-full">
+                        <label>Cliente</label>
+                        <select name="cliente_id">
+                            <option value="">Consumidor final</option>
+
+                            @foreach ($clientes as $cliente)
+                                <option value="{{ $cliente->id }}" @selected(old('cliente_id') == $cliente->id)>
+                                    {{ $cliente->nombre }}
+                                    @if ($cliente->ci_nit)
+                                        - CI/NIT: {{ $cliente->ci_nit }}
+                                    @endif
+                                </option>
+                            @endforeach
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Cantidad *</label>
+                        <input
+                            type="number"
+                            name="cantidad"
+                            id="cantidad"
+                            min="1"
+                            value="{{ old('cantidad', 1) }}"
+                            required
+                        >
+                    </div>
+
+                    <div class="form-group">
+                        <label>Precio unitario</label>
+                        <input
+                            type="number"
+                            id="precio_unitario"
+                            step="0.01"
+                            min="0"
+                            value="0"
+                            disabled
+                        >
+                    </div>
+
+                    <div class="form-group">
+                        <label>Descuento Bs</label>
+                        <input
+                            type="number"
+                            name="descuento"
+                            id="descuento"
+                            step="0.01"
+                            min="0"
+                            value="{{ old('descuento', 0) }}"
+                        >
+                    </div>
+                </div>
+            </div>
+
+            <div class="service-attention-card">
+                <div class="service-section-head">
+                    <div>
+                        <h3>
+                            <i class="bi bi-box-seam"></i>
+                            Insumos que se descontarán
+                        </h3>
+                        <small>El sistema usará FEFO y evitará lotes vencidos</small>
+                    </div>
                 </div>
 
-                <div class="form-group">
-                    <label>Cantidad *</label>
-                    <input
-                        type="number"
-                        name="cantidad"
-                        id="cantidad"
-                        min="1"
-                        value="{{ old('cantidad', 1) }}"
-                        required
-                    >
+                <div class="table-container service-table-container">
+                    <table class="table service-table">
+                        <thead>
+                            <tr>
+                                <th>Insumo</th>
+                                <th>Stock</th>
+                                <th>Cantidad base</th>
+                                <th>Descuento total</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+
+                        <tbody id="tabla_insumos_preview">
+                            <tr>
+                                <td colspan="6" class="service-empty">
+                                    Seleccione un servicio para ver insumos.
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
                 </div>
+            </div>
+
+        </section>
+
+        <aside class="service-attention-summary">
+
+            <div class="service-summary-card">
+                <h3>
+                    <i class="bi bi-cash-coin"></i>
+                    Cobro
+                </h3>
 
                 <div class="form-group">
                     <label>Método de pago *</label>
@@ -109,115 +195,60 @@
                         @endforeach
                     </select>
                 </div>
+
+                <div class="service-totals">
+                    <div class="service-total-item">
+                        <span>Subtotal</span>
+                        <strong id="subtotal_text">0.00 Bs</strong>
+                    </div>
+
+                    <div class="service-total-item">
+                        <span>Descuento</span>
+                        <strong id="descuento_text">0.00 Bs</strong>
+                    </div>
+
+                    <div class="service-total-item service-total-main">
+                        <span>Total a cobrar</span>
+                        <strong id="total_text">0.00 Bs</strong>
+                    </div>
+
+                    <div class="service-total-item">
+                        <span>Insumos</span>
+                        <strong id="insumos_count_text">0</strong>
+                    </div>
+                </div>
             </div>
 
-            <div class="form-grid" style="margin-top:14px;">
+            <div class="service-summary-card">
                 <div class="form-group">
-                    <label>Precio unitario</label>
-                    <input
-                        type="number"
-                        id="precio_unitario"
-                        step="0.01"
-                        min="0"
-                        value="0"
-                        disabled
-                    >
-                </div>
-
-                <div class="form-group">
-                    <label>Descuento Bs</label>
-                    <input
-                        type="number"
-                        name="descuento"
-                        id="descuento"
-                        step="0.01"
-                        min="0"
-                        value="{{ old('descuento', 0) }}"
-                    >
+                    <label>Observación</label>
+                    <textarea
+                        name="observacion"
+                        rows="3"
+                        placeholder="Opcional"
+                    >{{ old('observacion') }}</textarea>
                 </div>
             </div>
 
-            <div class="form-group" style="margin-top:14px;">
-                <label>Observación</label>
-                <textarea
-                    name="observacion"
-                    rows="3"
-                    placeholder="Opcional"
-                >{{ old('observacion') }}</textarea>
+            <input type="hidden" name="insumos_filtrados" value="1">
+            <div id="inputs_insumos_usados"></div>
+
+            <div class="service-actions">
+                <a href="{{ route('atenciones-servicio.index') }}" class="btn-secondary">
+                    <i class="bi bi-arrow-left"></i>
+                    Cancelar
+                </a>
+
+                <button type="submit" class="btn-primary">
+                    <i class="bi bi-check2-circle"></i>
+                    Registrar atención
+                </button>
             </div>
-        </div>
 
-        <div class="card" style="background:#F5F3FF; margin-bottom:22px;">
-            <h3 style="margin-top:0; color:#4C1D95;">Resumen de cobro</h3>
+        </aside>
 
-            <div class="grid" style="grid-template-columns: repeat(4, 1fr); margin-bottom:0;">
-                <div class="stat-card">
-                    <span>Subtotal</span>
-                    <h3 id="subtotal_text">0.00 Bs</h3>
-                </div>
-
-                <div class="stat-card">
-                    <span>Descuento</span>
-                    <h3 id="descuento_text">0.00 Bs</h3>
-                </div>
-
-                <div class="stat-card">
-                    <span>Total a cobrar</span>
-                    <h3 id="total_text">0.00 Bs</h3>
-                </div>
-
-                <div class="stat-card">
-                    <span>Insumos</span>
-                    <h3 id="insumos_count_text">0</h3>
-                </div>
-            </div>
-        </div>
-
-        <div class="card" style="background:#FAFAFA; margin-bottom:22px;">
-            <h3 style="margin-top:0; color:#4C1D95;">Insumos que se descontarán</h3>
-
-            <p style="color:#6B7280; margin-top:0;">
-                Si el servicio tiene insumos configurados, el sistema descontará stock automáticamente usando FEFO y evitando lotes vencidos.
-            </p>
-
-            <div class="table-container">
-                <table class="table">
-                    <thead>
-                        <tr>
-                            <th>Insumo</th>
-                            <th>Presentación</th>
-                            <th>Stock disponible</th>
-                            <th>Cantidad base</th>
-                            <th>Descuento total</th>
-                            <th>Acción</th>
-                        </tr>
-                    </thead>
-
-                    <tbody id="tabla_insumos_preview">
-                        <tr>
-                            <td colspan="6" style="text-align:center; color:#6B7280;">
-                                Seleccione un servicio para ver insumos.
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-        </div>
-
-        <input type="hidden" name="insumos_filtrados" value="1">
-        <div id="inputs_insumos_usados"></div>
-
-        <div style="display:flex; gap:12px; flex-wrap:wrap;">
-            <button type="submit" class="btn-primary">
-                Registrar atención
-            </button>
-
-            <a href="{{ route('atenciones-servicio.index') }}" class="btn-secondary">
-                Cancelar
-            </a>
-        </div>
-    </form>
-</div>
+    </div>
+</form>
 
 <script>
 const servicioSelect = document.getElementById('servicio_farmacia_id');
@@ -309,7 +340,7 @@ function renderInsumosPreview(insumos, cantidad) {
     if (!insumos || insumos.length === 0) {
         tablaInsumosPreview.innerHTML = `
             <tr>
-                <td colspan="6" style="text-align:center; color:#6B7280;">
+                <td colspan="5" style="text-align:center; color:#6B7280;">
                     No se descontará ningún insumo en esta atención.
                 </td>
             </tr>
@@ -329,13 +360,11 @@ function renderInsumosPreview(insumos, cantidad) {
                     <strong>${insumo.nombre}</strong>
                 </td>
 
-                <td>${insumo.presentacion || '-'}</td>
-
                 <td>
                     ${stockDisponible} unidad(es)
                     <br>
                     <small style="color:#6B7280;">
-                        Aprox: ${stockAproximado} presentación(es)
+                        ${insumo.presentacion || '-'} · Aprox: ${stockAproximado}
                     </small>
 
                     ${stockInsuficiente ? `
@@ -357,8 +386,8 @@ function renderInsumosPreview(insumos, cantidad) {
                 </td>
 
                 <td>
-                    <button type="button" class="btn-danger" onclick="quitarInsumoAtencion(${index})">
-                        Quitar
+                    <button type="button" class="icon-action icon-action-danger" onclick="quitarInsumoAtencion(${index})" title="Quitar">
+                        <i class="bi bi-x-lg"></i>
                     </button>
                 </td>
             </tr>
@@ -370,11 +399,6 @@ function renderInsumosPreview(insumos, cantidad) {
             `;
         }
     });
-}
-
-function quitarInsumoAtencion(index) {
-    insumosSeleccionados.splice(index, 1);
-    actualizarResumenServicio(false);
 }
 
 function quitarInsumoAtencion(index) {

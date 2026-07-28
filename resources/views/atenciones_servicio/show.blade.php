@@ -22,7 +22,7 @@
     <div style="display:flex; justify-content:space-between; align-items:center; gap:16px;">
         <div>
             <h2 style="margin:0; color:#4C1D95;">
-                Atención de servicio #{{ $atencionServicio->id }}
+                Atención de servicio #{{ $atencionServicio->numero_atencion ?? 'SER-' . str_pad($atencionServicio->id, 6, '0', STR_PAD_LEFT) }}
             </h2>
             <p style="margin:6px 0 0; color:#6B7280;">
                 Registrada el {{ $atencionServicio->fecha_hora->format('d/m/Y H:i') }}
@@ -35,6 +35,10 @@
                     Anular atención
                 </a>
             @endif
+
+            <a href="{{ route('atenciones-servicio.recibo', $atencionServicio) }}" class="btn-primary" target="_blank">
+                Imprimir comprobante
+            </a>
 
             <a href="{{ route('atenciones-servicio.index') }}" class="btn-secondary">
                 Volver

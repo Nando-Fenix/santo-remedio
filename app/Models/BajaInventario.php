@@ -9,6 +9,7 @@ class BajaInventario extends Model
     protected $table = 'bajas_inventario';
 
     protected $fillable = [
+        'numero_baja',
         'producto_id',
         'sucursal_id',
         'lote_id',

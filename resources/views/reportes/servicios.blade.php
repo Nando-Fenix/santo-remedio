@@ -13,6 +13,10 @@
             <p style="margin:6px 0 0; color:#6B7280;">
                 Revise ingresos por servicios, atenciones realizadas e insumos descontados.
             </p>
+            <p style="margin:6px 0 0; color:#4B5563;">
+                Sucursal:
+                <strong>{{ $sucursal?->nombre ?? 'Sin sucursal' }}</strong>
+            </p>
         </div>
 
         <div style="display:flex; gap:10px; flex-wrap:wrap;">
@@ -210,6 +214,7 @@
         <table class="table">
             <thead>
                 <tr>
+                    <th>N° atención</th>
                     <th>Fecha</th>
                     <th>Servicio</th>
                     <th>Cliente</th>
@@ -218,13 +223,18 @@
                     <th>Método</th>
                     <th>Usuario</th>
                     <th>Estado</th>
-                    <th>Ver</th>
+                    <th>Acciones</th>
                 </tr>
             </thead>
 
             <tbody>
                 @forelse ($atenciones as $atencion)
                     <tr>
+                        <td>
+                            <strong>
+                                {{ $atencion->numero_atencion ?? 'SER-' . str_pad($atencion->id, 6, '0', STR_PAD_LEFT) }}
+                            </strong>
+                        </td>
                         <td>{{ $atencion->fecha_hora->format('d/m/Y H:i') }}</td>
                         <td>{{ $atencion->servicio->nombre ?? '-' }}</td>
                         <td>{{ $atencion->cliente->nombre ?? 'Consumidor final' }}</td>
@@ -242,14 +252,20 @@
                         </td>
 
                         <td>
-                            <a href="{{ route('atenciones-servicio.show', $atencion) }}" class="btn-secondary">
-                                Ver
-                            </a>
+                            <div style="display:flex; gap:6px; flex-wrap:wrap;">
+                                <a href="{{ route('atenciones-servicio.show', $atencion) }}" class="btn-secondary">
+                                    Ver
+                                </a>
+
+                                <a href="{{ route('atenciones-servicio.recibo', $atencion) }}" class="btn-primary" target="_blank">
+                                    Imprimir
+                                </a>
+                            </div>
                         </td>
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="9" style="text-align:center; color:#6B7280;">
+                        <td colspan="10" style="text-align:center; color:#6B7280;">
                             No hay atenciones en el rango seleccionado.
                         </td>
                     </tr>

@@ -7,205 +7,250 @@
 @section('content')
 
 @if (!auth()->user()->tienePermiso('administrar_usuarios'))
-    <div class="card">
-        <div class="alert-danger">
-            No tiene permiso para administrar usuarios.
-        </div>
+    <div class="alert-danger">
+        No tiene permiso para administrar usuarios.
     </div>
 @else
 
-<form method="POST" action="{{ route('usuarios.update', $user) }}">
+@if ($errors->any())
+    <div class="alert-danger">
+        <strong>Revise los siguientes errores:</strong>
+        <ul style="margin-bottom:0;">
+            @foreach ($errors->all() as $error)
+                <li>{{ $error }}</li>
+            @endforeach
+        </ul>
+    </div>
+@endif
+
+<form method="POST" action="{{ route('usuarios.update', $user) }}" class="user-form">
     @csrf
     @method('PUT')
 
-    <div class="card" style="margin-bottom: 22px;">
-        <div style="display:flex; justify-content:space-between; align-items:center; gap:14px;">
-            <div>
-                <h2 style="margin:0; color:#4C1D95;">Editar usuario</h2>
-                <p style="margin:6px 0 0; color:#6B7280;">
-                    Usuario de acceso: <strong>{{ $user->usuario }}</strong>
-                </p>
+    <div class="user-three-layout">
+
+        {{-- COLUMNA IZQUIERDA --}}
+        <section class="user-panel">
+            <div class="user-section-head">
+                <div>
+                    <h3>
+                        <i class="bi bi-person-gear"></i>
+                        Datos de acceso
+                    </h3>
+                    <small>Información personal y credenciales</small>
+                </div>
             </div>
 
-            @if (auth()->user()->tienePermiso('administrar_usuarios'))
-                <a href="{{ route('usuarios.index') }}" class="btn-secondary">
-                    Volver
-                </a>
-            @endif
-        </div>
-    </div>
+            <div class="user-compact-grid">
+                <div class="form-group user-full">
+                    <label>Nombre completo *</label>
+                    <input
+                        type="text"
+                        name="nombre"
+                        value="{{ old('nombre', $user->nombre) }}"
+                        required
+                    >
+                </div>
 
-    @if ($errors->any())
-        <div class="card" style="margin-bottom:22px;">
-            <div class="alert-danger">
-                <strong>Revise los siguientes errores:</strong>
-                <ul style="margin-bottom:0;">
-                    @foreach ($errors->all() as $error)
-                        <li>{{ $error }}</li>
-                    @endforeach
-                </ul>
+                <div class="form-group">
+                    <label>CI *</label>
+                    <input
+                        type="text"
+                        name="ci"
+                        value="{{ old('ci', $user->ci) }}"
+                        required
+                    >
+                </div>
+
+                <div class="form-group">
+                    <label>Usuario *</label>
+                    <input
+                        type="text"
+                        name="usuario"
+                        value="{{ old('usuario', $user->usuario) }}"
+                        required
+                    >
+                </div>
+
+                <div class="form-group user-full">
+                    <label>Nueva contraseña</label>
+                    <input type="password" name="password">
+
+                    <small class="user-small-help">
+                        Déjelo vacío si no desea cambiarla.
+                    </small>
+                </div>
+
+                <div class="form-group user-full">
+                    <label>Confirmar nueva contraseña</label>
+                    <input type="password" name="password_confirmation">
+                </div>
+
+                <div class="form-group user-full">
+                    <label>Estado *</label>
+                    <select name="estado" required>
+                        <option value="activo" {{ old('estado', $user->estado) === 'activo' ? 'selected' : '' }}>
+                            Activo
+                        </option>
+
+                        <option value="inactivo" {{ old('estado', $user->estado) === 'inactivo' ? 'selected' : '' }}>
+                            Inactivo
+                        </option>
+                    </select>
+                </div>
             </div>
-        </div>
-    @endif
+        </section>
 
-    <div class="card" style="margin-bottom: 22px;">
-        <h3 style="margin-top:0; color:#4C1D95;">1. Datos del usuario</h3>
-
-        <div class="grid" style="grid-template-columns: repeat(3, 1fr);">
-            <div class="form-group">
-                <label>Nombre completo *</label>
-                <input type="text" name="nombre" value="{{ old('nombre', $user->nombre) }}" required>
+        {{-- COLUMNA CENTRAL --}}
+        <section class="user-panel">
+            <div class="user-section-head">
+                <div>
+                    <h3>
+                        <i class="bi bi-person-badge"></i>
+                        Rol y sucursales
+                    </h3>
+                    <small>Rol principal y sucursales permitidas</small>
+                </div>
             </div>
 
-            <div class="form-group">
-                <label>CI *</label>
-                <input type="text" name="ci" value="{{ old('ci', $user->ci) }}" required>
-            </div>
+            <div class="user-compact-grid">
+                <div class="form-group user-full">
+                    <label>Rol *</label>
+                    <select name="rol_id" id="rol_id" required>
+                        <option value="">Seleccione rol...</option>
 
-            <div class="form-group">
-                <label>Usuario de acceso *</label>
-                <input type="text" name="usuario" value="{{ old('usuario', $user->usuario) }}" required>
-            </div>
-        </div>
-
-        <div class="grid" style="grid-template-columns: repeat(3, 1fr);">
-            <div class="form-group">
-                <label>Nueva contraseña</label>
-                <input type="password" name="password">
-                <small style="color:#6B7280;">Dejar vacío si no desea cambiarla.</small>
-            </div>
-
-            <div class="form-group">
-                <label>Confirmar nueva contraseña</label>
-                <input type="password" name="password_confirmation">
-            </div>
-
-            <div class="form-group">
-                <label>Estado *</label>
-                <select name="estado" required>
-                    <option value="activo" {{ old('estado', $user->estado) === 'activo' ? 'selected' : '' }}>
-                        Activo
-                    </option>
-                    <option value="inactivo" {{ old('estado', $user->estado) === 'inactivo' ? 'selected' : '' }}>
-                        Inactivo
-                    </option>
-                </select>
-            </div>
-        </div>
-    </div>
-
-    <div class="card" style="margin-bottom: 22px;">
-        <h3 style="margin-top:0; color:#4C1D95;">2. Rol y sucursales</h3>
-
-        <div class="grid" style="grid-template-columns: repeat(2, 1fr);">
-            <div class="form-group">
-                <label>Rol *</label>
-                <select name="rol_id" id="rol_id" required>
-                    <option value="">Seleccione rol...</option>
-                    @foreach ($roles as $rol)
-                        <option value="{{ $rol->id }}"
+                        @foreach ($roles as $rol)
+                            <option
+                                value="{{ $rol->id }}"
                                 data-nombre="{{ $rol->nombre }}"
-                                {{ old('rol_id', $user->rol_id) == $rol->id ? 'selected' : '' }}>
-                            {{ $rol->nombre }}
-                        </option>
-                    @endforeach
-                </select>
-
-                <small style="color:#6B7280;">
-                    El administrador tiene acceso total automáticamente.
-                </small>
-            </div>
-
-            <div class="form-group">
-                <label>Sucursal principal *</label>
-                <select name="sucursal_principal_id" required>
-                    <option value="">Seleccione sucursal...</option>
-                    @foreach ($sucursales as $sucursal)
-                        <option value="{{ $sucursal->id }}"
-                                {{ old('sucursal_principal_id', $sucursalPrincipalId) == $sucursal->id ? 'selected' : '' }}>
-                            {{ $sucursal->nombre }}
-                        </option>
-                    @endforeach
-                </select>
-            </div>
-        </div>
-
-        <h4 style="color:#374151; margin-bottom:10px;">Sucursales permitidas</h4>
-
-        <div class="checkbox-grid">
-            @foreach ($sucursales as $sucursal)
-                <label class="checkbox-card">
-                    <input type="checkbox"
-                           name="sucursales[]"
-                           value="{{ $sucursal->id }}"
-                           {{ in_array($sucursal->id, old('sucursales', $sucursalesUsuario)) ? 'checked' : '' }}>
-                    <span>{{ $sucursal->nombre }}</span>
-                </label>
-            @endforeach
-        </div>
-    </div>
-
-    <div class="card" style="margin-bottom: 22px;" id="bloque_permisos">
-        <div style="display:flex; justify-content:space-between; align-items:center; gap:14px;">
-            <div>
-                <h3 style="margin-top:0; color:#4C1D95;">3. Permisos personalizados</h3>
-                <p style="margin:6px 0 0; color:#6B7280;">
-                    Estos permisos son directos para este usuario. El administrador tiene acceso total aunque no se marque nada.
-                </p>
-            </div>
-
-            <div style="display:flex; gap:8px;">
-                <button type="button" class="btn-secondary" onclick="marcarTodosPermisos()">
-                    Marcar todos
-                </button>
-
-                <button type="button" class="btn-secondary" onclick="desmarcarTodosPermisos()">
-                    Desmarcar
-                </button>
-            </div>
-        </div>
-
-        <div style="margin-top:18px;">
-            @foreach ($permisos as $modulo => $items)
-                <div class="permission-module">
-                    <h4>{{ $modulo }}</h4>
-
-                    <div class="checkbox-grid">
-                        @foreach ($items as $permiso)
-                            <label class="checkbox-card">
-                                <input type="checkbox"
-                                       class="permiso-checkbox"
-                                       name="permisos[]"
-                                       value="{{ $permiso->id }}"
-                                       {{ in_array($permiso->id, old('permisos', $permisosUsuario)) ? 'checked' : '' }}>
-                                <span>
-                                    <strong>{{ $permiso->descripcion }}</strong>
-                                    <br>
-                                    <small>{{ $permiso->nombre }}</small>
-                                </span>
-                            </label>
+                                {{ old('rol_id', $user->rol_id) == $rol->id ? 'selected' : '' }}
+                            >
+                                {{ $rol->nombre }}
+                            </option>
                         @endforeach
+                    </select>
+
+                    <div class="user-role-actions">
+                        <small class="user-small-help">
+                            Administrador tiene acceso total.
+                        </small>
+
+                        <button type="button" class="user-link-action" onclick="crearRolRapido()">
+                            <i class="bi bi-plus-circle"></i>
+                            Nuevo rol
+                        </button>
                     </div>
                 </div>
-            @endforeach
-        </div>
+
+                <div class="form-group user-full">
+                    <label>Sucursal principal *</label>
+                    <select name="sucursal_principal_id" required>
+                        <option value="">Seleccione sucursal...</option>
+
+                        @foreach ($sucursales as $sucursal)
+                            <option
+                                value="{{ $sucursal->id }}"
+                                {{ old('sucursal_principal_id', $sucursalPrincipalId) == $sucursal->id ? 'selected' : '' }}
+                            >
+                                {{ $sucursal->nombre }}
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
+            </div>
+
+            <div class="user-branch-compact">
+                <h4>Sucursales permitidas</h4>
+
+                <div class="user-branch-compact-list">
+                    @foreach ($sucursales as $sucursal)
+                        <label class="user-compact-check">
+                            <input
+                                type="checkbox"
+                                name="sucursales[]"
+                                value="{{ $sucursal->id }}"
+                                {{ in_array($sucursal->id, old('sucursales', $sucursalesUsuario)) ? 'checked' : '' }}
+                            >
+
+                            <span>{{ $sucursal->nombre }}</span>
+                        </label>
+                    @endforeach
+                </div>
+            </div>
+        </section>
+
+        {{-- COLUMNA DERECHA --}}
+        <section class="user-panel user-permissions-panel" id="bloque_permisos">
+            <div class="user-section-head user-section-head-actions">
+                <div>
+                    <h3>
+                        <i class="bi bi-shield-check"></i>
+                        Permisos
+                    </h3>
+                    <small>Permisos directos resumidos por módulo</small>
+                </div>
+
+                <div class="user-mini-actions">
+                    <button type="button" class="btn-secondary" onclick="marcarTodosPermisos()">
+                        Todos
+                    </button>
+
+                    <button type="button" class="btn-secondary" onclick="desmarcarTodosPermisos()">
+                        Ninguno
+                    </button>
+                </div>
+            </div>
+
+            <div class="permission-compact-modules">
+                @foreach ($permisos as $modulo => $items)
+                    <details class="permission-compact-module">
+                        <summary>
+                            <div>
+                                <strong>{{ $modulo }}</strong>
+                                <small>{{ $items->count() }} permiso(s)</small>
+                            </div>
+
+                            <i class="bi bi-chevron-down"></i>
+                        </summary>
+
+                        <div class="permission-compact-body">
+                            @foreach ($items as $permiso)
+                                <label class="permission-mini-item" title="{{ $permiso->nombre }}">
+                                    <input
+                                        type="checkbox"
+                                        class="permiso-checkbox"
+                                        name="permisos[]"
+                                        value="{{ $permiso->id }}"
+                                        {{ in_array($permiso->id, old('permisos', $permisosUsuario)) ? 'checked' : '' }}
+                                    >
+
+                                    <span>{{ $permiso->descripcion }}</span>
+                                </label>
+                            @endforeach
+                        </div>
+                    </details>
+                @endforeach
+            </div>
+        </section>
+
     </div>
 
-    <div class="card">
-        <div style="display:flex; gap:12px;">
-            @if (auth()->user()->tienePermiso('administrar_usuarios'))
-                <button type="submit" class="btn-primary">
-                    Guardar cambios
-                </button>
-            @endif
+    <div class="user-form-actions">
+        <a href="{{ route('usuarios.index') }}" class="btn-secondary">
+            <i class="bi bi-arrow-left"></i>
+            Cancelar
+        </a>
 
-            <a href="{{ route('usuarios.index') }}" class="btn-secondary">
-                Cancelar
-            </a>
-        </div>
+        @if (auth()->user()->tienePermiso('administrar_usuarios'))
+            <button type="submit" class="btn-primary">
+                <i class="bi bi-check2-circle"></i>
+                Guardar cambios
+            </button>
+        @endif
     </div>
 </form>
 @endif
+
 <script>
     function marcarTodosPermisos() {
         document.querySelectorAll('.permiso-checkbox').forEach(input => input.checked = true);
@@ -225,6 +270,90 @@
             bloquePermisos.style.opacity = '0.55';
         } else {
             bloquePermisos.style.opacity = '1';
+        }
+    }
+
+    async function crearRolRapido() {
+        const { value: nombre } = await Swal.fire({
+            title: 'Nuevo rol',
+            input: 'text',
+            inputLabel: 'Nombre del rol',
+            inputPlaceholder: 'Ej. Encargado de caja',
+            showCancelButton: true,
+            confirmButtonText: 'Guardar',
+            cancelButtonText: 'Cancelar',
+            confirmButtonColor: '#6D28D9',
+            inputValidator: (value) => {
+                if (!value || !value.trim()) {
+                    return 'Debe ingresar el nombre del rol.';
+                }
+            }
+        });
+
+        if (!nombre) {
+            return;
+        }
+
+        try {
+            const respuesta = await fetch(`{{ route('usuarios.roles-rapido') }}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                    'Accept': 'application/json',
+                },
+                body: JSON.stringify({
+                    nombre: nombre.trim(),
+                }),
+            });
+
+            const resultado = await respuesta.json();
+
+            if (!respuesta.ok) {
+                let mensaje = 'No se pudo crear el rol.';
+
+                if (resultado.errors) {
+                    mensaje = Object.values(resultado.errors).flat().join('\n');
+                } else if (resultado.message) {
+                    mensaje = resultado.message;
+                }
+
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: mensaje,
+                    confirmButtonColor: '#6D28D9'
+                });
+
+                return;
+            }
+
+            const selectRol = document.getElementById('rol_id');
+
+            const option = document.createElement('option');
+            option.value = resultado.rol.id;
+            option.textContent = resultado.rol.nombre;
+            option.dataset.nombre = resultado.rol.nombre;
+            option.selected = true;
+
+            selectRol.appendChild(option);
+
+            actualizarBloquePermisos();
+
+            Swal.fire({
+                icon: 'success',
+                title: 'Rol creado',
+                text: 'El rol fue creado y seleccionado.',
+                confirmButtonColor: '#6D28D9'
+            });
+
+        } catch (error) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Error inesperado',
+                text: error.message,
+                confirmButtonColor: '#6D28D9'
+            });
         }
     }
 

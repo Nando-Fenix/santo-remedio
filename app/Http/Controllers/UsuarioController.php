@@ -241,4 +241,24 @@ class UsuarioController extends Controller
             ->route('usuarios.index')
             ->with('success', 'Usuario desactivado correctamente.');
     }
+
+    public function rolRapido(Request $request)
+    {
+        $datos = $request->validate([
+            'nombre' => ['required', 'string', 'max:100', 'unique:roles,nombre'],
+        ]);
+
+        $rol = Rol::create([
+            'nombre' => $datos['nombre'],
+            'descripcion' => 'Rol creado desde el formulario de usuarios',
+            'estado' => 'activo',
+        ]);
+
+        return response()->json([
+            'rol' => [
+                'id' => $rol->id,
+                'nombre' => $rol->nombre,
+            ],
+        ]);
+    }
 }

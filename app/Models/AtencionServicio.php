@@ -9,6 +9,7 @@ class AtencionServicio extends Model
     protected $table = 'atenciones_servicio';
 
     protected $fillable = [
+        'numero_atencion',
         'servicio_farmacia_id',
         'sucursal_id',
         'usuario_id',

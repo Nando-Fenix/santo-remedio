@@ -13,11 +13,25 @@
             <p style="margin:6px 0 0; color:#6B7280;">
                 Resumen general de ingresos por ventas y servicios.
             </p>
+
+            <p style="margin:6px 0 0; color:#4B5563;">
+                Sucursal:
+                <strong>{{ $sucursal?->nombre ?? 'Sin sucursal' }}</strong>
+            </p>
         </div>
 
-        <a href="{{ route('reportes.index') }}" class="btn-secondary">
-            Volver a reportes
-        </a>
+        <div style="display:flex; gap:10px; flex-wrap:wrap;">
+            <a
+                href="{{ route('reportes.ingresos-diarios.exportar-csv', request()->query()) }}"
+                class="btn-primary"
+            >
+                Exportar Excel
+            </a>
+
+            <a href="{{ route('reportes.index') }}" class="btn-secondary">
+                Volver a reportes
+            </a>
+        </div>
     </div>
 </div>
 

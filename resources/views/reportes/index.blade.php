@@ -2,305 +2,242 @@
 
 @section('title', 'Reportes | Santo Remedio')
 @section('page-title', 'Reportes')
-@section('page-subtitle', 'Resumen de ventas, stock y alertas importantes')
+@section('page-subtitle', 'Panel general de reportes del sistema')
 
 @section('content')
 
 <div class="card" style="margin-bottom: 22px;">
-    <div style="display: flex; justify-content: space-between; align-items: center; gap: 14px;">
-        <div>
-            <h2 style="margin: 0; color: #4C1D95;">Reporte general</h2>
-            <p style="margin: 6px 0 0; color: #6B7280;">
-                Consulte ventas del día, pagos, stock bajo y productos próximos a vencer.
-            </p>
-        </div>
-    </div>
+    <h2 style="margin:0; color:#4C1D95;">Centro de reportes</h2>
 
-    <form method="GET" action="{{ route('reportes.index') }}" style="margin-top: 18px;">
-        <div class="form-grid">
-            <div class="form-group">
-                <label>Fecha del reporte</label>
-                <input type="date" name="fecha" value="{{ $fecha }}">
-            </div>
-        </div>
-
-        <div style="display: flex; gap: 10px; margin-top: 14px;">
-            <button type="submit" class="btn-primary">
-                Consultar
-            </button>
-
-            <a href="{{ route('reportes.index') }}" class="btn-secondary">
-                Hoy
-            </a>
-        </div>
-    </form>
+    <p style="margin:8px 0 0; color:#6B7280;">
+        Accede a los reportes administrativos, ventas, inventario, compras, caja y servicios de farmacia.
+    </p>
 </div>
 
-<div class="grid">
-    <div class="stat-card">
-        <span>Total vendido</span>
-        <h3>{{ number_format($totalVentas, 2) }} Bs</h3>
-    </div>
-
-    <div class="stat-card">
-        <span>Cantidad de ventas</span>
-        <h3>{{ $cantidadVentas }}</h3>
-    </div>
-
-    <div class="stat-card">
-        <span>Total efectivo</span>
-        <h3>{{ number_format($totalEfectivo, 2) }} Bs</h3>
-    </div>
-
-    <div class="stat-card">
-        <span>Total QR</span>
-        <h3>{{ number_format($totalQr, 2) }} Bs</h3>
-    </div>
-</div>
-
+{{-- ADMINISTRACIÓN --}}
 <div class="card" style="margin-bottom: 22px;">
-    <h3 style="margin-top: 0; color: #4C1D95;">Ventas del día</h3>
+    <h3 style="margin-top:0; color:#4C1D95;">Administración general</h3>
 
-    <div class="table-container">
-        <table class="table">
-            <thead>
-                <tr>
-                    <th>N° venta</th>
-                    <th>Hora</th>
-                    <th>Sucursal</th>
-                    <th>Vendedor</th>
-                    <th>Método</th>
-                    <th>Total</th>
-                </tr>
-            </thead>
-            <tbody>
-                @forelse ($ventasDelDia as $venta)
-                    <tr>
-                        <td>
-                            @if (auth()->user()->tienePermiso('ver_ventas'))
-                                <a href="{{ route('ventas.show', $venta) }}" class="btn-secondary">
-                                    {{ $venta->numero_venta }}
-                                </a>
-                            @else
-                                {{ $venta->numero_venta }}
-                            @endif
-                        </td>
-                        <td>{{ $venta->fecha_hora->format('H:i') }}</td>
-                        <td>{{ $venta->sucursal->nombre ?? '-' }}</td>
-                        <td>{{ $venta->usuario->nombre ?? '-' }}</td>
-                        <td>
-                            @foreach ($venta->pagos as $pago)
-                                <span class="badge badge-soft">
-                                    {{ $pago->metodoPago->nombre ?? '-' }}
-                                </span>
-                            @endforeach
-                        </td>
-                        <td>
-                            <strong>{{ number_format($venta->total, 2) }} Bs</strong>
-                        </td>
-                    </tr>
-                @empty
-                    <tr>
-                        <td colspan="6" style="text-align: center; color: #6B7280;">
-                            No hay ventas registradas en esta fecha.
-                        </td>
-                    </tr>
-                @endforelse
-            </tbody>
-        </table>
-    </div>
-</div>
-@if (auth()->user()->tienePermiso('ver_inventario'))
-<div class="grid" style="grid-template-columns: repeat(2, 1fr);">
-    <div class="card">
-
-    
-        <h3 style="margin-top: 0; color: #4C1D95;">Stock bajo</h3>
-
-        <div class="table-container">
-            <table class="table">
-                <thead>
-                    <tr>
-                        <th>Producto</th>
-                        <th>Sucursal</th>
-                        <th>Stock</th>
-                        <th>Mínimo</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @forelse ($stockBajo as $item)
-                        <tr>
-                            <td>
-                                {{ $item->producto->nombre_comercial ?? '-' }}
-                                @if($item->producto?->concentracion)
-                                    <br>
-                                    <small style="color: #6B7280;">{{ $item->producto->concentracion }}</small>
-                                @endif
-                            </td>
-                            <td>{{ $item->sucursal->nombre ?? '-' }}</td>
-                            <td>
-                                <span class="badge badge-warning">
-                                    {{ $item->stock_actual }}
-                                </span>
-                            </td>
-                            <td>{{ $item->stock_minimo }}</td>
-                        </tr>
-                    @empty
-                        <tr>
-                            <td colspan="4" style="text-align: center; color: #6B7280;">
-                                No hay productos con stock bajo.
-                            </td>
-                        </tr>
-                    @endforelse
-                </tbody>
-            </table>
-        </div>
-    </div>
-
-    <div class="card">
-        <h3 style="margin-top: 0; color: #4C1D95;">Promociones</h3>
-        <p style="color: #6B7280;">
-            Consulte promociones vendidas, ingresos generados y productos descontados.
-        </p>
-
-        <a href="{{ route('reportes.promociones') }}" class="btn-primary">
-            Ver reporte
-        </a>
-    </div>
-
-    @if (auth()->user()->tienePermiso('ver_bajas_inventario'))
-        <div class="card">
-            <h3 style="margin-top: 0; color: #4C1D95;">Bajas de inventario</h3>
-            <p style="color: #6B7280;">
-                Consulte productos retirados por vencimiento, daño, pérdida o ajuste autorizado.
+    <div class="grid" style="grid-template-columns: repeat(3, 1fr);">
+        <div class="stat-card">
+            <span>Resumen completo</span>
+            <h3>Resumen administrativo</h3>
+            <p style="color:#6B7280;">
+                Indicadores generales de ventas, servicios, compras, utilidad, caja e inventario crítico.
             </p>
 
-            <a href="{{ route('bajas-inventario.index') }}" class="btn-primary">
-                Ver bajas
+            <a href="{{ route('reportes.resumen-administrativo') }}" class="btn-primary">
+                Ver reporte
             </a>
         </div>
-    @endif
 
-    <div class="card">
-        <h3 style="margin-top:0; color:#4C1D95;">Servicios de farmacia</h3>
-        <p style="color:#6B7280;">
-            Ingresos por servicios, atenciones realizadas e insumos consumidos.
-        </p>
+        <div class="stat-card">
+            <span>Ganancia aproximada</span>
+            <h3>Utilidad estimada</h3>
+            <p style="color:#6B7280;">
+                Ganancia aproximada según precio de venta y precio de compra registrado.
+            </p>
 
-        <a href="{{ route('reportes.servicios') }}" class="btn-primary">
-            Ver reporte
-        </a>
-    </div>
+            <a href="{{ route('reportes.utilidad-estimada') }}" class="btn-primary">
+                Ver reporte
+            </a>
+        </div>
 
-    <div class="card">
-        <h3 style="margin-top:0; color:#4C1D95;">Ingresos diarios</h3>
-        <p style="color:#6B7280;">
-            Resumen general de ingresos por ventas y servicios de farmacia.
-        </p>
+        <div class="stat-card">
+            <span>Ingresos globales</span>
+            <h3>Ingresos diarios</h3>
+            <p style="color:#6B7280;">
+                Resumen general de ingresos por ventas y servicios de farmacia.
+            </p>
 
-        <a href="{{ route('reportes.ingresos-diarios') }}" class="btn-primary">
-            Ver reporte
-        </a>
-    </div>
-
-    <div class="card">
-        <h3 style="margin-top:0; color:#4C1D95;">Caja diaria</h3>
-        <p style="color:#6B7280;">
-            Resumen de ventas, servicios, egresos, reembolsos y anulaciones por caja.
-        </p>
-
-        <a href="{{ route('reportes.caja-diaria') }}" class="btn-primary">
-            Ver reporte
-        </a>
-    </div>
-
-    <div class="card">
-        <h3 style="margin-top: 0; color: #4C1D95;">Productos próximos a vencer</h3>
-
-        <div class="table-container">
-            <table class="table">
-                <thead>
-                    <tr>
-                        <th>Producto</th>
-                        <th>Sucursal</th>
-                        <th>Lote</th>
-                        <th>Vence</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @forelse ($productosPorVencer as $item)
-                        <tr>
-                            <td>
-                                {{ $item->producto->nombre_comercial ?? '-' }}
-                                @if($item->producto?->concentracion)
-                                    <br>
-                                    <small style="color: #6B7280;">{{ $item->producto->concentracion }}</small>
-                                @endif
-                            </td>
-                            <td>{{ $item->sucursal->nombre ?? '-' }}</td>
-                            <td>{{ $item->lote->numero_lote ?? 'Sin lote' }}</td>
-                            <td>
-                                <span class="badge badge-warning">
-                                    {{ $item->lote?->fecha_vencimiento?->format('d/m/Y') }}
-                                </span>
-                            </td>
-                        </tr>
-                    @empty
-                        <tr>
-                            <td colspan="4" style="text-align: center; color: #6B7280;">
-                                No hay productos próximos a vencer.
-                            </td>
-                        </tr>
-                    @endforelse
-                </tbody>
-            </table>
+            <a href="{{ route('reportes.ingresos-diarios') }}" class="btn-primary">
+                Ver reporte
+            </a>
         </div>
     </div>
 </div>
-@endif
 
-@if (auth()->user()->tienePermiso('ver_inventario'))
-<div class="card" style="margin-top: 22px;">
-    <h3 style="margin-top: 0; color: #4C1D95;">Productos agotados</h3>
+{{-- VENTAS --}}
+<div class="card" style="margin-bottom: 22px;">
+    <h3 style="margin-top:0; color:#4C1D95;">Ventas e ingresos</h3>
 
-    <div class="table-container">
-        <table class="table">
-            <thead>
-                <tr>
-                    <th>Producto</th>
-                    <th>Sucursal</th>
-                    <th>Lote</th>
-                    <th>Stock</th>
-                </tr>
-            </thead>
-            <tbody>
-                @forelse ($productosAgotados as $item)
-                    <tr>
-                        <td>
-                            {{ $item->producto->nombre_comercial ?? '-' }}
-                            @if($item->producto?->concentracion)
-                                <br>
-                                <small style="color: #6B7280;">{{ $item->producto->concentracion }}</small>
-                            @endif
-                        </td>
-                        <td>{{ $item->sucursal->nombre ?? '-' }}</td>
-                        <td>{{ $item->lote->numero_lote ?? 'Sin lote' }}</td>
-                        <td>
-                            <span class="badge badge-danger">
-                                {{ $item->stock_actual }}
-                            </span>
-                        </td>
-                    </tr>
-                @empty
-                    <tr>
-                        <td colspan="4" style="text-align: center; color: #6B7280;">
-                            No hay productos agotados.
-                        </td>
-                    </tr>
-                @endforelse
-            </tbody>
-        </table>
+    <div class="grid" style="grid-template-columns: repeat(3, 1fr);">
+        <div class="stat-card">
+            <span>Ventas</span>
+            <h3>Reporte de ventas</h3>
+            <p style="color:#6B7280;">
+                Ventas completadas, anuladas, descuentos y métodos de pago.
+            </p>
+
+            <a href="{{ route('reportes.ventas') }}" class="btn-primary">
+                Ver reporte
+            </a>
+        </div>
+
+        <div class="stat-card">
+            <span>Ranking</span>
+            <h3>Productos vendidos</h3>
+            <p style="color:#6B7280;">
+                Ranking de productos vendidos por cantidad e ingresos generados.
+            </p>
+
+            <a href="{{ route('reportes.productos-vendidos') }}" class="btn-primary">
+                Ver reporte
+            </a>
+        </div>
+
+        <div class="stat-card">
+            <span>Clientes</span>
+            <h3>Clientes frecuentes</h3>
+            <p style="color:#6B7280;">
+                Ranking de clientes por compras, total comprado y ticket promedio.
+            </p>
+
+            <a href="{{ route('reportes.clientes-frecuentes') }}" class="btn-primary">
+                Ver reporte
+            </a>
+        </div>
+
+        <div class="stat-card">
+            <span>Promociones</span>
+            <h3>Promociones vendidas</h3>
+            <p style="color:#6B7280;">
+                Promociones vendidas y productos descontados por cada promoción.
+            </p>
+
+            <a href="{{ route('reportes.promociones') }}" class="btn-primary">
+                Ver reporte
+            </a>
+        </div>
+
+        <div class="stat-card">
+            <span>Pagos</span>
+            <h3>Métodos de pago</h3>
+            <p style="color:#6B7280;">
+                Resumen de ingresos por efectivo, QR, transferencia u otros métodos.
+            </p>
+
+            <a href="{{ route('reportes.metodos-pago') }}" class="btn-primary">
+                Ver reporte
+            </a>
+        </div>
     </div>
 </div>
-@endif
+
+{{-- INVENTARIO --}}
+<div class="card" style="margin-bottom: 22px;">
+    <h3 style="margin-top:0; color:#4C1D95;">Inventario</h3>
+
+    <div class="grid" style="grid-template-columns: repeat(3, 1fr);">
+        <div class="stat-card">
+            <span>Alertas</span>
+            <h3>Inventario crítico</h3>
+            <p style="color:#6B7280;">
+                Productos agotados, con stock bajo, próximos a vencer o vencidos.
+            </p>
+
+            <a href="{{ route('reportes.inventario-critico') }}" class="btn-primary">
+                Ver reporte
+            </a>
+        </div>
+
+        <div class="stat-card">
+            <span>Reposición</span>
+            <h3>Productos a reponer</h3>
+            <p style="color:#6B7280;">
+                Productos agotados o con stock bajo, priorizados según ventas recientes.
+            </p>
+
+            <a href="{{ route('reportes.productos-reponer') }}" class="btn-primary">
+                Ver reporte
+            </a>
+        </div>
+
+        <div class="stat-card">
+            <span>Historial</span>
+            <h3>Movimientos de inventario</h3>
+            <p style="color:#6B7280;">
+                Historial de entradas, salidas, bajas y ajustes de stock.
+            </p>
+
+            <a href="{{ route('reportes.movimientos-inventario') }}" class="btn-primary">
+                Ver reporte
+            </a>
+
+            <a href="{{ route('reportes.bajas-inventario') }}" class="btn-secondary">
+                Bajas de inventario
+            </a>
+        </div>
+    </div>
+</div>
+
+{{-- COMPRAS --}}
+<div class="card" style="margin-bottom: 22px;">
+    <h3 style="margin-top:0; color:#4C1D95;">Compras y proveedores</h3>
+
+    <div class="grid" style="grid-template-columns: repeat(3, 1fr);">
+        <div class="stat-card">
+            <span>Compras</span>
+            <h3>Reporte de compras</h3>
+            <p style="color:#6B7280;">
+                Compras, pagos realizados, saldos pendientes y anulaciones.
+            </p>
+
+            <a href="{{ route('reportes.compras') }}" class="btn-primary">
+                Ver reporte
+            </a>
+        </div>
+
+        <div class="stat-card">
+            <span>Deudas</span>
+            <h3>Deudas a proveedores</h3>
+            <p style="color:#6B7280;">
+                Control de compras pendientes agrupadas por proveedor.
+            </p>
+
+            <a href="{{ route('reportes.deudas-proveedores') }}" class="btn-primary">
+                Ver reporte
+            </a>
+        </div>
+    </div>
+</div>
+
+{{-- CAJA --}}
+<div class="card" style="margin-bottom: 22px;">
+    <h3 style="margin-top:0; color:#4C1D95;">Caja</h3>
+
+    <div class="grid" style="grid-template-columns: repeat(3, 1fr);">
+        <div class="stat-card">
+            <span>Control diario</span>
+            <h3>Caja diaria</h3>
+            <p style="color:#6B7280;">
+                Resumen de ventas, servicios, egresos, anulaciones y total final de caja.
+            </p>
+
+            <a href="{{ route('reportes.caja-diaria') }}" class="btn-primary">
+                Ver reporte
+            </a>
+        </div>
+    </div>
+</div>
+
+{{-- SERVICIOS --}}
+<div class="card" style="margin-bottom: 22px;">
+    <h3 style="margin-top:0; color:#4C1D95;">Servicios de farmacia</h3>
+
+    <div class="grid" style="grid-template-columns: repeat(3, 1fr);">
+        <div class="stat-card">
+            <span>Atenciones</span>
+            <h3>Servicios</h3>
+            <p style="color:#6B7280;">
+                Reporte de servicios realizados, ingresos e insumos utilizados.
+            </p>
+
+            <a href="{{ route('reportes.servicios') }}" class="btn-primary">
+                Ver reporte
+            </a>
+        </div>
+    </div>
+</div>
+
 @endsection

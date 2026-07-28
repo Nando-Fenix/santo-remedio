@@ -6,203 +6,240 @@
 
 @section('content')
 
-<div class="card">
-
-    <div style="margin-bottom: 22px;">
-        <h2 style="margin: 0; color: #4C1D95;">Venta rápida</h2>
-        <p style="margin: 6px 0 0; color: #6B7280;">
-            Sucursal: <strong>{{ $sucursal->nombre }}</strong>.
-            Caja: <strong>{{ $cajaAbierta->turno->nombre ?? 'Sin turno' }}</strong>
-            abierta desde <strong>{{ $cajaAbierta->fecha_apertura->format('d/m/Y H:i') }}</strong>.
-            Busque por nombre o escanee el código de barras.
-        </p>
+@if ($errors->any())
+    <div class="alert-danger">
+        <strong>Revise los siguientes errores:</strong>
+        <ul style="margin-bottom: 0;">
+            @foreach ($errors->all() as $error)
+                <li>{{ $error }}</li>
+            @endforeach
+        </ul>
     </div>
+@endif
 
-    @if ($errors->any())
-        <div class="alert-danger">
-            <strong>Revise los siguientes errores:</strong>
-            <ul style="margin-bottom: 0;">
-                @foreach ($errors->all() as $error)
-                    <li>{{ $error }}</li>
-                @endforeach
-            </ul>
-        </div>
-    @endif
+<form method="POST" action="{{ route('ventas.store') }}" id="form_venta" class="sale-form">
+    @csrf
 
-    <div class="form-group">
-        <label>Buscar producto o escanear código</label>
-        <input
-            type="text"
-            id="buscador_producto"
-            placeholder="Buscar por producto, forma de venta, laboratorio o código de barras"
-            autocomplete="off"
-        >
-    </div>
+    <div class="sale-layout">
 
-    <div id="resultados_busqueda" class="card" style="display: none; margin-top: 12px; background: #FAFAFA;"></div>
+        <section class="sale-main">
 
-    <form method="POST" action="{{ route('ventas.store') }}" id="form_venta">
-        @csrf
+            <div class="sale-header-card">
+                <div>
+                    <h2>
+                        <i class="bi bi-upc-scan"></i>
+                        Venta rápida
+                    </h2>
 
-        <div class="card" style="margin-top: 22px;">
-            <h3 style="margin-top: 0; color: #4C1D95;">Carrito de venta</h3>
-
-            <div class="table-container">
-                <table class="table" id="tabla_carrito">
-                    <thead>
-                        <tr>
-                            <th>Producto seleccionado</th>
-                            <th>Forma</th>
-                            <th>Stock</th>
-                            <th>Cantidad</th>
-                            <th>Precio</th>
-                            <th>Subtotal</th>
-                            <th>Acción</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr id="carrito_vacio">
-                            <td colspan="7" style="text-align: center; color: #6B7280;">
-                                No hay productos agregados.
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
+                    <p>
+                        Sucursal: <strong>{{ $sucursal->nombre }}</strong> ·
+                        Caja: <strong>{{ $cajaAbierta->turno->nombre ?? 'Sin turno' }}</strong> ·
+                        Apertura: <strong>{{ $cajaAbierta->fecha_apertura->format('d/m/Y H:i') }}</strong>
+                    </p>
+                </div>
             </div>
-        </div>
-        <div class="card" style="margin-bottom: 22px;">
-            <h3 style="margin-top: 0; color: #4C1D95;">Cliente</h3>
 
-        <div class="form-grid">
-            <div class="form-group">
-                <label>Cliente registrado</label>
-                <select name="cliente_id" id="cliente_id">
-                    <option value="">Consumidor final</option>
+            <div class="sale-search-card">
+                <div class="form-group sale-search-group">
+                    <label>Buscar producto o escanear código</label>
+                    <div class="sale-search-box">
+                        <i class="bi bi-search"></i>
+                        <input
+                            type="text"
+                            id="buscador_producto"
+                            placeholder="Producto, presentación, laboratorio o código de barras"
+                            autocomplete="off"
+                        >
+                    </div>
+                </div>
 
-                    @foreach ($clientes as $cliente)
-                        <option 
-                            value="{{ $cliente->id }}"
-                            data-descuento="{{ $cliente->descuento_default }}" {{ old('cliente_id') == $cliente->id ? 'selected' : '' }}>
-                            {{ $cliente->nombre }}
-                            @if ($cliente->ci_nit)
-                                - CI/NIT: {{ $cliente->ci_nit }}
-                            @endif
-                        </option>
-                    @endforeach
-                </select>
-
-                @error('cliente_id')
-                    <small class="error">{{ $message }}</small>
-                @enderror
+                <div id="resultados_busqueda" class="sale-results" style="display: none;"></div>
             </div>
-        </div>
 
-        <p style="margin: 8px 0 0; color: #6B7280; font-size: 14px;">
-            Si no selecciona un cliente, la venta se registrará como consumidor final.
-        </p>
+            <div class="sale-cart-card">
+                <div class="sale-section-head">
+                    <div>
+                        <h3>
+                            <i class="bi bi-cart-check"></i>
+                            Carrito de venta
+                        </h3>
+                        <small>Productos y promociones agregadas</small>
+                    </div>
+                </div>
 
-        <div class="card" style="margin-top: 22px; background: #F5F3FF;">
-            <h3 style="margin-top: 0; color: #4C1D95;">Pago</h3>
+                <div class="table-container sale-table-container">
+                    <table class="table sale-table" id="tabla_carrito">
+                        <thead>
+                            <tr>
+                                <th>Producto</th>
+                                <th>Forma</th>
+                                <th>Stock</th>
+                                <th>Cant.</th>
+                                <th>Precio</th>
+                                <th>Subtotal</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr id="carrito_vacio">
+                                <td colspan="7" class="sale-empty">
+                                    No hay productos agregados.
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
 
-            <div class="form-grid">
+        </section>
+
+        <aside class="sale-summary">
+
+            <div class="sale-summary-card">
+                <h3>
+                    <i class="bi bi-person"></i>
+                    Cliente
+                </h3>
+
                 <div class="form-group">
-                    <label>Método de pago *</label>
-                    <select name="metodo_pago_id" required>
-                        <option value="">Seleccione método</option>
-                        @foreach ($metodosPago as $metodo)
-                            <option value="{{ $metodo->id }}" @selected(old('metodo_pago_id') == $metodo->id)>
-                                {{ $metodo->nombre }}
+                    <label>Cliente registrado</label>
+                    <select name="cliente_id" id="cliente_id">
+                        <option value="">Consumidor final</option>
+
+                        @foreach ($clientes as $cliente)
+                            <option
+                                value="{{ $cliente->id }}"
+                                data-descuento="{{ $cliente->descuento_default }}"
+                                {{ old('cliente_id') == $cliente->id ? 'selected' : '' }}>
+                                {{ $cliente->nombre }}
+                                @if ($cliente->ci_nit)
+                                    - CI/NIT: {{ $cliente->ci_nit }}
+                                @endif
                             </option>
                         @endforeach
                     </select>
+
+                    @error('cliente_id')
+                        <small class="error">{{ $message }}</small>
+                    @enderror
                 </div>
 
-                <div class="form-group">
-                    <label>Descuento (%)</label>
+                <small class="sale-help">
+                    Si no selecciona cliente, se registrará como consumidor final.
+                </small>
+            </div>
 
-                    @if (auth()->user()->tienePermiso('aplicar_descuento'))
+            <div class="sale-summary-card sale-payment-card">
+                <h3>
+                    <i class="bi bi-cash-coin"></i>
+                    Pago
+                </h3>
+
+                <div class="sale-payment-grid">
+                    <div class="form-group">
+                        <label>Método *</label>
+                        <select name="metodo_pago_id" required>
+                            <option value="">Seleccione</option>
+                            @foreach ($metodosPago as $metodo)
+                                <option value="{{ $metodo->id }}" @selected(old('metodo_pago_id') == $metodo->id)>
+                                    {{ $metodo->nombre }}
+                                </option>
+                            @endforeach
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Descuento %</label>
+
+                        @if (auth()->user()->tienePermiso('aplicar_descuento'))
+                            <input
+                                type="number"
+                                step="0.01"
+                                min="0"
+                                max="100"
+                                name="descuento_porcentaje"
+                                id="descuento_porcentaje"
+                                value="{{ old('descuento_porcentaje', 0) }}"
+                            >
+                        @else
+                            <input
+                                type="number"
+                                step="0.01"
+                                min="0"
+                                max="100"
+                                id="descuento_porcentaje"
+                                value="0"
+                                disabled
+                            >
+
+                            <input type="hidden" name="descuento_porcentaje" value="0">
+                        @endif
+                    </div>
+
+                    <div class="form-group sale-full">
+                        <label>Monto recibido *</label>
                         <input
                             type="number"
                             step="0.01"
                             min="0"
-                            max="100"
-                            name="descuento_porcentaje"
-                            id="descuento_porcentaje"
-                            value="{{ old('descuento_porcentaje', 0) }}"
+                            name="monto_recibido"
+                            id="monto_recibido"
+                            value="{{ old('monto_recibido', 0) }}"
+                            required
                         >
-                    @else
-                        <input
-                            type="number"
-                            step="0.01"
-                            min="0"
-                            max="100"
-                            id="descuento_porcentaje"
-                            value="0"
-                            disabled
-                        >
-
-                        <input type="hidden" name="descuento_porcentaje" value="0">
-                    @endif
+                    </div>
                 </div>
 
+                <div class="sale-totals">
+                    <div class="sale-total-item">
+                        <span>Subtotal</span>
+                        <strong id="subtotal_venta">0.00 Bs</strong>
+                    </div>
+
+                    <div class="sale-total-item">
+                        <span>Descuento</span>
+                        <strong id="descuento_venta">0.00 Bs</strong>
+                    </div>
+
+                    <div class="sale-total-item sale-total-main">
+                        <span>Total</span>
+                        <strong id="total_venta">0.00 Bs</strong>
+                    </div>
+
+                    <div class="sale-total-item">
+                        <span>Cambio</span>
+                        <strong id="cambio_venta">0.00 Bs</strong>
+                    </div>
+                </div>
+            </div>
+
+            <div class="sale-summary-card">
                 <div class="form-group">
-                    <label>Monto recibido *</label>
-                    <input
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        name="monto_recibido"
-                        id="monto_recibido"
-                        value="{{ old('monto_recibido', 0) }}"
-                        required
-                    >
+                    <label>Observación</label>
+                    <textarea name="observacion" rows="2" placeholder="Opcional">{{ old('observacion') }}</textarea>
                 </div>
             </div>
 
-            <div class="grid" style="grid-template-columns: repeat(4, 1fr); margin-top: 18px; margin-bottom: 0;">
-                <div class="stat-card">
-                    <span>Subtotal</span>
-                    <h3 id="subtotal_venta">0.00 Bs</h3>
-                </div>
+            <div id="inputs_carrito"></div>
 
-                <div class="stat-card">
-                    <span>Descuento</span>
-                    <h3 id="descuento_venta">0.00 Bs</h3>
-                </div>
+            <div class="sale-actions">
+                <a href="{{ route('ventas.index') }}" class="btn-secondary">
+                    <i class="bi bi-arrow-left"></i>
+                    Cancelar
+                </a>
 
-                <div class="stat-card">
-                    <span>Total</span>
-                    <h3 id="total_venta">0.00 Bs</h3>
-                </div>
-
-                <div class="stat-card">
-                    <span>Cambio</span>
-                    <h3 id="cambio_venta">0.00 Bs</h3>
-                </div>
+                @if (auth()->user()->tienePermiso('realizar_venta'))
+                    <button type="submit" class="btn-primary">
+                        <i class="bi bi-check2-circle"></i>
+                        Guardar venta
+                    </button>
+                @endif
             </div>
-        </div>
 
-        <div class="form-group" style="margin-top: 18px;">
-            <label>Observación</label>
-            <textarea name="observacion" rows="3" placeholder="Opcional">{{ old('observacion') }}</textarea>
-        </div>
+        </aside>
 
-        <div id="inputs_carrito"></div>
-
-        <div style="display: flex; gap: 12px; margin-top: 24px;">
-            @if (auth()->user()->tienePermiso('realizar_venta'))
-                <button type="submit" class="btn-primary">
-                    Guardar venta
-                </button>
-            @endif
-
-            <a href="{{ route('ventas.index') }}" class="btn-secondary">
-                Cancelar
-            </a>
-        </div>
-    </form>
-
-</div>
+    </div>
+</form>
 @php
     $itemsAntiguosVenta = collect(old('items', []))->map(function ($item) {
         return [
@@ -595,8 +632,8 @@
                     <td>${item.precio_venta.toFixed(2)} Bs</td>
                     <td>${subtotal.toFixed(2)} Bs</td>
                     <td>
-                        <button type="button" class="btn-danger" onclick="quitarProducto('${item.id}')">
-                            Quitar
+                        <button type="button" class="icon-action icon-action-danger" onclick="quitarProducto('${item.id}')" title="Quitar">
+                            <i class="bi bi-x-lg"></i>
                         </button>
                     </td>
                 </tr>

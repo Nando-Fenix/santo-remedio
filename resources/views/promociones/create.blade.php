@@ -6,161 +6,226 @@
 
 @section('content')
 
-<div class="card">
-
-    <div style="margin-bottom: 22px;">
-        <h2 style="margin: 0; color: #4C1D95;">Registrar promoción</h2>
-        <p style="margin: 6px 0 0; color: #6B7280;">
-            Una promoción puede incluir uno, dos o más productos. El stock se descontará de cada producto incluido.
-        </p>
+@if (!auth()->user()->tienePermiso('crear_promocion'))
+    <div class="alert-danger">
+        No tiene permiso para crear promociones.
     </div>
+@else
 
-    @if (!auth()->user()->tienePermiso('crear_promocion'))
-        <div class="alert-danger">
-            No tiene permiso para crear promociones.
-        </div>
-    @else
+@if ($errors->any())
+    <div class="alert-danger">
+        <strong>Revise los siguientes errores:</strong>
+        <ul style="margin-bottom: 0;">
+            @foreach ($errors->all() as $error)
+                <li>{{ $error }}</li>
+            @endforeach
+        </ul>
+    </div>
+@endif
 
-    @if ($errors->any())
-        <div class="alert-danger">
-            <strong>Revise los siguientes errores:</strong>
-            <ul style="margin-bottom: 0;">
-                @foreach ($errors->all() as $error)
-                    <li>{{ $error }}</li>
-                @endforeach
-            </ul>
-        </div>
-    @endif
+<form method="POST" action="{{ route('promociones.store') }}" id="form_promocion" class="promo-form">
+    @csrf
 
-    <form method="POST" action="{{ route('promociones.store') }}" id="form_promocion">
-        @csrf
+    <div class="promo-layout">
 
-        <div class="card" style="background: #FAFAFA; margin-bottom: 22px;">
-            <h3 style="margin-top: 0; color: #4C1D95;">Datos de la promoción</h3>
+        <section class="promo-main">
 
-            <div class="form-grid">
-                <div class="form-group">
-                    <label>Nombre *</label>
-                    <input type="text" name="nombre" value="{{ old('nombre') }}" placeholder="Ej. Combo tos" required>
+            <div class="promo-header-card">
+                <div>
+                    <h2>
+                        <i class="bi bi-tags"></i>
+                        Registrar promoción
+                    </h2>
+
+                    <p>
+                        Una promoción puede incluir uno o varios productos. El stock se descontará de cada producto incluido.
+                    </p>
+                </div>
+            </div>
+
+            <div class="promo-search-card">
+                <div class="promo-section-head">
+                    <div>
+                        <h3>
+                            <i class="bi bi-box-seam"></i>
+                            Productos incluidos
+                        </h3>
+                        <small>Busque productos o escanee códigos para agregarlos</small>
+                    </div>
                 </div>
 
-                <div class="form-group">
-                    <label>Tipo *</label>
-                    <select name="tipo" id="tipo_promocion" required>
-                        <option value="producto_individual" @selected(old('tipo') === 'producto_individual')>Producto individual</option>
-                        <option value="combo" @selected(old('tipo') === 'combo')>Combo</option>
-                        <option value="por_vencimiento" @selected(old('tipo', $inventarioSeleccionado ? 'por_vencimiento' : '') === 'por_vencimiento')>
-                            Por vencimiento
-                        </option>
-                    </select>
+                <div class="form-group promo-search-group">
+                    <label>Buscar producto o escanear código</label>
+
+                    <div class="promo-search-box">
+                        <i class="bi bi-search"></i>
+                        <input
+                            type="text"
+                            id="buscador_producto_promocion"
+                            placeholder="Producto, presentación, laboratorio o código"
+                            autocomplete="off"
+                        >
+                    </div>
                 </div>
 
-                <div class="form-group">
-                    <label>Precio promocional *</label>
-                    <input type="number" step="0.01" min="0" name="precio_promocional" value="{{ old('precio_promocional', 0) }}" required>
+                <div id="resultados_producto_promocion" class="promo-results" style="display:none;"></div>
+            </div>
+
+            <div class="promo-items-card">
+                <div class="promo-section-head">
+                    <div>
+                        <h3>
+                            <i class="bi bi-list-check"></i>
+                            Detalle de la promoción
+                        </h3>
+                        <small>Productos que formarán parte de la oferta</small>
+                    </div>
                 </div>
 
-                <div class="form-group">
-                    <label>Sucursal</label>
-                    <select name="sucursal_id" required>
-                        @foreach ($sucursales as $sucursal)
-                            <option
-                                value="{{ $sucursal->id }}"
-                                @selected(old('sucursal_id', $inventarioSeleccionado->sucursal_id ?? $sucursalUsuario->id ?? '') == $sucursal->id)
-                            >
-                                {{ $sucursal->nombre }}
+                <div class="table-container promo-table-container">
+                    <table class="table promo-table" id="tabla_items_promocion">
+                        <thead>
+                            <tr>
+                                <th>Producto</th>
+                                <th>Forma</th>
+                                <th>Stock</th>
+                                <th>Cant.</th>
+                                <th>Unidades</th>
+                                <th>Precio ref.</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr id="promocion_vacia">
+                                <td colspan="7" class="promo-empty">
+                                    No hay productos agregados a la promoción.
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div id="inputs_items_promocion"></div>
+            </div>
+
+        </section>
+
+        <aside class="promo-summary">
+
+            <div class="promo-summary-card">
+                <h3>
+                    <i class="bi bi-pencil-square"></i>
+                    Datos de la promoción
+                </h3>
+
+                <div class="promo-data-grid">
+                    <div class="form-group promo-full">
+                        <label>Nombre *</label>
+                        <input type="text" name="nombre" value="{{ old('nombre') }}" placeholder="Ej. Combo tos" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Tipo *</label>
+                        <select name="tipo" id="tipo_promocion" required>
+                            <option value="producto_individual" @selected(old('tipo') === 'producto_individual')>Producto individual</option>
+                            <option value="combo" @selected(old('tipo') === 'combo')>Combo</option>
+                            <option value="por_vencimiento" @selected(old('tipo', $inventarioSeleccionado ? 'por_vencimiento' : '') === 'por_vencimiento')>
+                                Por vencimiento
                             </option>
-                        @endforeach
-                    </select>
-                </div>
+                        </select>
+                    </div>
 
+                    <div class="form-group">
+                        <label>Precio *</label>
+                        <input
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            name="precio_promocional"
+                            value="{{ old('precio_promocional', 0) }}"
+                            required
+                        >
+                    </div>
+
+                    <div class="form-group promo-full">
+                        <label>Sucursal</label>
+                        <select name="sucursal_id" required>
+                            @foreach ($sucursales as $sucursal)
+                                <option
+                                    value="{{ $sucursal->id }}"
+                                    @selected(old('sucursal_id', $inventarioSeleccionado->sucursal_id ?? $sucursalUsuario->id ?? '') == $sucursal->id)
+                                >
+                                    {{ $sucursal->nombre }}
+                                </option>
+                            @endforeach
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Fecha inicio</label>
+                        <input
+                            type="date"
+                            name="fecha_inicio"
+                            value="{{ old('fecha_inicio', now()->format('Y-m-d')) }}"
+                        >
+                    </div>
+
+                    <div class="form-group">
+                        <label>Fecha fin</label>
+                        <input
+                            type="date"
+                            name="fecha_fin"
+                            value="{{ old('fecha_fin', $inventarioSeleccionado?->lote?->fecha_vencimiento?->format('Y-m-d')) }}"
+                        >
+                    </div>
+
+                    <div class="form-group promo-full">
+                        <label>Motivo</label>
+                        <input
+                            type="text"
+                            name="motivo"
+                            value="{{ old('motivo', ($inventarioSeleccionado ?? null) ? 'Próximo a vencer' : '') }}"
+                            placeholder="Ej. Próximo a vencer"
+                        >
+                    </div>
+                </div>
+            </div>
+
+            <div class="promo-summary-card">
                 <div class="form-group">
-                    <label>Fecha inicio</label>
-                    <input
-                        type="date"
-                        name="fecha_inicio"
-                        value="{{ old('fecha_inicio', now()->format('Y-m-d')) }}"
-                    >
-                </div>
-
-                <div class="form-group">
-                    <label>Fecha fin</label>
-                    <input
-                        type="date"
-                        name="fecha_fin"
-                        value="{{ old('fecha_fin', $inventarioSeleccionado?->lote?->fecha_vencimiento?->format('Y-m-d')) }}"
-                    >
+                    <label>Descripción</label>
+                    <textarea name="descripcion" rows="3" placeholder="Ej. Jarabe para la tos + caramelos">{{ old('descripcion') }}</textarea>
                 </div>
             </div>
 
-            <div class="form-group" style="margin-top: 14px;">
-                <label>Descripción</label>
-                <textarea name="descripcion" rows="3" placeholder="Ej. Jarabe para la tos + caramelos para la tos">{{ old('descripcion') }}</textarea>
+            <div class="promo-info-card">
+                <div class="promo-info-icon">
+                    <i class="bi bi-info-circle"></i>
+                </div>
+
+                <div>
+                    <strong>Recuerda</strong>
+                    <span>La venta de una promoción descontará el stock real de cada producto incluido.</span>
+                </div>
             </div>
 
-            <div class="form-group">
-                <label>Motivo</label>
-                <input
-                    type="text"
-                    name="motivo"
-                    value="{{ old('motivo', ($inventarioSeleccionado ?? null) ? 'Próximo a vencer' : '') }}"
-                >
-            </div>
-        </div>
+            <div class="promo-actions">
+                <a href="{{ route('promociones.index') }}" class="btn-secondary">
+                    <i class="bi bi-arrow-left"></i>
+                    Cancelar
+                </a>
 
-        <div class="card" style="margin-bottom: 22px;">
-            <h3 style="margin-top: 0; color: #4C1D95;">Productos incluidos</h3>
-
-            <div class="form-group">
-                <label>Buscar producto o escanear código</label>
-                <input
-                    type="text"
-                    id="buscador_producto_promocion"
-                    placeholder="Buscar por producto, forma de venta, laboratorio o código"
-                    autocomplete="off"
-                >
+                <button type="submit" class="btn-primary">
+                    <i class="bi bi-check2-circle"></i>
+                    Guardar promoción
+                </button>
             </div>
 
-            <div id="resultados_producto_promocion" class="card" style="display:none; margin-top:12px; background:#FAFAFA;"></div>
+        </aside>
 
-            <div class="table-container" style="margin-top: 18px;">
-                <table class="table" id="tabla_items_promocion">
-                    <thead>
-                        <tr>
-                            <th>Producto incluido</th>
-                            <th>Forma</th>
-                            <th>Stock</th>
-                            <th>Cantidad</th>
-                            <th>Unidades necesarias</th>
-                            <th>Precio referencia</th>
-                            <th>Acción</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr id="promocion_vacia">
-                            <td colspan="7" style="text-align:center; color:#6B7280;">
-                                No hay productos agregados a la promoción.
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-
-            <div id="inputs_items_promocion"></div>
-        </div>
-
-        <div style="display: flex; gap: 12px; flex-wrap: wrap;">
-            <button type="submit" class="btn-primary">
-                Guardar promoción
-            </button>
-
-            <a href="{{ route('promociones.index') }}" class="btn-secondary">
-                Cancelar
-            </a>
-        </div>
-    </form>
-    @endif
-</div>
+    </div>
+</form>
+@endif
 
 @php
     $itemInicialPromocion = null;
@@ -424,8 +489,8 @@
                     <td>${item.precio_referencia.toFixed(2)} Bs</td>
 
                     <td>
-                        <button type="button" class="btn-danger" onclick="quitarItemPromocion(${index})">
-                            Quitar
+                        <button type="button" class="icon-action icon-action-danger" onclick="quitarItemPromocion(${index})" title="Quitar">
+                            <i class="bi bi-x-lg"></i>
                         </button>
                     </td>
                 </tr>

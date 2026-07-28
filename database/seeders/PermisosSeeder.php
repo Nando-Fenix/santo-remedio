@@ -160,17 +160,15 @@ class PermisosSeeder extends Seeder
         if ($vendedor) {
             $permisosVendedor = Permiso::whereIn('nombre', [
                 'ver_dashboard',
+                'registrar_egreso',
 
                 'ver_ventas',
                 'realizar_venta',
-                'aplicar_descuento',
 
                 'ver_clientes',
                 'crear_cliente',
-                'editar_cliente',
 
                 'ver_productos',
-
                 'ver_inventario',
                 'ver_movimientos_inventario',
 
@@ -179,10 +177,11 @@ class PermisosSeeder extends Seeder
                 'cerrar_caja',
 
                 'ver_promociones',
-                'crear_promocion',
-                'editar_promocion',
-                'desactivar_promocion',
                 'vender_promocion',
+
+                'ver_servicios_farmacia',
+                'ver_atenciones_servicio',
+                'registrar_atencion_servicio',
             ])->pluck('id')->toArray();
 
             $vendedor->permisos()->sync($permisosVendedor);

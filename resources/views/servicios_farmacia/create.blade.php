@@ -6,134 +6,179 @@
 
 @section('content')
 
-<div class="card">
-
-    <div style="margin-bottom: 22px;">
-        <h2 style="margin: 0; color: #4C1D95;">Nuevo servicio de farmacia</h2>
-        <p style="margin: 6px 0 0; color: #6B7280;">
-            Configure servicios como inyectables, controles, curaciones, nebulizaciones u otros.
-        </p>
+@if ($errors->any())
+    <div class="alert-danger">
+        <strong>Revise los siguientes errores:</strong>
+        <ul style="margin-bottom: 0;">
+            @foreach ($errors->all() as $error)
+                <li>{{ $error }}</li>
+            @endforeach
+        </ul>
     </div>
+@endif
 
-    @if ($errors->any())
-        <div class="alert-danger">
-            <strong>Revise los siguientes errores:</strong>
-            <ul style="margin-bottom: 0;">
-                @foreach ($errors->all() as $error)
-                    <li>{{ $error }}</li>
-                @endforeach
-            </ul>
-        </div>
-    @endif
+<form method="POST" action="{{ route('servicios-farmacia.store') }}" id="form_servicio" class="pharmacy-service-form">
+    @csrf
 
-    <form method="POST" action="{{ route('servicios-farmacia.store') }}" id="form_servicio">
-        @csrf
+    <div class="pharmacy-service-layout">
 
-        <div class="card" style="background: #FAFAFA; margin-bottom: 22px;">
-            <h3 style="margin-top: 0; color: #4C1D95;">Datos del servicio</h3>
+        <section class="pharmacy-service-main">
 
-            <div class="form-grid">
-                <div class="form-group">
-                    <label>Nombre del servicio *</label>
-                    <input
-                        type="text"
-                        name="nombre"
-                        value="{{ old('nombre') }}"
-                        placeholder="Ej: Aplicación de inyectable"
-                        required
-                    >
-                </div>
+            <div class="pharmacy-service-header-card">
+                <div>
+                    <h2>
+                        <i class="bi bi-heart-pulse"></i>
+                        Nuevo servicio de farmacia
+                    </h2>
 
-                <div class="form-group">
-                    <label>Tipo *</label>
-                    <select name="tipo" required>
-                        <option value="">Seleccione...</option>
-                        <option value="inyectable" @selected(old('tipo') === 'inyectable')>Inyectable</option>
-                        <option value="control" @selected(old('tipo') === 'control')>Control</option>
-                        <option value="curacion" @selected(old('tipo') === 'curacion')>Curación</option>
-                        <option value="nebulizacion" @selected(old('tipo') === 'nebulizacion')>Nebulización</option>
-                        <option value="orientacion" @selected(old('tipo') === 'orientacion')>Orientación</option>
-                        <option value="otro" @selected(old('tipo', 'otro') === 'otro')>Otro</option>
-                    </select>
-                </div>
-
-                <div class="form-group">
-                    <label>Precio del servicio *</label>
-                    <input
-                        type="number"
-                        name="precio"
-                        step="0.01"
-                        min="0"
-                        value="{{ old('precio', 0) }}"
-                        required
-                    >
+                    <p>
+                        Configure servicios como inyectables, controles, curaciones, nebulizaciones u otros.
+                    </p>
                 </div>
             </div>
 
-            <div class="form-group" style="margin-top: 14px;">
-                <label>Descripción</label>
-                <textarea
-                    name="descripcion"
-                    rows="3"
-                    placeholder="Opcional"
-                >{{ old('descripcion') }}</textarea>
+            <div class="pharmacy-service-card">
+                <div class="pharmacy-service-section-head">
+                    <div>
+                        <h3>
+                            <i class="bi bi-clipboard2-pulse"></i>
+                            Datos del servicio
+                        </h3>
+                        <small>Nombre, tipo y precio del servicio</small>
+                    </div>
+                </div>
+
+                <div class="pharmacy-service-grid">
+                    <div class="form-group pharmacy-service-full">
+                        <label>Nombre del servicio *</label>
+                        <input
+                            type="text"
+                            name="nombre"
+                            value="{{ old('nombre') }}"
+                            placeholder="Ej: Aplicación de inyectable"
+                            required
+                        >
+                    </div>
+
+                    <div class="form-group">
+                        <label>Tipo *</label>
+                        <select name="tipo" required>
+                            <option value="">Seleccione...</option>
+                            <option value="inyectable" @selected(old('tipo') === 'inyectable')>Inyectable</option>
+                            <option value="control" @selected(old('tipo') === 'control')>Control</option>
+                            <option value="curacion" @selected(old('tipo') === 'curacion')>Curación</option>
+                            <option value="nebulizacion" @selected(old('tipo') === 'nebulizacion')>Nebulización</option>
+                            <option value="orientacion" @selected(old('tipo') === 'orientacion')>Orientación</option>
+                            <option value="otro" @selected(old('tipo', 'otro') === 'otro')>Otro</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Precio *</label>
+                        <input
+                            type="number"
+                            name="precio"
+                            step="0.01"
+                            min="0"
+                            value="{{ old('precio', 0) }}"
+                            required
+                        >
+                    </div>
+
+                    <div class="form-group pharmacy-service-full">
+                        <label>Descripción</label>
+                        <textarea
+                            name="descripcion"
+                            rows="5"
+                            placeholder="Opcional"
+                        >{{ old('descripcion') }}</textarea>
+                    </div>
+                </div>
             </div>
-        </div>
 
-        <div class="card" style="background: #FAFAFA; margin-bottom: 22px;">
-            <h3 style="margin-top: 0; color: #4C1D95;">Insumos del servicio</h3>
+        </section>
 
-            <p style="color:#6B7280; margin-top:0;">
-                Opcional. Agregue productos que se descontarán automáticamente cuando se registre una atención.
-            </p>
+        <aside class="pharmacy-service-summary">
 
-            <div class="form-group">
-                <label>Buscar producto/insumo</label>
-                <input
-                    type="text"
-                    id="buscador_insumo_servicio"
-                    placeholder="Buscar por producto, presentación, laboratorio..."
-                    autocomplete="off"
-                >
+            <div class="pharmacy-service-summary-card">
+                <div class="pharmacy-service-section-head">
+                    <div>
+                        <h3>
+                            <i class="bi bi-box-seam"></i>
+                            Insumos del servicio
+                        </h3>
+                        <small>Opcional. Se descontarán al registrar una atención</small>
+                    </div>
+                </div>
+
+                <div class="form-group pharmacy-service-search-group">
+                    <label>Buscar producto/insumo</label>
+
+                    <div class="pharmacy-service-search-box">
+                        <i class="bi bi-search"></i>
+                        <input
+                            type="text"
+                            id="buscador_insumo_servicio"
+                            placeholder="Producto, presentación o laboratorio"
+                            autocomplete="off"
+                        >
+                    </div>
+                </div>
+
+                <div id="resultados_insumos_servicio" class="pharmacy-service-results" style="display:none;"></div>
+
+                <div class="table-container pharmacy-service-table-container">
+                    <table class="table pharmacy-service-table" id="tabla_insumos_servicio">
+                        <thead>
+                            <tr>
+                                <th>Insumo</th>
+                                <th>Cant.</th>
+                                <th>Desc.</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr id="insumos_vacios">
+                                <td colspan="4" class="pharmacy-service-empty">
+                                    No hay insumos agregados.
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div id="inputs_insumos_servicio"></div>
             </div>
 
-            <div id="resultados_insumos_servicio" class="card" style="display:none; margin-top:12px; background:#FFFFFF;"></div>
+            <div class="pharmacy-service-info-card">
+                <div class="pharmacy-service-info-icon">
+                    <i class="bi bi-info-circle"></i>
+                </div>
 
-            <div class="table-container" style="margin-top: 18px;">
-                <table class="table" id="tabla_insumos_servicio">
-                    <thead>
-                        <tr>
-                            <th>Insumo</th>
-                            <th>Presentación</th>
-                            <th>Cantidad</th>
-                            <th>Descuenta del inventario</th>
-                            <th>Acción</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr id="insumos_vacios">
-                            <td colspan="5" style="text-align:center; color:#6B7280;">
-                                No hay insumos agregados.
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
+                <div>
+                    <strong>Control automático</strong>
+                    <span>
+                        Los insumos configurados se descontarán del inventario cuando se registre una atención.
+                    </span>
+                </div>
             </div>
 
-            <div id="inputs_insumos_servicio"></div>
-        </div>
+            <div class="pharmacy-service-actions">
+                <a href="{{ route('servicios-farmacia.index') }}" class="btn-secondary">
+                    <i class="bi bi-arrow-left"></i>
+                    Cancelar
+                </a>
 
-        <div style="display: flex; gap: 12px; flex-wrap: wrap;">
-            <button type="submit" class="btn-primary">
-                Guardar servicio
-            </button>
+                <button type="submit" class="btn-primary">
+                    <i class="bi bi-check2-circle"></i>
+                    Guardar servicio
+                </button>
+            </div>
 
-            <a href="{{ route('servicios-farmacia.index') }}" class="btn-secondary">
-                Cancelar
-            </a>
-        </div>
-    </form>
-</div>
+        </aside>
+
+    </div>
+</form>
 
 @php
     $insumosAntiguosServicio = collect(old('insumos', []))->map(function ($item) {
@@ -315,14 +360,11 @@ function renderInsumosServicio() {
                     </small>
                 </td>
 
-                <td>${item.presentacion || '-'}</td>
-
                 <td>
                     <input
                         type="number"
                         min="1"
                         value="${item.cantidad}"
-                        style="width:80px;"
                         onchange="cambiarCantidadInsumoServicio(${index}, this.value)"
                     >
                 </td>
@@ -336,8 +378,8 @@ function renderInsumosServicio() {
                 </td>
 
                 <td>
-                    <button type="button" class="btn-danger" onclick="quitarInsumoServicio(${index})">
-                        Quitar
+                    <button type="button" class="icon-action icon-action-danger" onclick="quitarInsumoServicio(${index})" title="Quitar">
+                        <i class="bi bi-x-lg"></i>
                     </button>
                 </td>
             </tr>

@@ -6,34 +6,162 @@
 
 @section('content')
 
-<div class="card">
-
-    <div style="margin-bottom: 22px;">
-        <h2 style="margin: 0; color: #4C1D95;">Registrar compra</h2>
-        <p style="margin: 6px 0 0; color: #6B7280;">
-            Sucursal: <strong>{{ $sucursal->nombre }}</strong>.
-            Esta compra ingresará productos al inventario de la sucursal actual.
-        </p>
+@if ($errors->any())
+    <div class="alert-danger">
+        <strong>Revise los siguientes errores:</strong>
+        <ul style="margin-bottom: 0;">
+            @foreach ($errors->all() as $error)
+                <li>{{ $error }}</li>
+            @endforeach
+        </ul>
     </div>
+@endif
 
-    @if ($errors->any())
-        <div class="alert-danger">
-            <strong>Revise los siguientes errores:</strong>
-            <ul style="margin-bottom: 0;">
-                @foreach ($errors->all() as $error)
-                    <li>{{ $error }}</li>
-                @endforeach
-            </ul>
-        </div>
-    @endif
+<form method="POST" action="{{ route('compras.store') }}" id="form_compra" class="purchase-form">
+    @csrf
 
-    <form method="POST" action="{{ route('compras.store') }}" id="form_compra">
-        @csrf
+    <div class="purchase-layout">
 
-        <div class="card" style="margin-bottom: 22px; background: #FAFAFA;">
-            <h3 style="margin-top: 0; color: #4C1D95;">Proveedor y pago</h3>
+        <section class="purchase-main">
 
-            <div class="form-grid">
+            <div class="purchase-header-card">
+                <div>
+                    <h2>
+                        <i class="bi bi-bag-plus"></i>
+                        Registrar compra
+                    </h2>
+
+                    <p>
+                        Sucursal: <strong>{{ $sucursal->nombre }}</strong> ·
+                        Esta compra ingresará productos al inventario actual.
+                    </p>
+                </div>
+
+                @if (auth()->user()->tienePermiso('creacion_rapida_compras'))
+                    <button type="button" class="btn-secondary" onclick="mostrarFormularioProductoRapido()">
+                        <i class="bi bi-plus-circle"></i>
+                        Producto rápido
+                    </button>
+                @endif
+            </div>
+
+            <div class="purchase-search-card">
+                <div class="form-group purchase-search-group">
+                    <label>Buscar producto o escanear código</label>
+
+                    <div class="purchase-search-box">
+                        <i class="bi bi-search"></i>
+                        <input
+                            type="text"
+                            id="buscador_producto_compra"
+                            placeholder="Producto, presentación, laboratorio o código de barras"
+                            autocomplete="off"
+                        >
+                    </div>
+                </div>
+
+                <div id="resultados_producto_compra" class="purchase-results" style="display: none;"></div>
+            </div>
+
+            <input type="hidden" id="producto_presentacion_id">
+
+            <div id="producto_seleccionado_box" class="purchase-selected-product" style="display: none;">
+                <div>
+                    <strong id="producto_seleccionado_nombre"></strong>
+                    <small id="producto_seleccionado_detalle"></small>
+                </div>
+            </div>
+
+            <div class="purchase-item-card">
+                <div class="purchase-section-head">
+                    <div>
+                        <h3>
+                            <i class="bi bi-box-seam"></i>
+                            Datos del ingreso
+                        </h3>
+                        <small>Complete cantidad, precio, lote y vencimiento</small>
+                    </div>
+                </div>
+
+                <div class="purchase-item-grid">
+                    <div class="form-group">
+                        <label>Cantidad *</label>
+                        <input type="number" id="cantidad" min="1" value="1">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Precio compra *</label>
+                        <input type="number" id="precio_compra" step="0.01" min="0" value="0">
+                    </div>
+
+                    <div class="form-group">
+                        <label>N° lote</label>
+                        <input type="text" id="numero_lote" placeholder="Opcional">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Vencimiento</label>
+                        <input type="date" id="fecha_vencimiento">
+                    </div>
+
+                    <div class="purchase-item-action">
+                        @if (auth()->user()->tienePermiso('registrar_compra'))
+                            <button type="button" class="btn-primary" onclick="agregarProductoCompra()">
+                                <i class="bi bi-plus-circle"></i>
+                                Agregar
+                            </button>
+                        @endif
+                    </div>
+                </div>
+            </div>
+
+            <div class="purchase-detail-card">
+                <div class="purchase-section-head">
+                    <div>
+                        <h3>
+                            <i class="bi bi-list-check"></i>
+                            Detalle de compra
+                        </h3>
+                        <small>Productos que ingresarán al inventario</small>
+                    </div>
+                </div>
+
+                <div class="table-container purchase-table-container">
+                    <table class="table purchase-table" id="tabla_compra">
+                        <thead>
+                            <tr>
+                                <th>Producto</th>
+                                <th>Forma</th>
+                                <th>Lote</th>
+                                <th>Vence</th>
+                                <th>Cant.</th>
+                                <th>Ingresa</th>
+                                <th>Precio</th>
+                                <th>Subtotal</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr id="compra_vacia">
+                                <td colspan="9" class="purchase-empty">
+                                    No hay productos agregados.
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </section>
+
+        <aside class="purchase-summary">
+
+            <div class="purchase-summary-card">
+                <h3>
+                    <i class="bi bi-truck"></i>
+                    Proveedor
+                </h3>
+
                 <div class="form-group">
                     <label>Proveedor *</label>
                     <select name="proveedor_id" id="proveedor_id" required>
@@ -44,307 +172,232 @@
                             </option>
                         @endforeach
                     </select>
+                </div>
+
+                @if (auth()->user()->tienePermiso('creacion_rapida_compras'))
+                    <button type="button" class="btn-secondary purchase-mini-btn" onclick="crearProveedorRapido()">
+                        <i class="bi bi-plus-circle"></i>
+                        Nuevo proveedor
+                    </button>
+                @endif
+            </div>
+
+            <div class="purchase-summary-card">
+                <h3>
+                    <i class="bi bi-cash-coin"></i>
+                    Pago
+                </h3>
+
+                <div class="purchase-payment-grid">
+                    <div class="form-group">
+                        <label>Tipo *</label>
+                        <select name="tipo_pago" id="tipo_pago" required>
+                            <option value="contado" {{ old('tipo_pago') === 'contado' ? 'selected' : '' }}>Contado</option>
+                            <option value="credito" {{ old('tipo_pago') === 'credito' ? 'selected' : '' }}>Crédito</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Método</label>
+                        <select name="metodo_pago" id="metodo_pago">
+                            <option value="efectivo" {{ old('metodo_pago') == 'efectivo' ? 'selected' : '' }}>Efectivo</option>
+                            <option value="qr" {{ old('metodo_pago') == 'qr' ? 'selected' : '' }}>QR</option>
+                            <option value="transferencia" {{ old('metodo_pago') == 'transferencia' ? 'selected' : '' }}>Transferencia</option>
+                            <option value="otro" {{ old('metodo_pago') == 'otro' ? 'selected' : '' }}>Otro</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group purchase-full">
+                        <label>Monto pagado *</label>
+                        <input
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            name="monto_pagado"
+                            id="monto_pagado"
+                            value="{{ old('monto_pagado', 0) }}"
+                            required
+                        >
+                    </div>
+                </div>
+
+                <div class="purchase-totals">
+                    <div class="purchase-total-item purchase-total-main">
+                        <span>Total compra</span>
+                        <strong id="total_compra">0.00 Bs</strong>
+                    </div>
+
+                    <div class="purchase-total-item">
+                        <span>Monto pagado</span>
+                        <strong id="monto_pagado_text">0.00 Bs</strong>
+                    </div>
+
+                    <div class="purchase-total-item">
+                        <span>Saldo pendiente</span>
+                        <strong id="saldo_pendiente">0.00 Bs</strong>
+                    </div>
+                </div>
+            </div>
+
+            <div class="purchase-summary-card">
+                <div class="form-group">
+                    <label>Observación</label>
+                    <textarea name="observacion" rows="2" placeholder="Opcional">{{ old('observacion') }}</textarea>
+                </div>
+            </div>
+
+            <div id="inputs_compra"></div>
+
+            <div class="purchase-actions">
+                <a href="{{ route('compras.index') }}" class="btn-secondary">
+                    <i class="bi bi-arrow-left"></i>
+                    Cancelar
+                </a>
+
+                @if (auth()->user()->tienePermiso('registrar_compra'))
+                    <button type="submit" class="btn-primary">
+                        <i class="bi bi-check2-circle"></i>
+                        Guardar compra
+                    </button>
+                @endif
+            </div>
+
+        </aside>
+
+    </div>
+
+    <div id="modal_producto_rapido" class="modal-overlay" style="display: none;">
+        <div class="modal-content purchase-modal-content">
+            <div class="modal-header">
+                <div>
+                    <h3>Crear producto rápido</h3>
+                    <p>Registre un producto nuevo sin salir de la compra.</p>
+                </div>
+
+                <button type="button" class="modal-close" onclick="ocultarFormularioProductoRapido()">
+                    ✕
+                </button>
+            </div>
+
+            <div class="purchase-modal-grid purchase-modal-grid-4">
+                <div class="form-group">
+                    <label>Nombre comercial *</label>
+                    <input type="text" id="rapido_nombre_comercial" placeholder="Ej: Paracetamol">
+                </div>
+
+                <div class="form-group">
+                    <label>Nombre genérico</label>
+                    <input type="text" id="rapido_nombre_generico" placeholder="Ej: Acetaminofén">
+                </div>
+
+                <div class="form-group">
+                    <label>Concentración</label>
+                    <input type="text" id="rapido_concentracion" placeholder="Ej: 500 mg">
+                </div>
+
+                <div class="form-group">
+                    <label>Tipo *</label>
+                    <select id="rapido_tipo_producto">
+                        <option value="medicamento">Medicamento</option>
+                        <option value="insumo_medico">Insumo médico</option>
+                        <option value="producto_general">Producto general</option>
+                        <option value="higiene">Higiene</option>
+                        <option value="bebe">Bebé</option>
+                        <option value="otro">Otro</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="purchase-modal-grid purchase-modal-grid-3">
+                <div class="form-group">
+                    <label>Categoría</label>
+                    <select id="rapido_categoria_id">
+                        <option value="">Sin categoría</option>
+                        @foreach ($categorias as $categoria)
+                            <option value="{{ $categoria->id }}">{{ $categoria->nombre }}</option>
+                        @endforeach
+                    </select>
 
                     @if (auth()->user()->tienePermiso('creacion_rapida_compras'))
-                        <button type="button" class="btn-secondary" style="margin-top: 8px;" onclick="crearProveedorRapido()">
-                            + Nuevo proveedor
+                        <button type="button" class="btn-secondary purchase-mini-btn" onclick="crearCategoriaRapida()">
+                            + Nueva
                         </button>
                     @endif
                 </div>
 
                 <div class="form-group">
-                    <label>Tipo de pago *</label>
-                    <select name="tipo_pago" id="tipo_pago" required>
-                        <option value="contado" {{ old('tipo_pago') === 'contado' ? 'selected' : '' }}>Contado</option>
-                        <option value="credito" {{ old('tipo_pago') === 'credito' ? 'selected' : '' }}>Crédito</option>
+                    <label>Laboratorio</label>
+                    <select id="rapido_laboratorio_id">
+                        <option value="">Sin laboratorio</option>
+                        @foreach ($laboratorios as $laboratorio)
+                            <option value="{{ $laboratorio->id }}">{{ $laboratorio->nombre }}</option>
+                        @endforeach
                     </select>
+
+                    @if (auth()->user()->tienePermiso('creacion_rapida_compras'))
+                        <button type="button" class="btn-secondary purchase-mini-btn" onclick="crearLaboratorioRapido()">
+                            + Nuevo
+                        </button>
+                    @endif
                 </div>
 
                 <div class="form-group">
-                    <label>Monto pagado *</label>
-                    <input
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        name="monto_pagado"
-                        id="monto_pagado"
-                        value="{{ old('monto_pagado', 0) }}"
-                        required
-                    >
-                </div>
-
-                <div class="form-group">
-                    <label for="metodo_pago">Método de pago</label>
-                    <select name="metodo_pago" id="metodo_pago" class="form-control">
-                        <option value="efectivo" {{ old('metodo_pago') == 'efectivo' ? 'selected' : '' }}>Efectivo</option>
-                        <option value="qr" {{ old('metodo_pago') == 'qr' ? 'selected' : '' }}>QR</option>
-                        <option value="transferencia" {{ old('metodo_pago') == 'transferencia' ? 'selected' : '' }}>Transferencia</option>
-                        <option value="otro" {{ old('metodo_pago') == 'otro' ? 'selected' : '' }}>Otro</option>
+                    <label>Presentación *</label>
+                    <select id="rapido_presentacion_id">
+                        <option value="">Seleccione...</option>
+                        @foreach ($presentaciones as $presentacion)
+                            <option value="{{ $presentacion->id }}">{{ $presentacion->nombre }}</option>
+                        @endforeach
                     </select>
+
+                    @if (auth()->user()->tienePermiso('creacion_rapida_compras'))
+                        <button type="button" class="btn-secondary purchase-mini-btn" onclick="crearPresentacionRapida()">
+                            + Nueva
+                        </button>
+                    @endif
                 </div>
             </div>
 
-            <div class="form-group" style="margin-top: 14px;">
-                <label>Observación</label>
-                <textarea name="observacion" rows="3" placeholder="Opcional">{{ old('observacion') }}</textarea>
-            </div>
-        </div>
-
-        <div class="card" style="margin-bottom: 22px;">
-            <h3 style="margin-top: 0; color: #4C1D95;">Agregar producto</h3>
-
-            <div class="form-group">
-                <label>Buscar producto o escanear código</label>
-                <input
-                    type="text"
-                    id="buscador_producto_compra"
-                    placeholder="Buscar por producto, forma de compra, laboratorio o código de barras"
-                    autocomplete="off"
-                >
-            </div>
-
-            <div id="resultados_producto_compra" class="card" style="display: none; margin-top: 12px; background: #FAFAFA;">
-
-            </div>
-            @if (auth()->user()->tienePermiso('creacion_rapida_compras'))
-                <button type="button" class="btn-primary" onclick="mostrarFormularioProductoRapido()">
-                    + Crear producto rápido
-                </button>
-            @endif
-
-            <div id="modal_producto_rapido" class="modal-overlay" style="display: none;">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <div>
-                            <h3>Crear producto rápido</h3>
-                            <p>Registre un producto nuevo sin salir de la compra.</p>
-                        </div>
-
-                        <button type="button" class="modal-close" onclick="ocultarFormularioProductoRapido()">
-                            ✕
-                        </button>
-                    </div>
-
-                    <div class="grid" style="grid-template-columns: repeat(4, 1fr);">
-                        <div class="form-group">
-                            <label>Nombre comercial *</label>
-                            <input type="text" id="rapido_nombre_comercial" placeholder="Ej: Paracetamol">
-                        </div>
-
-                        <div class="form-group">
-                            <label>Nombre genérico</label>
-                            <input type="text" id="rapido_nombre_generico" placeholder="Ej: Acetaminofén">
-                        </div>
-
-                        <div class="form-group">
-                            <label>Concentración</label>
-                            <input type="text" id="rapido_concentracion" placeholder="Ej: 500 mg">
-                        </div>
-
-                        <div class="form-group">
-                            <label>Tipo de producto *</label>
-                            <select id="rapido_tipo_producto">
-                                <option value="medicamento">Medicamento</option>
-                                <option value="insumo_medico">Insumo médico</option>
-                                <option value="producto_general">Producto general</option>
-                                <option value="higiene">Higiene</option>
-                                <option value="bebe">Bebé</option>
-                                <option value="otro">Otro</option>
-                            </select>
-                        </div>
-                    </div>
-
-                    <div class="grid" style="grid-template-columns: repeat(3, 1fr);">
-                        <div class="form-group">
-                            <label>Categoría</label>
-                            <select id="rapido_categoria_id">
-                                <option value="">Sin categoría</option>
-                                @foreach ($categorias as $categoria)
-                                    <option value="{{ $categoria->id }}">{{ $categoria->nombre }}</option>
-                                @endforeach
-                            </select>
-
-                            @if (auth()->user()->tienePermiso('creacion_rapida_compras'))
-                                <button type="button" class="btn-secondary" style="margin-top: 8px;" onclick="crearCategoriaRapida()">
-                                    + Nueva categoría
-                                </button>
-                            @endif
-                        </div>
-
-                        <div class="form-group">
-                            <label>Laboratorio</label>
-                            <select id="rapido_laboratorio_id">
-                                <option value="">Sin laboratorio</option>
-                                @foreach ($laboratorios as $laboratorio)
-                                    <option value="{{ $laboratorio->id }}">{{ $laboratorio->nombre }}</option>
-                                @endforeach
-                            </select>
-
-                            @if (auth()->user()->tienePermiso('creacion_rapida_compras'))
-                                <button type="button" class="btn-secondary" style="margin-top: 8px;" onclick="crearLaboratorioRapido()">
-                                    + Nuevo laboratorio
-                                </button>
-                            @endif
-                        </div>
-
-                        <div class="form-group">
-                            <label>Presentación *</label>
-                            <select id="rapido_presentacion_id">
-                                <option value="">Seleccione...</option>
-                                @foreach ($presentaciones as $presentacion)
-                                    <option value="{{ $presentacion->id }}">{{ $presentacion->nombre }}</option>
-                                @endforeach
-                            </select>
-
-                            @if (auth()->user()->tienePermiso('creacion_rapida_compras'))
-                                <button type="button" class="btn-secondary" style="margin-top: 8px;" onclick="crearPresentacionRapida()">
-                                    + Nueva presentación
-                                </button>
-                            @endif
-                        </div>
-                    </div>
-
-                    <div class="grid" style="grid-template-columns: repeat(4, 1fr);">
-                        <div class="form-group">
-                            <label>Nombre mostrado</label>
-                            <input type="text" id="rapido_nombre_mostrado" placeholder="Ej: Paracetamol 500 mg tableta">
-                        </div>
-
-                        <div class="form-group">
-                            <label>Unidades equivalentes *</label>
-                            <input type="number" id="rapido_unidades_equivalentes" min="1" value="1">
-                        </div>
-
-                        <div class="form-group">
-                            <label>Precio compra *</label>
-                            <input type="number" id="rapido_precio_compra" min="0" step="0.01" value="0">
-                        </div>
-
-                        <div class="form-group">
-                            <label>Precio venta *</label>
-                            <input type="number" id="rapido_precio_venta" min="0" step="0.01" value="0">
-                        </div>
-                    </div>
-
-                    <div class="form-group">
-                        <label>Código de barras opcional</label>
-                        <input type="text" id="rapido_codigo_barra" placeholder="Escanear o escribir código de barras">
-                    </div>
-
-                    <div style="display: flex; gap: 10px; margin-top: 18px;">
-                        <button type="button" class="btn-primary" onclick="guardarProductoRapido()">
-                            Guardar producto rápido
-                        </button>
-
-                        <button type="button" class="btn-secondary" onclick="ocultarFormularioProductoRapido()">
-                            Cancelar
-                        </button>
-                    </div>
-                </div>
-            </div>
-            <input type="hidden" id="producto_presentacion_id">
-
-            <div id="producto_seleccionado_box" style="display: none; margin-top: 16px; padding: 14px; background: #F5F3FF; border-radius: 12px;">
-                <strong id="producto_seleccionado_nombre"></strong>
-                <br>
-                <small id="producto_seleccionado_detalle" style="color: #6B7280;"></small>
-            </div>
-
-            <div class="form-grid" style="margin-top: 16px;">
+            <div class="purchase-modal-grid purchase-modal-grid-4">
                 <div class="form-group">
-                    <label>Cantidad *</label>
-                    <input type="number" id="cantidad" min="1" value="1">
+                    <label>Nombre mostrado</label>
+                    <input type="text" id="rapido_nombre_mostrado" placeholder="Ej: Paracetamol 500 mg tableta">
+                </div>
+
+                <div class="form-group">
+                    <label>Unidades equivalentes *</label>
+                    <input type="number" id="rapido_unidades_equivalentes" min="1" value="1">
                 </div>
 
                 <div class="form-group">
                     <label>Precio compra *</label>
-                    <input type="number" id="precio_compra" step="0.01" min="0" value="0">
+                    <input type="number" id="rapido_precio_compra" min="0" step="0.01" value="0">
                 </div>
 
                 <div class="form-group">
-                    <label>N° lote</label>
-                    <input type="text" id="numero_lote" placeholder="Opcional. Ej: L001">
-                    <small style="color: #6B7280;">
-                        Si se deja vacío, el sistema generará un lote interno automáticamente.
-                    </small>
-                </div>
-
-                <div class="form-group">
-                    <label>Fecha vencimiento</label>
-                    <input type="date" id="fecha_vencimiento">
+                    <label>Precio venta *</label>
+                    <input type="number" id="rapido_precio_venta" min="0" step="0.01" value="0">
                 </div>
             </div>
 
-            <div style="margin-top: 14px;">
-                @if (auth()->user()->tienePermiso('registrar_compra'))
-                    <button type="button" class="btn-primary" onclick="agregarProductoCompra()">
-                        Agregar a compra
-                    </button>
-                @endif
-            </div>
-        </div>
-
-        <div class="card">
-            <h3 style="margin-top: 0; color: #4C1D95;">Detalle de compra</h3>
-
-            <div class="table-container">
-                <table class="table" id="tabla_compra">
-                    <thead>
-                        <tr>
-                            <th>Producto seleccionado</th>
-                            <th>Forma</th>
-                            <th>Lote</th>
-                            <th>Vencimiento</th>
-                            <th>Cantidad</th>
-                            <th>Ingresa al inventario</th>
-                            <th>Precio compra</th>
-                            <th>Subtotal</th>
-                            <th>Acción</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr id="compra_vacia">
-                            <td colspan="9" style="text-align: center; color: #6B7280;">
-                                No hay productos agregados.
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-        </div>
-
-        <div class="grid" style="grid-template-columns: repeat(3, 1fr); margin-top: 22px;">
-            <div class="stat-card">
-                <span>Total compra</span>
-                <h3 id="total_compra">0.00 Bs</h3>
+            <div class="form-group">
+                <label>Código de barras opcional</label>
+                <input type="text" id="rapido_codigo_barra" placeholder="Escanear o escribir código de barras">
             </div>
 
-            <div class="stat-card">
-                <span>Monto pagado</span>
-                <h3 id="monto_pagado_text">0.00 Bs</h3>
-            </div>
-
-            <div class="stat-card">
-                <span>Saldo pendiente</span>
-                <h3 id="saldo_pendiente">0.00 Bs</h3>
-            </div>
-        </div>
-
-        <div id="inputs_compra"></div>
-
-        <div style="display: flex; gap: 12px; margin-top: 24px;">
-            @if (auth()->user()->tienePermiso('registrar_compra'))
-                <button type="submit" class="btn-primary">
-                    Guardar compra
+            <div class="purchase-modal-actions">
+                <button type="button" class="btn-secondary" onclick="ocultarFormularioProductoRapido()">
+                    Cancelar
                 </button>
-            @endif
 
-            <a href="{{ route('compras.index') }}" class="btn-secondary">
-                Cancelar
-            </a>
+                <button type="button" class="btn-primary" onclick="guardarProductoRapido()">
+                    <i class="bi bi-check2-circle"></i>
+                    Guardar producto rápido
+                </button>
+            </div>
         </div>
-    </form>
-</div>
+    </div>
+</form>
 @php
     $itemsAntiguosCompra = collect(old('items', []))->map(function ($item) {
         return [
@@ -652,8 +705,8 @@
                     <td>${item.precio_compra.toFixed(2)} Bs</td>
                     <td>${subtotal.toFixed(2)} Bs</td>
                     <td>
-                        <button type="button" class="btn-danger" onclick="quitarProductoCompra(${index})">
-                            Quitar
+                        <button type="button" class="icon-action icon-action-danger" onclick="quitarProductoCompra(${index})" title="Quitar">
+                            <i class="bi bi-x-lg"></i>
                         </button>
                     </td>
                 </tr>

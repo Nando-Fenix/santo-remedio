@@ -6,54 +6,82 @@
 
 @section('content')
 
-<div class="card">
-
-    <div style="margin-bottom: 22px;">
-        <h2 style="margin: 0; color: #4C1D95;">Registrar baja de inventario</h2>
-        <p style="margin: 6px 0 0; color: #6B7280;">
-            Seleccione un producto con stock disponible y registre la cantidad que será retirada.
-        </p>
+@if ($errors->any())
+    <div class="alert-danger">
+        <strong>Revise los siguientes errores:</strong>
+        <ul style="margin-bottom: 0;">
+            @foreach ($errors->all() as $error)
+                <li>{{ $error }}</li>
+            @endforeach
+        </ul>
     </div>
+@endif
 
-    @if ($errors->any())
-        <div class="alert-danger">
-            <strong>Revise los siguientes errores:</strong>
-            <ul style="margin-bottom: 0;">
-                @foreach ($errors->all() as $error)
-                    <li>{{ $error }}</li>
-                @endforeach
-            </ul>
-        </div>
-    @endif
+<form method="POST" action="{{ route('bajas-inventario.store') }}" id="form_baja" class="stock-out-form">
+    @csrf
 
-    <form method="POST" action="{{ route('bajas-inventario.store') }}" id="form_baja">
-        @csrf
+    <div class="stock-out-layout">
 
-        <div class="card" style="background: #FAFAFA; margin-bottom: 22px;">
-            <h3 style="margin-top: 0; color: #4C1D95;">Producto seleccionado</h3>
+        <section class="stock-out-main">
 
-            <div class="form-group">
-                <label>Buscar producto en inventario *</label>
-                <input
-                    type="text"
-                    id="buscador_producto_baja"
-                    placeholder="Buscar por nombre, genérico, concentración o laboratorio"
-                    autocomplete="off"
-                >
+            <div class="stock-out-header-card">
+                <div>
+                    <h2>
+                        <i class="bi bi-box-arrow-down"></i>
+                        Registrar baja de inventario
+                    </h2>
+
+                    <p>
+                        Seleccione un producto con stock disponible y registre la cantidad que será retirada.
+                    </p>
+                </div>
             </div>
 
-            <div id="resultados_producto_baja" class="card" style="display:none; margin-top:12px; background:#FFFFFF;"></div>
+            <div class="stock-out-card">
+                <div class="stock-out-section-head">
+                    <div>
+                        <h3>
+                            <i class="bi bi-search"></i>
+                            Buscar producto
+                        </h3>
+                        <small>Busque por nombre, genérico, concentración o laboratorio</small>
+                    </div>
+                </div>
 
-            <div id="producto_seleccionado" style="{{ $inventarioSeleccionado ? '' : 'display:none;' }} margin-top: 18px; padding: 16px; border: 1px solid #DDD6FE; border-radius: 12px; background: #F5F3FF;">
-                <h4 style="margin: 0 0 8px; color: #4C1D95;">Producto para baja</h4>
+                <div class="form-group stock-out-search-group">
+                    <label>Buscar producto en inventario *</label>
 
-                <p style="margin: 0; color: #374151;">
+                    <div class="stock-out-search-box">
+                        <i class="bi bi-upc-scan"></i>
+                        <input
+                            type="text"
+                            id="buscador_producto_baja"
+                            placeholder="Buscar producto con stock disponible"
+                            autocomplete="off"
+                        >
+                    </div>
+                </div>
+
+                <div id="resultados_producto_baja" class="stock-out-results" style="display:none;"></div>
+            </div>
+
+            <div
+                id="producto_seleccionado"
+                class="stock-out-selected-card"
+                style="{{ $inventarioSeleccionado ? '' : 'display:none;' }}"
+            >
+                <div class="stock-out-selected-icon">
+                    <i class="bi bi-capsule"></i>
+                </div>
+
+                <div class="stock-out-selected-info">
+                    <span>Producto para baja</span>
+
                     <strong id="producto_nombre">
                         {{ $inventarioSeleccionado->producto->nombre_comercial ?? '' }}
                     </strong>
-                    <br>
 
-                    <span id="producto_detalle" style="color: #6B7280;">
+                    <small id="producto_detalle">
                         @if ($inventarioSeleccionado)
                             {{ collect([
                                 $inventarioSeleccionado->producto->nombre_generico ?? null,
@@ -61,10 +89,9 @@
                                 $inventarioSeleccionado->producto->laboratorio->nombre ?? null,
                             ])->filter()->join(' | ') }}
                         @endif
-                    </span>
-                    <br>
+                    </small>
 
-                    <span id="producto_lote" style="color: #4C1D95;">
+                    <small id="producto_lote" class="stock-out-lot">
                         @if ($inventarioSeleccionado)
                             Lote: {{ $inventarioSeleccionado->lote->numero_lote ?? 'Sin lote' }}
 
@@ -72,15 +99,14 @@
                                 | Vence: {{ $inventarioSeleccionado->lote->fecha_vencimiento->format('d/m/Y') }}
                             @endif
                         @endif
-                    </span>
-                    <br>
+                    </small>
 
-                    <span id="producto_stock" style="color: #991B1B; font-weight: bold;">
+                    <small id="producto_stock" class="stock-out-stock">
                         @if ($inventarioSeleccionado)
                             Stock disponible: {{ $inventarioSeleccionado->stock_actual }}
                         @endif
-                    </span>
-                </p>
+                    </small>
+                </div>
             </div>
 
             <input
@@ -89,62 +115,95 @@
                 id="inventario_id"
                 value="{{ old('inventario_id', $inventarioSeleccionado->id ?? '') }}"
             >
-        </div>
 
-        <div class="card" style="background: #FAFAFA; margin-bottom: 22px;">
-            <h3 style="margin-top: 0; color: #4C1D95;">Datos de la baja</h3>
+        </section>
 
-            <div class="form-grid">
-                <div class="form-group">
-                    <label>Motivo *</label>
-                    <select name="motivo" required>
-                        <option value="">Seleccione un motivo</option>
-                        <option value="vencimiento" @selected(old('motivo') === 'vencimiento')>Vencimiento</option>
-                        <option value="danado" @selected(old('motivo') === 'danado')>Dañado</option>
-                        <option value="perdido" @selected(old('motivo') === 'perdido')>Perdido</option>
-                        <option value="ajuste_autorizado" @selected(old('motivo') === 'ajuste_autorizado')>Ajuste autorizado</option>
-                        <option value="otro" @selected(old('motivo') === 'otro')>Otro</option>
-                    </select>
+        <aside class="stock-out-summary">
+
+            <div class="stock-out-summary-card">
+                <h3>
+                    <i class="bi bi-clipboard-x"></i>
+                    Datos de la baja
+                </h3>
+
+                <div class="stock-out-side-grid">
+                    <div class="form-group stock-out-full">
+                        <label>Motivo *</label>
+                        <select name="motivo" required>
+                            <option value="">Seleccione un motivo</option>
+                            <option value="vencimiento" @selected(old('motivo') === 'vencimiento')>Vencimiento</option>
+                            <option value="danado" @selected(old('motivo') === 'danado')>Dañado</option>
+                            <option value="perdido" @selected(old('motivo') === 'perdido')>Perdido</option>
+                            <option value="ajuste_autorizado" @selected(old('motivo') === 'ajuste_autorizado')>Ajuste autorizado</option>
+                            <option value="otro" @selected(old('motivo') === 'otro')>Otro</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group stock-out-full">
+                        <label>Cantidad a dar de baja *</label>
+                        <input
+                            type="number"
+                            name="cantidad"
+                            id="cantidad_baja"
+                            min="1"
+                            max="{{ $inventarioSeleccionado->stock_actual ?? '' }}"
+                            value="{{ old('cantidad', $inventarioSeleccionado->stock_actual ?? 1) }}"
+                            required
+                        >
+                    </div>
                 </div>
 
-                <div class="form-group">
-                    <label>Cantidad a dar de baja *</label>
-                    <input
-                        type="number"
-                        name="cantidad"
-                        id="cantidad_baja"
-                        min="1"
-                        max="{{ $inventarioSeleccionado->stock_actual ?? '' }}"
-                        value="{{ old('cantidad', $inventarioSeleccionado->stock_actual ?? 1) }}"
-                        required
-                    >
-                    <small style="color: #6B7280;">
-                        No puede superar el stock disponible del producto seleccionado.
-                    </small>
+                <div class="stock-out-help-card">
+                    <i class="bi bi-exclamation-triangle"></i>
+                    <span>
+                        La cantidad no puede superar el stock disponible del producto seleccionado.
+                    </span>
                 </div>
             </div>
 
-            <div class="form-group" style="margin-top: 14px;">
-                <label>Observación</label>
-                <textarea
-                    name="observacion"
-                    rows="4"
-                    placeholder="Ej. Producto vencido retirado de estantería, envase dañado, pérdida confirmada, ajuste autorizado por administración..."
-                >{{ old('observacion') }}</textarea>
+            <div class="stock-out-summary-card">
+                <h3>
+                    <i class="bi bi-card-text"></i>
+                    Observación
+                </h3>
+
+                <div class="form-group">
+                    <label>Detalle de la baja</label>
+                    <textarea
+                        name="observacion"
+                        rows="5"
+                        placeholder="Ej. Producto vencido retirado de estantería, envase dañado, pérdida confirmada..."
+                    >{{ old('observacion') }}</textarea>
+                </div>
             </div>
-        </div>
 
-        <div style="display: flex; gap: 12px; flex-wrap: wrap;">
-            <button type="submit" class="btn-primary">
-                Registrar baja
-            </button>
+            <div class="stock-out-info-card">
+                <div class="stock-out-info-icon">
+                    <i class="bi bi-shield-check"></i>
+                </div>
 
-            <a href="{{ route('bajas-inventario.index') }}" class="btn-secondary">
-                Cancelar
-            </a>
-        </div>
-    </form>
-</div>
+                <div>
+                    <strong>Control de inventario</strong>
+                    <span>Esta acción retirará stock real y quedará registrada en movimientos.</span>
+                </div>
+            </div>
+
+            <div class="stock-out-actions">
+                <a href="{{ route('bajas-inventario.index') }}" class="btn-secondary">
+                    <i class="bi bi-arrow-left"></i>
+                    Cancelar
+                </a>
+
+                <button type="submit" class="btn-primary">
+                    <i class="bi bi-check2-circle"></i>
+                    Registrar baja
+                </button>
+            </div>
+
+        </aside>
+
+    </div>
+</form>
 
 <script>
 const buscarBajaProductosUrl = "{{ route('bajas-inventario.buscar-productos') }}";
@@ -243,8 +302,8 @@ function mostrarResultadosBaja(productos) {
                     </div>
                 </div>
 
-                <button type="button" class="btn-primary" data-producto="${dataProducto}" onclick="seleccionarProductoBaja(this)">
-                    Seleccionar
+                <button type="button" class="icon-action icon-action-primary" data-producto="${dataProducto}" onclick="seleccionarProductoBaja(this)" title="Seleccionar">
+                    <i class="bi bi-check2"></i>
                 </button>
             </div>
         `;

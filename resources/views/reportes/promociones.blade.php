@@ -8,6 +8,23 @@
 
 <div class="card" style="margin-bottom: 22px;">
     <h2 style="margin-top: 0; color: #4C1D95;">Reporte de promociones</h2>
+    <p style="margin:6px 0 0; color:#4B5563;">
+        Sucursal:
+        <strong>{{ $sucursal?->nombre ?? 'Sin sucursal' }}</strong>
+    </p>
+
+    <div style="display:flex; gap:10px; flex-wrap:wrap;">
+        <a
+            href="{{ route('reportes.promociones.exportar-csv', request()->query()) }}"
+            class="btn-primary"
+        >
+            Exportar Excel
+        </a>
+
+        <a href="{{ route('reportes.index') }}" class="btn-secondary">
+            Volver a reportes
+        </a>
+    </div>
 
     <form method="GET" action="{{ route('reportes.promociones') }}">
         <div class="form-grid">

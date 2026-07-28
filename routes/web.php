@@ -4,6 +4,7 @@ use App\Http\Controllers\AtencionServicioController;
 use App\Http\Controllers\BajaInventarioController;
 use App\Http\Controllers\CajaController;
 use App\Http\Controllers\CambioProductoController;
+use App\Http\Controllers\ConfiguracionController;
 use App\Http\Controllers\CompraController;
 use App\Http\Controllers\ClienteController;
 use App\Http\Controllers\DashboardController;
@@ -65,6 +66,9 @@ Route::middleware('auth')->group(function () {
     Route::middleware('permiso:ver_ventas')->group(function () {
         Route::get('/ventas', [VentaController::class, 'index'])
             ->name('ventas.index');
+
+        Route::get('/ventas/{venta}/recibo', [VentaController::class, 'recibo'])
+            ->name('ventas.recibo');
     });
 
     Route::middleware('permiso:anular_venta')->group(function () {
@@ -400,6 +404,9 @@ Route::middleware('auth')->group(function () {
 
         Route::delete('/usuarios/{user}', [UsuarioController::class, 'destroy'])
             ->name('usuarios.destroy');
+
+        Route::post('/usuarios/roles-rapido', [UsuarioController::class, 'rolRapido'])
+            ->name('usuarios.roles-rapido');
     });
 
     /*
@@ -411,6 +418,9 @@ Route::middleware('auth')->group(function () {
     Route::middleware('permiso:ver_reportes')->group(function () {
         Route::get('/reportes', [ReporteController::class, 'index'])
             ->name('reportes.index');
+
+        Route::get('/reportes/promociones/exportar-csv', [ReporteController::class, 'promocionesExportarCsv'])
+            ->name('reportes.promociones.exportar-csv');
 
         Route::get('/reportes/promociones', [ReporteController::class, 'promociones'])
             ->name('reportes.promociones');
@@ -435,6 +445,78 @@ Route::middleware('auth')->group(function () {
 
         Route::get('/reportes/ingresos-diarios', [ReporteController::class, 'ingresosDiarios'])
             ->name('reportes.ingresos-diarios');
+
+        Route::get('/reportes/ventas', [ReporteController::class, 'ventas'])
+            ->name('reportes.ventas');
+
+        Route::get('/reportes/ventas/exportar-csv', [ReporteController::class, 'ventasExportarCsv'])
+            ->name('reportes.ventas.exportar-csv');
+
+        Route::get('/reportes/compras', [ReporteController::class, 'compras'])
+            ->name('reportes.compras');
+
+        Route::get('/reportes/compras/exportar-csv', [ReporteController::class, 'comprasExportarCsv'])
+            ->name('reportes.compras.exportar-csv');
+
+        Route::get('/reportes/deudas-proveedores', [ReporteController::class, 'deudasProveedores'])
+            ->name('reportes.deudas-proveedores');
+
+        Route::get('/reportes/deudas-proveedores/exportar-csv', [ReporteController::class, 'deudasProveedoresExportarCsv'])
+            ->name('reportes.deudas-proveedores.exportar-csv');
+
+        Route::get('/reportes/inventario-critico', [ReporteController::class, 'inventarioCritico'])
+            ->name('reportes.inventario-critico');
+
+        Route::get('/reportes/inventario-critico/exportar-csv', [ReporteController::class, 'inventarioCriticoExportarCsv'])
+            ->name('reportes.inventario-critico.exportar-csv');
+
+        Route::get('/reportes/movimientos-inventario', [ReporteController::class, 'movimientosInventario'])
+            ->name('reportes.movimientos-inventario');
+
+        Route::get('/reportes/movimientos-inventario/exportar-csv', [ReporteController::class, 'movimientosInventarioExportarCsv'])
+            ->name('reportes.movimientos-inventario.exportar-csv');
+
+        Route::get('/reportes/productos-vendidos', [ReporteController::class, 'productosVendidos'])
+            ->name('reportes.productos-vendidos');
+
+        Route::get('/reportes/productos-vendidos/exportar-csv', [ReporteController::class, 'productosVendidosExportarCsv'])
+            ->name('reportes.productos-vendidos.exportar-csv');
+
+        Route::get('/reportes/clientes-frecuentes', [ReporteController::class, 'clientesFrecuentes'])
+            ->name('reportes.clientes-frecuentes');
+
+        Route::get('/reportes/clientes-frecuentes/exportar-csv', [ReporteController::class, 'clientesFrecuentesExportarCsv'])
+            ->name('reportes.clientes-frecuentes.exportar-csv');
+
+        Route::get('/reportes/productos-reponer', [ReporteController::class, 'productosReponer'])
+            ->name('reportes.productos-reponer');
+
+        Route::get('/reportes/productos-reponer/exportar-csv', [ReporteController::class, 'productosReponerExportarCsv'])
+            ->name('reportes.productos-reponer.exportar-csv');
+
+        Route::get('/reportes/utilidad-estimada', [ReporteController::class, 'utilidadEstimada'])
+            ->name('reportes.utilidad-estimada');
+
+        Route::get('/reportes/utilidad-estimada/exportar-csv', [ReporteController::class, 'utilidadEstimadaExportarCsv'])
+            ->name('reportes.utilidad-estimada.exportar-csv');
+
+        Route::get('/reportes/metodos-pago', [ReporteController::class, 'metodosPago'])
+            ->name('reportes.metodos-pago');
+
+        Route::get('/reportes/metodos-pago/exportar-csv', [ReporteController::class, 'metodosPagoExportarCsv'])
+            ->name('reportes.metodos-pago.exportar-csv');
+
+        Route::get('/reportes/resumen-administrativo', [ReporteController::class, 'resumenAdministrativo'])
+            ->name('reportes.resumen-administrativo');
+
+        Route::get('/reportes/resumen-administrativo/exportar-csv', [ReporteController::class, 'resumenAdministrativoExportarCsv'])
+            ->name('reportes.resumen-administrativo.exportar-csv');
+
+        Route::get('/reportes/bajas-inventario', [ReporteController::class, 'bajasInventario'])
+            ->name('reportes.bajas-inventario');
+
+        Route::get('/reportes/bajas-inventario/exportar-csv', [ReporteController::class, 'bajasInventarioExportarCsv'])
+            ->name('reportes.bajas-inventario.exportar-csv');
     });
 
     /*
@@ -486,6 +568,9 @@ Route::middleware('auth')->group(function () {
 
             Route::get('/inventario/bajas/{bajaInventario}', [BajaInventarioController::class, 'show'])
                 ->name('bajas-inventario.show');
+            
+            Route::get('/inventario/bajas/{bajaInventario}/recibo', [BajaInventarioController::class, 'recibo'])
+                ->name('bajas-inventario.recibo');
         });
 
         Route::middleware('permiso:registrar_baja_inventario')->group(function () {
@@ -558,6 +643,9 @@ Route::middleware('auth')->group(function () {
 
             Route::get('/atenciones-servicio/{atencionServicio}', [AtencionServicioController::class, 'show'])
                 ->name('atenciones-servicio.show');
+
+            Route::get('/atenciones-servicio/{atencionServicio}/recibo', [AtencionServicioController::class, 'recibo'])
+                ->name('atenciones-servicio.recibo');
         });
 
         Route::middleware('permiso:registrar_atencion_servicio')->group(function () {
@@ -575,4 +663,20 @@ Route::middleware('auth')->group(function () {
             Route::post('/atenciones-servicio/{atencionServicio}/anular', [AtencionServicioController::class, 'anularStore'])
                 ->name('atenciones-servicio.anular.store');
         });
+
+        /*
+        |--------------------------------------------------------------------------
+        | Configuración
+        |--------------------------------------------------------------------------
+        */
+
+        Route::middleware('permiso:administrar_configuracion')->group(function () {
+            Route::get('/configuracion', [ConfiguracionController::class, 'edit'])
+                ->name('configuracion.edit');
+
+            Route::put('/configuracion', [ConfiguracionController::class, 'update'])
+                ->name('configuracion.update');
+        });
+
+        
 });

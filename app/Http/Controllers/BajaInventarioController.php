@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\BajaInventario;
+use App\Models\Configuracion;
 use App\Models\Inventario;
 use App\Models\MovimientoInventario;
 use Illuminate\Http\Request;
@@ -24,10 +25,16 @@ class BajaInventarioController extends Controller
                 'usuarioAnulacion',
             ])
             ->when($buscar, function ($query, $buscar) {
-                $query->whereHas('producto', function ($q) use ($buscar) {
-                    $q->where('nombre_comercial', 'like', "%{$buscar}%")
-                        ->orWhere('nombre_generico', 'like', "%{$buscar}%")
-                        ->orWhere('concentracion', 'like', "%{$buscar}%");
+                $query->where(function ($q) use ($buscar) {
+                    $q->where('numero_baja', 'like', "%{$buscar}%")
+                        ->orWhereHas('producto', function ($productoQuery) use ($buscar) {
+                            $productoQuery->where('nombre_comercial', 'like', "%{$buscar}%")
+                                ->orWhere('nombre_generico', 'like', "%{$buscar}%")
+                                ->orWhere('concentracion', 'like', "%{$buscar}%");
+                        })
+                        ->orWhereHas('lote', function ($loteQuery) use ($buscar) {
+                            $loteQuery->where('numero_lote', 'like', "%{$buscar}%");
+                        });
                 });
             })
             ->when($motivo, function ($query, $motivo) {
@@ -179,6 +186,7 @@ class BajaInventarioController extends Controller
             ]);
 
             $baja = BajaInventario::create([
+                'numero_baja' => null,
                 'producto_id' => $inventario->producto_id,
                 'sucursal_id' => $sucursal->id,
                 'lote_id' => $inventario->lote_id,
@@ -189,6 +197,10 @@ class BajaInventarioController extends Controller
                 'stock_nuevo' => $stockNuevo,
                 'observacion' => $datos['observacion'] ?? null,
                 'estado' => 'registrado',
+            ]);
+
+            $baja->update([
+                'numero_baja' => 'BAJ-' . str_pad($baja->id, 6, '0', STR_PAD_LEFT),
             ]);
 
             MovimientoInventario::create([
@@ -308,5 +320,29 @@ class BajaInventarioController extends Controller
         return redirect()
             ->route('bajas-inventario.show', $bajaInventario)
             ->with('success', 'Baja de inventario anulada correctamente. El stock fue devuelto.');
+    }
+
+    public function recibo(BajaInventario $bajaInventario)
+    {
+        $bajaInventario->load([
+            'producto.laboratorio',
+            'lote',
+            'sucursal',
+            'usuario',
+            'usuarioAnulacion',
+        ]);
+
+        $configuracion = Configuracion::firstOrCreate(
+            ['id' => 1],
+            [
+                'nombre_farmacia' => 'Santo Remedio',
+                'moneda' => 'Bs',
+            ]
+        );
+
+        return view('bajas_inventario.recibo', compact(
+            'bajaInventario',
+            'configuracion'
+        ));
     }
 }

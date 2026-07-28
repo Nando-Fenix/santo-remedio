@@ -77,6 +77,10 @@
                     Volver a ventas
                 </a>
             @endif
+
+            <a href="{{ route('ventas.recibo', $venta) }}" class="btn-primary" target="_blank">
+                Imprimir recibo
+            </a>
         </div>
     </div>
 </div>
