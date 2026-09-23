@@ -2,123 +2,159 @@
 
 @section('title', 'Usuarios | Santo Remedio')
 @section('page-title', 'Usuarios')
-@section('page-subtitle', 'Gestión de usuarios, roles, sucursales y permisos')
+@section('page-subtitle', 'Gestión de accesos, roles, sucursales y permisos')
 
 @section('content')
 
-<div class="card" style="margin-bottom: 22px;">
-    <div style="display: flex; justify-content: space-between; align-items: center; gap: 14px;">
+<div class="usuarios-page">
+
+    <div class="compact-card usuarios-header">
         <div>
-            <h2 style="margin: 0; color: #4C1D95;">Usuarios del sistema</h2>
-            <p style="margin: 6px 0 0; color: #6B7280;">
-                Administre accesos, roles, sucursales y permisos personalizados.
+            <h2>
+                <i class="bi bi-person-lock"></i>
+                Usuarios
+            </h2>
+
+            <p>
+                Administra accesos, roles, sucursales asignadas y permisos manuales.
             </p>
         </div>
 
         @if (auth()->user()->tienePermiso('administrar_usuarios'))
-            <a href="{{ route('usuarios.create') }}" class="btn-primary">
-                + Nuevo usuario
+            <a href="{{ route('usuarios.create') }}" class="btn-primary btn-mini">
+                <i class="bi bi-plus-circle"></i>
+                Nuevo
             </a>
         @endif
     </div>
-</div>
 
-<div class="card">
-    <div class="table-container">
-        <table class="table">
-            <thead>
-                <tr>
-                    <th>Usuario</th>
-                    <th>CI</th>
-                    <th>Rol</th>
-                    <th>Sucursales</th>
-                    <th>Permisos directos</th>
-                    <th>Estado</th>
-                    <th>Acciones</th>
-                </tr>
-            </thead>
+    <div class="compact-card usuarios-filter-card">
+        <form method="GET" action="{{ route('usuarios.index') }}" class="usuarios-filter">
+            <div class="form-group">
+                <label>Buscar</label>
+                <input
+                    type="text"
+                    name="buscar"
+                    value="{{ $buscar ?? '' }}"
+                    placeholder="Nombre, usuario, CI o rol"
+                >
+            </div>
 
-            <tbody>
-                @forelse ($usuarios as $usuario)
-                    <tr>
-                        <td>
-                            <strong>{{ $usuario->nombre }}</strong>
-                            <br>
-                            <small style="color:#6B7280;">
-                                Acceso: {{ $usuario->usuario }}
-                            </small>
-                        </td>
+            <div class="usuarios-filter-actions">
+                <button type="submit" class="btn-primary btn-mini" title="Buscar">
+                    <i class="bi bi-search"></i>
+                </button>
 
-                        <td>{{ $usuario->ci }}</td>
-
-                        <td>
-                            <span class="badge badge-primary">
-                                {{ $usuario->rol->nombre ?? 'Sin rol' }}
-                            </span>
-                        </td>
-
-                        <td>
-                            @forelse ($usuario->sucursales as $sucursal)
-                                <span class="badge {{ $sucursal->pivot->principal ? 'badge-success' : 'badge-secondary' }}">
-                                    {{ $sucursal->nombre }}
-                                    {{ $sucursal->pivot->principal ? '(Principal)' : '' }}
-                                </span>
-                            @empty
-                                <span style="color:#6B7280;">Sin sucursal</span>
-                            @endforelse
-                        </td>
-
-                        <td>
-                            @if ($usuario->rol?->nombre === 'Administrador')
-                                <span class="badge badge-success">Acceso total</span>
-                            @else
-                                <span class="badge badge-secondary">
-                                    {{ $usuario->permisosDirectos->count() }} permisos directos
-                                </span>
-                            @endif
-                        </td>
-
-                        <td>
-                            @if ($usuario->estado === 'activo')
-                                <span class="badge badge-success">Activo</span>
-                            @else
-                                <span class="badge badge-danger">Inactivo</span>
-                            @endif
-                        </td>
-
-                        <td>
-                            <div style="display:flex; gap:8px; flex-wrap:wrap;">
-                                @if (auth()->user()->tienePermiso('administrar_usuarios'))
-                                    <a href="{{ route('usuarios.edit', $usuario) }}" class="btn-secondary">
-                                        Editar
-                                    </a>
-
-                                    @if ($usuario->id !== auth()->id() && $usuario->estado === 'activo')
-                                        <form method="POST"
-                                            action="{{ route('usuarios.destroy', $usuario) }}"
-                                            onsubmit="return confirmarFormulario(event, '¿Desactivar este usuario?')">
-                                            @csrf
-                                            @method('DELETE')
-
-                                            <button type="submit" class="btn-danger">
-                                                Desactivar
-                                            </button>
-                                        </form>
-                                    @endif
-                                @endif
-                            </div>
-                        </td>
-                    </tr>
-                @empty
-                    <tr>
-                        <td colspan="7" style="text-align:center; color:#6B7280;">
-                            No hay usuarios registrados.
-                        </td>
-                    </tr>
-                @endforelse
-            </tbody>
-        </table>
+                <a href="{{ route('usuarios.index') }}" class="btn-secondary btn-mini" title="Limpiar">
+                    <i class="bi bi-x-circle"></i>
+                </a>
+            </div>
+        </form>
     </div>
+
+    <div class="usuarios-list">
+        @forelse ($usuarios as $usuario)
+            @php
+                $sucursalPrincipal = $usuario->sucursales->firstWhere('pivot.principal', true);
+                $totalSucursales = $usuario->sucursales->count();
+                $esAdmin = $usuario->rol?->nombre === 'Administrador';
+            @endphp
+
+            <div class="compact-card usuario-item">
+                <div class="usuario-main">
+                    <div class="usuario-avatar-mini">
+                        <i class="bi bi-person"></i>
+                    </div>
+
+                    <div>
+                        <h3>{{ $usuario->nombre }}</h3>
+
+                        <p>
+                            <span>{{ $usuario->usuario }}</span>
+                            <span>•</span>
+                            <span>CI: {{ $usuario->ci }}</span>
+                        </p>
+                    </div>
+                </div>
+
+                <div class="usuario-info">
+                    <span class="badge badge-primary">
+                        {{ $usuario->rol->nombre ?? 'Sin rol' }}
+                    </span>
+
+                    @if ($usuario->estado === 'activo')
+                        <span class="badge badge-success">Activo</span>
+                    @else
+                        <span class="badge badge-danger">Inactivo</span>
+                    @endif
+                </div>
+
+                <div class="usuario-details">
+                    <div>
+                        <span>Sucursal principal</span>
+                        <strong>{{ $sucursalPrincipal->nombre ?? 'Sin sucursal' }}</strong>
+                    </div>
+
+                    <div>
+                        <span>Sucursales</span>
+                        <strong>{{ $totalSucursales }}</strong>
+                    </div>
+
+                    <div>
+                        <span>Permisos</span>
+
+                        @if ($esAdmin)
+                            <strong class="usuario-total-access">Acceso total</strong>
+                        @else
+                            <strong>{{ $usuario->permisosDirectos->count() }}</strong>
+                        @endif
+                    </div>
+                </div>
+
+                <div class="usuario-actions">
+                    @if (auth()->user()->tienePermiso('administrar_usuarios'))
+                        <a
+                            href="{{ route('usuarios.edit', $usuario) }}"
+                            class="icon-action icon-action-primary"
+                            title="Editar"
+                        >
+                            <i class="bi bi-pencil-square"></i>
+                        </a>
+
+                        @if ($usuario->id !== auth()->id() && $usuario->estado === 'activo')
+                            <form
+                                method="POST"
+                                action="{{ route('usuarios.destroy', $usuario) }}"
+                                onsubmit="return confirmarFormulario(event, '¿Desactivar este usuario?')"
+                            >
+                                @csrf
+                                @method('DELETE')
+
+                                <button
+                                    type="submit"
+                                    class="icon-action icon-action-danger"
+                                    title="Desactivar"
+                                >
+                                    <i class="bi bi-person-x"></i>
+                                </button>
+                            </form>
+                        @endif
+                    @endif
+                </div>
+            </div>
+        @empty
+            <div class="compact-card usuarios-empty">
+                <i class="bi bi-people"></i>
+                <strong>No hay usuarios registrados.</strong>
+                <span>Crea un usuario para empezar a administrar accesos.</span>
+            </div>
+        @endforelse
+    </div>
+
+    <div class="pagination-wrapper">
+        {{ $usuarios->links() }}
+    </div>
+
 </div>
 
 @endsection

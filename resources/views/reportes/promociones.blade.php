@@ -6,234 +6,298 @@
 
 @section('content')
 
-<div class="card" style="margin-bottom: 22px;">
-    <h2 style="margin-top: 0; color: #4C1D95;">Reporte de promociones</h2>
-    <p style="margin:6px 0 0; color:#4B5563;">
-        Sucursal:
-        <strong>{{ $sucursal?->nombre ?? 'Sin sucursal' }}</strong>
-    </p>
+<div class="report-detail-page">
 
-    <div style="display:flex; gap:10px; flex-wrap:wrap;">
-        <a
-            href="{{ route('reportes.promociones.exportar-csv', request()->query()) }}"
-            class="btn-primary"
-        >
-            Exportar Excel
-        </a>
+    <div class="compact-card report-detail-header">
+        <div>
+            <h2>
+                <i class="bi bi-tags"></i>
+                Reporte de promociones
+            </h2>
 
-        <a href="{{ route('reportes.index') }}" class="btn-secondary">
-            Volver a reportes
-        </a>
+            <p>
+                Sucursal:
+                <strong>{{ $sucursal?->nombre ?? 'Sin sucursal' }}</strong>
+                |
+                Periodo:
+                <strong>{{ $fechaInicio }}</strong>
+                al
+                <strong>{{ $fechaFin }}</strong>
+            </p>
+        </div>
+
+        <div class="detail-actions">
+            <a
+                href="{{ route('reportes.promociones.exportar-xlsx', request()->query()) }}"
+                class="btn-primary"
+            >
+                <i class="bi bi-file-earmark-spreadsheet"></i>
+                Excel
+            </a>
+
+            <a
+                href="{{ route('reportes.promociones.exportar-csv', request()->query()) }}"
+                class="btn-secondary"
+            >
+                <i class="bi bi-file-earmark-excel"></i>
+                CSV
+            </a>
+
+            <a href="{{ route('reportes.index') }}" class="btn-secondary">
+                <i class="bi bi-arrow-left"></i>
+                Reportes
+            </a>
+        </div>
     </div>
 
-    <form method="GET" action="{{ route('reportes.promociones') }}">
-        <div class="form-grid">
+    <div class="compact-card report-filter-card">
+        <form method="GET" action="{{ route('reportes.promociones') }}" class="filter-bar report-filter-bar">
             <div class="form-group">
-                <label>Fecha inicio</label>
+                <label>Inicio</label>
                 <input type="date" name="fecha_inicio" value="{{ $fechaInicio }}">
             </div>
 
             <div class="form-group">
-                <label>Fecha fin</label>
+                <label>Fin</label>
                 <input type="date" name="fecha_fin" value="{{ $fechaFin }}">
+            </div>
+
+            <div class="filter-actions">
+                <button type="submit" class="btn-primary" title="Filtrar">
+                    <i class="bi bi-search"></i>
+                </button>
+
+                <a href="{{ route('reportes.promociones') }}" class="btn-secondary" title="Limpiar filtros">
+                    <i class="bi bi-x-circle"></i>
+                </a>
+            </div>
+        </form>
+    </div>
+
+    <div class="report-summary-strip report-summary-three">
+        <div class="report-mini-stat report-mini-total">
+            <span>Total generado</span>
+            <strong>{{ number_format($totalGenerado, 2) }} Bs</strong>
+        </div>
+
+        <div class="report-mini-stat">
+            <span>Promociones vendidas</span>
+            <strong>{{ $totalPromocionesVendidas }}</strong>
+        </div>
+
+        <div class="report-mini-stat">
+            <span>Registros encontrados</span>
+            <strong>{{ $promocionesVendidas->count() }}</strong>
+        </div>
+    </div>
+
+    <div class="report-two-columns">
+        <div class="compact-card">
+            <div class="detail-section-head">
+                <h3>
+                    <i class="bi bi-graph-up"></i>
+                    Resumen por promoción
+                </h3>
+            </div>
+
+            <div class="table-container compact-table-container">
+                <table class="table compact-table report-promotions-summary-table">
+                    <thead>
+                        <tr>
+                            <th>Promoción</th>
+                            <th>Cant.</th>
+                            <th>Total</th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+                        @forelse ($resumenPromociones as $resumen)
+                            <tr>
+                                <td>
+                                    <strong>{{ $resumen->promocion->nombre ?? 'Promoción eliminada' }}</strong>
+                                </td>
+
+                                <td>
+                                    <span class="reorder-suggested">
+                                        {{ $resumen->cantidad_vendida }}
+                                    </span>
+                                </td>
+
+                                <td>
+                                    <strong class="report-money">
+                                        {{ number_format($resumen->total_generado, 2) }} Bs
+                                    </strong>
+                                </td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="3" class="empty-table-message">
+                                    No hay promociones vendidas en este rango de fechas.
+                                </td>
+                            </tr>
+                        @endforelse
+                    </tbody>
+                </table>
             </div>
         </div>
 
-        <div style="display: flex; gap: 10px; margin-top: 14px;">
-            <button type="submit" class="btn-primary">
-                Filtrar
-            </button>
+        <div class="compact-card">
+            <div class="detail-section-head">
+                <h3>
+                    <i class="bi bi-box-arrow-down"></i>
+                    Productos descontados
+                </h3>
+            </div>
 
-            <a href="{{ route('reportes.promociones') }}" class="btn-secondary">
-                Limpiar
-            </a>
+            <div class="table-container compact-table-container">
+                <table class="table compact-table report-promotions-products-table">
+                    <thead>
+                        <tr>
+                            <th>Producto</th>
+                            <th>Forma</th>
+                            <th>Unid.</th>
+                        </tr>
+                    </thead>
 
-            @if (auth()->user()->tienePermiso('ver_reportes'))
-                <a href="{{ route('reportes.index') }}" class="btn-secondary">
-                    Volver a reportes
-                </a>
-            @endif
+                    <tbody>
+                        @forelse ($productosDescontados as $producto)
+                            <tr>
+                                <td>
+                                    <strong>
+                                        {{ $producto->productoPresentacion->nombre_mostrado ?? $producto->producto->nombre_comercial ?? '-' }}
+                                    </strong>
+
+                                    @if ($producto->producto?->laboratorio || $producto->producto?->concentracion)
+                                        <br>
+                                        <small style="color:#6B7280;">
+                                            @if ($producto->producto?->laboratorio)
+                                                {{ $producto->producto->laboratorio->nombre }}
+                                            @endif
+
+                                            @if ($producto->producto?->laboratorio && $producto->producto?->concentracion)
+                                                |
+                                            @endif
+
+                                            @if ($producto->producto?->concentracion)
+                                                {{ $producto->producto->concentracion }}
+                                            @endif
+                                        </small>
+                                    @endif
+                                </td>
+
+                                <td>
+                                    <span class="badge badge-soft">
+                                        {{ $producto->productoPresentacion->presentacion->nombre ?? '-' }}
+                                    </span>
+                                </td>
+
+                                <td>
+                                    <strong class="stock-out-quantity">
+                                        {{ $producto->total_unidades_descontadas }}
+                                    </strong>
+                                </td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="3" class="empty-table-message">
+                                    No hay productos descontados por promociones en este rango.
+                                </td>
+                            </tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
         </div>
-    </form>
-</div>
-
-<div class="grid" style="grid-template-columns: repeat(3, 1fr); margin-bottom: 22px;">
-    <div class="stat-card">
-        <span>Total generado</span>
-        <h3>{{ number_format($totalGenerado, 2) }} Bs</h3>
     </div>
 
-    <div class="stat-card">
-        <span>Promociones vendidas</span>
-        <h3>{{ $totalPromocionesVendidas }}</h3>
-    </div>
+    <div class="compact-card">
+        <div class="detail-section-head">
+            <h3>
+                <i class="bi bi-list-check"></i>
+                Detalle de ventas con promociones
+            </h3>
+        </div>
 
-    <div class="stat-card">
-        <span>Registros encontrados</span>
-        <h3>{{ $promocionesVendidas->count() }}</h3>
-    </div>
-</div>
-
-<div class="card" style="margin-bottom: 22px;">
-    <h3 style="margin-top: 0; color: #4C1D95;">Resumen por promoción</h3>
-
-    <div class="table-container">
-        <table class="table">
-            <thead>
-                <tr>
-                    <th>Promoción</th>
-                    <th>Cantidad vendida</th>
-                    <th>Total generado</th>
-                </tr>
-            </thead>
-
-            <tbody>
-                @forelse ($resumenPromociones as $resumen)
+        <div class="table-container compact-table-container">
+            <table class="table compact-table report-promotions-detail-table">
+                <thead>
                     <tr>
-                        <td>
-                            <strong>{{ $resumen->promocion->nombre ?? 'Promoción eliminada' }}</strong>
-                        </td>
-
-                        <td>{{ $resumen->cantidad_vendida }}</td>
-
-                        <td>
-                            <strong>{{ number_format($resumen->total_generado, 2) }} Bs</strong>
-                        </td>
+                        <th>Venta</th>
+                        <th>Fecha</th>
+                        <th>Promoción</th>
+                        <th>Cant.</th>
+                        <th>Subtotal</th>
+                        <th>Vendedor</th>
+                        <th>Sucursal</th>
+                        <th class="table-actions-cell">Acción</th>
                     </tr>
-                @empty
-                    <tr>
-                        <td colspan="3" style="text-align: center; color: #6B7280;">
-                            No hay promociones vendidas en este rango de fechas.
-                        </td>
-                    </tr>
-                @endforelse
-            </tbody>
-        </table>
-    </div>
-</div>
+                </thead>
 
-<div class="card" style="margin-bottom: 22px;">
-    <h3 style="margin-top: 0; color: #4C1D95;">Productos descontados por promociones</h3>
+                <tbody>
+                    @forelse ($promocionesVendidas as $detallePromo)
+                        <tr>
+                            <td>
+                                <strong>{{ $detallePromo->venta->numero_venta ?? '-' }}</strong>
+                            </td>
 
-    <div class="table-container">
-        <table class="table">
-            <thead>
-                <tr>
-                    <th>Producto</th>
-                    <th>Forma</th>
-                    <th>Unidades descontadas</th>
-                </tr>
-            </thead>
-
-            <tbody>
-                @forelse ($productosDescontados as $producto)
-                    <tr>
-                        <td>
-                            <strong>
-                                {{ $producto->productoPresentacion->nombre_mostrado ?? $producto->producto->nombre_comercial ?? '-' }}
-                            </strong>
-
-                            @if ($producto->producto?->laboratorio || $producto->producto?->concentracion)
+                            <td>
+                                {{ $detallePromo->venta?->fecha_hora?->format('d/m/Y') ?? '-' }}
                                 <br>
-                                <small style="color: #6B7280;">
-                                    @if ($producto->producto?->laboratorio)
-                                        {{ $producto->producto->laboratorio->nombre }}
-                                    @endif
-
-                                    @if ($producto->producto?->laboratorio && $producto->producto?->concentracion)
-                                        |
-                                    @endif
-
-                                    @if ($producto->producto?->concentracion)
-                                        {{ $producto->producto->concentracion }}
-                                    @endif
+                                <small style="color:#6B7280;">
+                                    {{ $detallePromo->venta?->fecha_hora?->format('H:i') ?? '' }}
                                 </small>
-                            @endif
-                        </td>
+                            </td>
 
-                        <td>
-                            {{ $producto->productoPresentacion->presentacion->nombre ?? '-' }}
-                        </td>
+                            <td>
+                                <strong>{{ $detallePromo->promocion->nombre ?? 'Promoción eliminada' }}</strong>
+                            </td>
 
-                        <td>
-                            <strong>{{ $producto->total_unidades_descontadas }}</strong>
-                        </td>
-                    </tr>
-                @empty
-                    <tr>
-                        <td colspan="3" style="text-align: center; color: #6B7280;">
-                            No hay productos descontados por promociones en este rango.
-                        </td>
-                    </tr>
-                @endforelse
-            </tbody>
-        </table>
+                            <td>
+                                {{ $detallePromo->cantidad }}
+                            </td>
+
+                            <td>
+                                <strong class="report-money">
+                                    {{ number_format($detallePromo->subtotal, 2) }} Bs
+                                </strong>
+                            </td>
+
+                            <td>
+                                {{ $detallePromo->venta->usuario->nombre ?? '-' }}
+                            </td>
+
+                            <td>
+                                {{ $detallePromo->venta->sucursal->nombre ?? '-' }}
+                            </td>
+
+                            <td>
+                                <div class="action-group">
+                                    @if ($detallePromo->venta && auth()->user()->tienePermiso('ver_ventas'))
+                                        <a
+                                            href="{{ route('ventas.show', $detallePromo->venta) }}"
+                                            class="icon-action icon-action-primary"
+                                            title="Ver venta"
+                                        >
+                                            <i class="bi bi-eye"></i>
+                                        </a>
+                                    @else
+                                        <span style="color:#6B7280;">-</span>
+                                    @endif
+                                </div>
+                            </td>
+                        </tr>
+                    @empty
+                        <tr>
+                            <td colspan="8" class="empty-table-message">
+                                No hay ventas con promociones en este rango.
+                            </td>
+                        </tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
     </div>
-</div>
 
-<div class="card">
-    <h3 style="margin-top: 0; color: #4C1D95;">Detalle de ventas con promociones</h3>
-
-    <div class="table-container">
-        <table class="table">
-            <thead>
-                <tr>
-                    <th>Venta</th>
-                    <th>Fecha</th>
-                    <th>Promoción</th>
-                    <th>Cantidad</th>
-                    <th>Subtotal</th>
-                    <th>Vendedor</th>
-                    <th>Sucursal</th>
-                    <th>Acción</th>
-                </tr>
-            </thead>
-
-            <tbody>
-                @forelse ($promocionesVendidas as $detallePromo)
-                    <tr>
-                        <td>
-                            <strong>{{ $detallePromo->venta->numero_venta ?? '-' }}</strong>
-                        </td>
-
-                        <td>
-                            {{ $detallePromo->venta?->fecha_hora?->format('d/m/Y H:i') ?? '-' }}
-                        </td>
-
-                        <td>
-                            {{ $detallePromo->promocion->nombre ?? 'Promoción eliminada' }}
-                        </td>
-
-                        <td>{{ $detallePromo->cantidad }}</td>
-
-                        <td>
-                            <strong>{{ number_format($detallePromo->subtotal, 2) }} Bs</strong>
-                        </td>
-
-                        <td>{{ $detallePromo->venta->usuario->nombre ?? '-' }}</td>
-
-                        <td>{{ $detallePromo->venta->sucursal->nombre ?? '-' }}</td>
-
-                        <td>
-                            @if ($detallePromo->venta && auth()->user()->tienePermiso('ver_ventas'))
-                                <a href="{{ route('ventas.show', $detallePromo->venta) }}" class="btn-secondary">
-                                    Ver venta
-                                </a>
-                            @else
-                                -
-                            @endif
-                        </td>
-                    </tr>
-                @empty
-                    <tr>
-                        <td colspan="8" style="text-align: center; color: #6B7280;">
-                            No hay ventas con promociones en este rango.
-                        </td>
-                    </tr>
-                @endforelse
-            </tbody>
-        </table>
-    </div>
 </div>
 
 @endsection

@@ -18,138 +18,157 @@
     </div>
 @endif
 
-<div class="card" style="margin-bottom: 22px;">
-    <div style="display:flex; justify-content:space-between; align-items:center; gap:16px;">
+<div class="compact-card">
+
+    <div class="compact-header">
         <div>
-            <h2 style="margin:0; color:#4C1D95;">
+            <h2>
+                <i class="bi bi-clipboard2-pulse"></i>
                 {{ $servicioFarmacia->nombre }}
             </h2>
-            <p style="margin:6px 0 0; color:#6B7280;">
+
+            <p>
                 Servicio registrado para cobros y atenciones.
             </p>
         </div>
 
-        <div style="display:flex; gap:10px; flex-wrap:wrap;">
+        <div class="detail-actions">
+            @if ($servicioFarmacia->estado === 'activo')
+                <span class="badge badge-success">Activo</span>
+            @else
+                <span class="badge badge-danger">Inactivo</span>
+            @endif
+
             @if (auth()->user()->tienePermiso('editar_servicio_farmacia'))
                 <a href="{{ route('servicios-farmacia.edit', $servicioFarmacia) }}" class="btn-primary">
+                    <i class="bi bi-pencil"></i>
                     Editar
                 </a>
             @endif
 
             <a href="{{ route('servicios-farmacia.index') }}" class="btn-secondary">
+                <i class="bi bi-arrow-left"></i>
                 Volver
             </a>
         </div>
     </div>
-</div>
 
-<div class="grid" style="grid-template-columns: repeat(3, 1fr); margin-bottom: 22px;">
-    <div class="stat-card">
-        <span>Precio</span>
-        <h3>{{ number_format($servicioFarmacia->precio, 2) }} Bs</h3>
+    <div class="detail-stat-grid">
+        <div class="detail-stat-card detail-stat-main">
+            <span>Precio</span>
+            <strong>{{ number_format($servicioFarmacia->precio, 2) }} Bs</strong>
+        </div>
+
+        <div class="detail-stat-card">
+            <span>Tipo</span>
+            <strong>
+                @if ($servicioFarmacia->tipo === 'inyectable')
+                    Inyectable
+                @elseif ($servicioFarmacia->tipo === 'control')
+                    Control
+                @elseif ($servicioFarmacia->tipo === 'curacion')
+                    Curación
+                @elseif ($servicioFarmacia->tipo === 'nebulizacion')
+                    Nebulización
+                @elseif ($servicioFarmacia->tipo === 'orientacion')
+                    Orientación
+                @else
+                    Otro
+                @endif
+            </strong>
+        </div>
+
+        <div class="detail-stat-card">
+            <span>Insumos</span>
+            <strong>{{ $servicioFarmacia->insumos->count() }}</strong>
+        </div>
+
+        <div class="detail-stat-card">
+            <span>Creado por</span>
+            <strong>{{ $servicioFarmacia->creadoPor->nombre ?? '-' }}</strong>
+        </div>
     </div>
 
-    <div class="stat-card">
-        <span>Tipo</span>
-        <h3 style="font-size:18px;">
-            @if ($servicioFarmacia->tipo === 'inyectable')
-                Inyectable
-            @elseif ($servicioFarmacia->tipo === 'control')
-                Control
-            @elseif ($servicioFarmacia->tipo === 'curacion')
-                Curación
-            @elseif ($servicioFarmacia->tipo === 'nebulizacion')
-                Nebulización
-            @elseif ($servicioFarmacia->tipo === 'orientacion')
-                Orientación
-            @else
-                Otro
-            @endif
-        </h3>
+    <div class="service-show-layout">
+
+        <section class="detail-section-card">
+            <div class="detail-section-head">
+                <h3>
+                    <i class="bi bi-card-text"></i>
+                    Descripción
+                </h3>
+            </div>
+
+            <div class="service-description-box">
+                {{ $servicioFarmacia->descripcion ?? 'Sin descripción.' }}
+            </div>
+        </section>
+
+        <section class="detail-section-card">
+            <div class="detail-section-head">
+                <h3>
+                    <i class="bi bi-box-seam"></i>
+                    Insumos configurados
+                </h3>
+            </div>
+
+            <div class="table-container compact-table-container">
+                <table class="table compact-table">
+                    <thead>
+                        <tr>
+                            <th>Insumo</th>
+                            <th>Cant.</th>
+                            <th>Desc.</th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+                        @forelse ($servicioFarmacia->insumos as $insumo)
+                            <tr>
+                                <td>
+                                    <strong>
+                                        {{ $insumo->productoPresentacion->nombre_mostrado ?? $insumo->producto->nombre_comercial ?? '-' }}
+                                    </strong>
+
+                                    <br>
+
+                                    <small style="color:#6B7280;">
+                                        {{ $insumo->productoPresentacion->presentacion->nombre ?? '-' }}
+
+                                        @if ($insumo->producto?->laboratorio)
+                                            · {{ $insumo->producto->laboratorio->nombre }}
+                                        @endif
+
+                                        @if ($insumo->producto?->concentracion)
+                                            · {{ $insumo->producto->concentracion }}
+                                        @endif
+                                    </small>
+                                </td>
+
+                                <td>
+                                    <strong>{{ $insumo->cantidad }}</strong>
+                                </td>
+
+                                <td>
+                                    <strong>{{ $insumo->unidades_necesarias }}</strong>
+                                    <br>
+                                    <small style="color:#6B7280;">unidad(es)</small>
+                                </td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="3" class="empty-table-message">
+                                    Este servicio no tiene insumos configurados.
+                                </td>
+                            </tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
     </div>
 
-    <div class="stat-card">
-        <span>Estado</span>
-        <h3 style="font-size:18px;">
-            @if ($servicioFarmacia->estado === 'activo')
-                Activo
-            @else
-                Inactivo
-            @endif
-        </h3>
-    </div>
-</div>
-
-<div class="card" style="margin-bottom: 22px;">
-    <h3 style="margin-top:0; color:#4C1D95;">Descripción</h3>
-
-    <p style="color:#374151;">
-        {{ $servicioFarmacia->descripcion ?? 'Sin descripción.' }}
-    </p>
-
-    <p style="color:#6B7280; margin-bottom:0;">
-        <strong>Creado por:</strong>
-        {{ $servicioFarmacia->creadoPor->nombre ?? '-' }}
-    </p>
-</div>
-
-<div class="card">
-    <h3 style="margin-top:0; color:#4C1D95;">Insumos configurados</h3>
-
-    <div class="table-container">
-        <table class="table">
-            <thead>
-                <tr>
-                    <th>Insumo</th>
-                    <th>Presentación</th>
-                    <th>Cantidad</th>
-                    <th>Descuenta del inventario</th>
-                </tr>
-            </thead>
-
-            <tbody>
-                @forelse ($servicioFarmacia->insumos as $insumo)
-                    <tr>
-                        <td>
-                            <strong>{{ $insumo->productoPresentacion->nombre_mostrado ?? $insumo->producto->nombre_comercial ?? '-' }}</strong>
-
-                            @if ($insumo->producto?->laboratorio || $insumo->producto?->concentracion)
-                                <br>
-                                <small style="color:#6B7280;">
-                                    @if ($insumo->producto?->laboratorio)
-                                        {{ $insumo->producto->laboratorio->nombre }}
-                                    @endif
-
-                                    @if ($insumo->producto?->laboratorio && $insumo->producto?->concentracion)
-                                        |
-                                    @endif
-
-                                    @if ($insumo->producto?->concentracion)
-                                        {{ $insumo->producto->concentracion }}
-                                    @endif
-                                </small>
-                            @endif
-                        </td>
-
-                        <td>{{ $insumo->productoPresentacion->presentacion->nombre ?? '-' }}</td>
-
-                        <td>{{ $insumo->cantidad }}</td>
-
-                        <td>
-                            {{ $insumo->unidades_necesarias }}
-                            unidad(es)
-                        </td>
-                    </tr>
-                @empty
-                    <tr>
-                        <td colspan="4" style="text-align:center; color:#6B7280;">
-                            Este servicio no tiene insumos configurados.
-                        </td>
-                    </tr>
-                @endforelse
-            </tbody>
-        </table>
-    </div>
 </div>
 
 @endsection

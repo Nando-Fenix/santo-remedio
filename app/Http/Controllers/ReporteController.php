@@ -3,7 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\AtencionServicio;
-use App\Models\AtencionServicioInsumo;
+use App\Models\AtencionServicioInsumo; 
 use App\Models\BajaInventario;
 use App\Models\Inventario;
 use App\Models\Caja;
@@ -19,7 +19,28 @@ use App\Models\ServicioFarmacia;
 use App\Models\MovimientoInventario;
 use App\Models\MetodoPago;
 use App\Models\PagoVenta;
+use App\Exports\Reportes\VentasReporteExport;
+use App\Exports\Reportes\CajaDiariaReporteExport;
+use App\Exports\Reportes\ComprasReporteExport;
+use App\Exports\Reportes\DeudasProveedoresReporteExport;
+use App\Exports\Reportes\ServiciosReporteExport;
+use App\Exports\Reportes\ServiciosInsumosReporteExport;
+use App\Exports\Reportes\PromocionesReporteExport;
+use App\Exports\Reportes\IngresosDiariosReporteExport;
+use App\Exports\Reportes\MetodosPagoReporteExport;
+use App\Exports\Reportes\MovimientosInventarioReporteExport;
+use App\Exports\Reportes\BajasInventarioReporteExport;
+use App\Exports\Reportes\InventarioCriticoReporteExport;
+use App\Exports\Reportes\ProductosVendidosReporteExport;
+use App\Exports\Reportes\ClientesFrecuentesReporteExport;
+use App\Exports\Reportes\ProductosReponerReporteExport;
+use App\Exports\Reportes\UtilidadEstimadaReporteExport;
+use App\Exports\Reportes\ResumenAdministrativoReporteExport;
+use Maatwebsite\Excel\Facades\Excel;
 use Illuminate\Support\Facades\DB;
+
+
+
 
 class ReporteController extends Controller
 {
@@ -121,11 +142,9 @@ class ReporteController extends Controller
                 'items.productoPresentacion.presentacion',
                 'items.lote',
             ])
-            ->whereHas('venta', function ($query) use ($sucursal) {
-                $query->where('sucursal_id', $sucursal->id);
-            })
-            ->whereHas('venta', function ($query) use ($fechaInicio, $fechaFin) {
-                $query->where('estado', 'completada')
+            ->whereHas('venta', function ($query) use ($sucursal, $fechaInicio, $fechaFin) {
+                $query->where('sucursal_id', $sucursal->id)
+                    ->where('estado', 'completada')
                     ->whereDate('fecha_hora', '>=', $fechaInicio)
                     ->whereDate('fecha_hora', '<=', $fechaFin);
             })
@@ -138,8 +157,9 @@ class ReporteController extends Controller
                 SUM(subtotal) as total_generado
             ')
             ->with('promocion')
-            ->whereHas('venta', function ($query) use ($fechaInicio, $fechaFin) {
-                $query->where('estado', 'completada')
+            ->whereHas('venta', function ($query) use ($sucursal, $fechaInicio, $fechaFin) {
+                $query->where('sucursal_id', $sucursal->id)
+                    ->where('estado', 'completada')
                     ->whereDate('fecha_hora', '>=', $fechaInicio)
                     ->whereDate('fecha_hora', '<=', $fechaFin);
             })
@@ -156,8 +176,9 @@ class ReporteController extends Controller
                 'producto.laboratorio',
                 'productoPresentacion.presentacion',
             ])
-            ->whereHas('detalleVentaPromocion.venta', function ($query) use ($fechaInicio, $fechaFin) {
-                $query->where('estado', 'completada')
+            ->whereHas('detalleVentaPromocion.venta', function ($query) use ($sucursal, $fechaInicio, $fechaFin) {
+                $query->where('sucursal_id', $sucursal->id)
+                    ->where('estado', 'completada')
                     ->whereDate('fecha_hora', '>=', $fechaInicio)
                     ->whereDate('fecha_hora', '<=', $fechaFin);
             })
@@ -235,6 +256,7 @@ class ReporteController extends Controller
                 DB::raw('SUM(total) as ingresos_total')
             )
             ->with('servicio')
+            ->where('sucursal_id', $sucursal->id)
             ->whereDate('fecha_hora', '>=', $fechaInicio)
             ->whereDate('fecha_hora', '<=', $fechaFin)
             ->where('estado', 'completada')
@@ -255,8 +277,9 @@ class ReporteController extends Controller
                 'producto.laboratorio',
                 'productoPresentacion.presentacion',
             ])
-            ->whereHas('atencionServicio', function ($query) use ($fechaInicio, $fechaFin, $servicioId) {
-                $query->whereDate('fecha_hora', '>=', $fechaInicio)
+            ->whereHas('atencionServicio', function ($query) use ($sucursal, $fechaInicio, $fechaFin, $servicioId) {
+                $query->where('sucursal_id', $sucursal->id)
+                    ->whereDate('fecha_hora', '>=', $fechaInicio)
                     ->whereDate('fecha_hora', '<=', $fechaFin)
                     ->where('estado', 'completada')
                     ->when($servicioId, function ($q, $servicioId) {
@@ -286,6 +309,17 @@ class ReporteController extends Controller
 
     public function serviciosExportarCsv(Request $request)
     {
+        $user = auth()->user();
+
+        $sucursal = $user->sucursalPrincipal()->first()
+            ?? $user->sucursales()->wherePivot('estado', 'activo')->first();
+
+        if (!$sucursal) {
+            return redirect()
+                ->route('dashboard')
+                ->with('error', 'El usuario no tiene una sucursal asignada.');
+        }
+
         $fechaInicio = $request->get('fecha_inicio', now()->startOfMonth()->format('Y-m-d'));
         $fechaFin = $request->get('fecha_fin', now()->format('Y-m-d'));
         $estado = $request->get('estado');
@@ -298,6 +332,7 @@ class ReporteController extends Controller
                 'metodoPago',
                 'sucursal',
             ])
+            ->where('sucursal_id', $sucursal->id)
             ->whereDate('fecha_hora', '>=', $fechaInicio)
             ->whereDate('fecha_hora', '<=', $fechaFin)
             ->when($estado, function ($query, $estado) {
@@ -309,18 +344,24 @@ class ReporteController extends Controller
             ->latest('fecha_hora')
             ->get();
 
-        $nombreArchivo = 'reporte_servicios_' . $fechaInicio . '_al_' . $fechaFin . '.csv';
+        $nombreArchivo = 'reporte_servicios_' . $sucursal->id . '_' . $fechaInicio . '_al_' . $fechaFin . '.csv';
 
         $headers = [
             'Content-Type' => 'text/csv; charset=UTF-8',
             'Content-Disposition' => "attachment; filename=\"{$nombreArchivo}\"",
         ];
 
-        return response()->stream(function () use ($atenciones) {
+        return response()->stream(function () use ($atenciones, $sucursal, $fechaInicio, $fechaFin, $estado) {
             $archivo = fopen('php://output', 'w');
 
-            // BOM para que Excel abra acentos correctamente
             fprintf($archivo, chr(0xEF).chr(0xBB).chr(0xBF));
+
+            fputcsv($archivo, ['REPORTE DE SERVICIOS'], ';');
+            fputcsv($archivo, ['Sucursal', $sucursal->nombre], ';');
+            fputcsv($archivo, ['Desde', $fechaInicio], ';');
+            fputcsv($archivo, ['Hasta', $fechaFin], ';');
+            fputcsv($archivo, ['Estado', $estado ?: 'Todos'], ';');
+            fputcsv($archivo, [], ';');
 
             fputcsv($archivo, [
                 'N° atencion',
@@ -370,6 +411,17 @@ class ReporteController extends Controller
 
     public function serviciosInsumosExportarCsv(Request $request)
     {
+        $user = auth()->user();
+
+        $sucursal = $user->sucursalPrincipal()->first()
+            ?? $user->sucursales()->wherePivot('estado', 'activo')->first();
+
+        if (!$sucursal) {
+            return redirect()
+                ->route('dashboard')
+                ->with('error', 'El usuario no tiene una sucursal asignada.');
+        }
+
         $fechaInicio = $request->get('fecha_inicio', now()->startOfMonth()->format('Y-m-d'));
         $fechaFin = $request->get('fecha_fin', now()->format('Y-m-d'));
         $servicioId = $request->get('servicio_farmacia_id');
@@ -383,8 +435,9 @@ class ReporteController extends Controller
                 'productoPresentacion.presentacion',
                 'lote',
             ])
-            ->whereHas('atencionServicio', function ($query) use ($fechaInicio, $fechaFin, $servicioId) {
-                $query->whereDate('fecha_hora', '>=', $fechaInicio)
+            ->whereHas('atencionServicio', function ($query) use ($sucursal, $fechaInicio, $fechaFin, $servicioId) {
+                $query->where('sucursal_id', $sucursal->id)
+                    ->whereDate('fecha_hora', '>=', $fechaInicio)
                     ->whereDate('fecha_hora', '<=', $fechaFin)
                     ->where('estado', 'completada')
                     ->when($servicioId, function ($q, $servicioId) {
@@ -394,17 +447,23 @@ class ReporteController extends Controller
             ->latest('created_at')
             ->get();
 
-        $nombreArchivo = 'insumos_servicios_' . $fechaInicio . '_al_' . $fechaFin . '.csv';
+        $nombreArchivo = 'insumos_servicios_' . $sucursal->id . '_' . $fechaInicio . '_al_' . $fechaFin . '.csv';
 
         $headers = [
             'Content-Type' => 'text/csv; charset=UTF-8',
             'Content-Disposition' => "attachment; filename=\"{$nombreArchivo}\"",
         ];
 
-        return response()->stream(function () use ($insumos) {
+        return response()->stream(function () use ($insumos, $sucursal, $fechaInicio, $fechaFin) {
             $archivo = fopen('php://output', 'w');
 
             fprintf($archivo, chr(0xEF).chr(0xBB).chr(0xBF));
+
+            fputcsv($archivo, ['REPORTE DE INSUMOS USADOS EN SERVICIOS'], ';');
+            fputcsv($archivo, ['Sucursal', $sucursal->nombre], ';');
+            fputcsv($archivo, ['Desde', $fechaInicio], ';');
+            fputcsv($archivo, ['Hasta', $fechaFin], ';');
+            fputcsv($archivo, [], ';');
 
             fputcsv($archivo, [
                 'Atencion ID',
@@ -649,6 +708,29 @@ class ReporteController extends Controller
         }, 200, $headers);
     }
 
+    public function cajaDiariaExportarXlsx(Request $request)
+    {
+        $user = auth()->user();
+
+        $sucursal = $user->sucursalPrincipal()->first()
+            ?? $user->sucursales()->wherePivot('estado', 'activo')->first();
+
+        if (!$sucursal) {
+            return redirect()
+                ->route('dashboard')
+                ->with('error', 'El usuario no tiene una sucursal asignada.');
+        }
+
+        $fecha = $request->get('fecha', now()->format('Y-m-d'));
+
+        $nombreArchivo = 'reporte_caja_diaria_' . $sucursal->id . '_' . $fecha . '.xlsx';
+
+        return Excel::download(
+            new CajaDiariaReporteExport($sucursal, $fecha),
+            $nombreArchivo
+        );
+    }
+
     public function ingresosDiarios(Request $request)
     {
 
@@ -666,23 +748,27 @@ class ReporteController extends Controller
         $fechaInicio = $request->get('fecha_inicio', now()->startOfMonth()->format('Y-m-d'));
         $fechaFin = $request->get('fecha_fin', now()->format('Y-m-d'));
 
-        $ventasCompletadas = Venta::whereDate('fecha_hora', '>=', $fechaInicio)
-            ->whereDate('fecha_hora', '<=', $fechaFin)
-            ->where('estado', 'completada')
-            ->get();
-
-        $ventasAnuladas = Venta::whereDate('fecha_hora', '>=', $fechaInicio)
-            ->whereDate('fecha_hora', '<=', $fechaFin)
-            ->where('estado', 'anulada')
-            ->get();
-
-        $serviciosCompletados = AtencionServicio::with(['servicio', 'cliente', 'usuario', 'metodoPago'])
+        $ventasCompletadas = Venta::where('sucursal_id', $sucursal->id)
             ->whereDate('fecha_hora', '>=', $fechaInicio)
             ->whereDate('fecha_hora', '<=', $fechaFin)
             ->where('estado', 'completada')
             ->get();
 
-        $serviciosAnulados = AtencionServicio::whereDate('fecha_hora', '>=', $fechaInicio)
+        $ventasAnuladas = Venta::where('sucursal_id', $sucursal->id)
+            ->whereDate('fecha_hora', '>=', $fechaInicio)
+            ->whereDate('fecha_hora', '<=', $fechaFin)
+            ->where('estado', 'anulada')
+            ->get();
+
+        $serviciosCompletados = AtencionServicio::with(['servicio', 'cliente', 'usuario', 'metodoPago'])
+            ->where('sucursal_id', $sucursal->id)
+            ->whereDate('fecha_hora', '>=', $fechaInicio)
+            ->whereDate('fecha_hora', '<=', $fechaFin)
+            ->where('estado', 'completada')
+            ->get();
+
+        $serviciosAnulados = AtencionServicio::where('sucursal_id', $sucursal->id)
+            ->whereDate('fecha_hora', '>=', $fechaInicio)
             ->whereDate('fecha_hora', '<=', $fechaFin)
             ->where('estado', 'anulada')
             ->get();
@@ -708,6 +794,7 @@ class ReporteController extends Controller
                 'usuario',
                 'metodoPago',
             ])
+            ->where('sucursal_id', $sucursal->id)
             ->whereDate('fecha_hora', '>=', $fechaInicio)
             ->whereDate('fecha_hora', '<=', $fechaFin)
             ->latest('fecha_hora')
@@ -898,6 +985,7 @@ class ReporteController extends Controller
             ])
             ->whereHas('venta', function ($query) use ($sucursal, $fechaInicio, $fechaFin) {
                 $query->where('sucursal_id', $sucursal->id)
+                    ->where('estado', 'completada')
                     ->whereDate('fecha_hora', '>=', $fechaInicio)
                     ->whereDate('fecha_hora', '<=', $fechaFin);
             })
@@ -913,6 +1001,7 @@ class ReporteController extends Controller
             ])
             ->whereHas('detalleVentaPromocion.venta', function ($query) use ($sucursal, $fechaInicio, $fechaFin) {
                 $query->where('sucursal_id', $sucursal->id)
+                    ->where('estado', 'completada')
                     ->whereDate('fecha_hora', '>=', $fechaInicio)
                     ->whereDate('fecha_hora', '<=', $fechaFin);
             })
@@ -939,7 +1028,7 @@ class ReporteController extends Controller
             fputcsv($archivo, ['RESUMEN GENERAL'], ';');
             fputcsv($archivo, ['Concepto', 'Valor'], ';');
             fputcsv($archivo, ['Promociones vendidas', $promocionesVendidas->sum('cantidad')], ';');
-            fputcsv($archivo, ['Total generado', number_format($promocionesVendidas->sum('total'), 2, '.', '')], ';');
+            fputcsv($archivo, ['Total generado', number_format($promocionesVendidas->sum('subtotal'), 2, '.', '')], ';');
             fputcsv($archivo, ['Productos descontados', $productosDescontados->sum('unidades_descontadas')], ';');
             fputcsv($archivo, [], ';');
 
@@ -953,8 +1042,6 @@ class ReporteController extends Controller
                 'Cantidad',
                 'Precio unitario',
                 'Subtotal',
-                'Descuento',
-                'Total',
                 'Estado venta',
             ], ';');
 
@@ -968,8 +1055,6 @@ class ReporteController extends Controller
                     $detalle->cantidad,
                     number_format($detalle->precio_unitario, 2, '.', ''),
                     number_format($detalle->subtotal, 2, '.', ''),
-                    number_format($detalle->descuento, 2, '.', ''),
-                    number_format($detalle->total, 2, '.', ''),
                     $detalle->venta->estado ?? '-',
                 ], ';');
             }
@@ -1225,6 +1310,32 @@ class ReporteController extends Controller
 
             fclose($archivo);
         }, 200, $headers);
+    }
+
+    public function ventasExportarXlsx(Request $request)
+    {
+        $user = auth()->user();
+
+        $sucursal = $user->sucursalPrincipal()->first()
+            ?? $user->sucursales()->wherePivot('estado', 'activo')->first();
+
+        if (!$sucursal) {
+            return redirect()
+                ->route('dashboard')
+                ->with('error', 'El usuario no tiene una sucursal asignada.');
+        }
+
+        $fechaInicio = $request->get('fecha_inicio', now()->startOfMonth()->format('Y-m-d'));
+        $fechaFin = $request->get('fecha_fin', now()->format('Y-m-d'));
+        $estado = $request->get('estado');
+        $buscar = $request->get('buscar');
+
+        $nombreArchivo = 'reporte_ventas_' . $sucursal->id . '_' . $fechaInicio . '_al_' . $fechaFin . '.xlsx';
+
+        return Excel::download(
+            new VentasReporteExport($sucursal, $fechaInicio, $fechaFin, $estado, $buscar),
+            $nombreArchivo
+        );
     }
 
     public function compras(Request $request)
@@ -3766,4 +3877,378 @@ class ReporteController extends Controller
             fclose($archivo);
         }, 200, $headers);
     }
+    public function comprasExportarXlsx(Request $request)
+    {
+        $user = auth()->user();
+
+        $sucursal = $user->sucursalPrincipal()->first()
+            ?? $user->sucursales()->wherePivot('estado', 'activo')->first();
+
+        if (!$sucursal) {
+            return redirect()
+                ->route('dashboard')
+                ->with('error', 'El usuario no tiene una sucursal asignada.');
+        }
+
+        $fechaInicio = $request->get('fecha_inicio', now()->startOfMonth()->format('Y-m-d'));
+        $fechaFin = $request->get('fecha_fin', now()->format('Y-m-d'));
+        $estado = $request->get('estado');
+
+        $nombreArchivo = 'reporte_compras_' . $sucursal->id . '_' . $fechaInicio . '_al_' . $fechaFin . '.xlsx';
+
+        return Excel::download(
+            new ComprasReporteExport($sucursal, $fechaInicio, $fechaFin, $estado),
+            $nombreArchivo
+        );
+    }
+
+    public function deudasProveedoresExportarXlsx(Request $request)
+    {
+        $user = auth()->user();
+
+        $sucursal = $user->sucursalPrincipal()->first()
+            ?? $user->sucursales()->wherePivot('estado', 'activo')->first();
+
+        if (!$sucursal) {
+            return redirect()
+                ->route('dashboard')
+                ->with('error', 'El usuario no tiene una sucursal asignada.');
+        }
+
+        $fechaInicio = $request->get('fecha_inicio', now()->startOfMonth()->format('Y-m-d'));
+        $fechaFin = $request->get('fecha_fin', now()->format('Y-m-d'));
+        $buscar = $request->get('buscar');
+
+        $nombreArchivo = 'deudas_proveedores_' . $sucursal->id . '_' . $fechaInicio . '_al_' . $fechaFin . '.xlsx';
+
+        return Excel::download(
+            new DeudasProveedoresReporteExport($sucursal, $fechaInicio, $fechaFin, $buscar),
+            $nombreArchivo
+        );
+    }
+
+    public function serviciosExportarXlsx(Request $request)
+    {
+        $user = auth()->user();
+
+        $sucursal = $user->sucursalPrincipal()->first()
+            ?? $user->sucursales()->wherePivot('estado', 'activo')->first();
+
+        if (!$sucursal) {
+            return redirect()
+                ->route('dashboard')
+                ->with('error', 'El usuario no tiene una sucursal asignada.');
+        }
+
+        $fechaInicio = $request->get('fecha_inicio', now()->startOfMonth()->format('Y-m-d'));
+        $fechaFin = $request->get('fecha_fin', now()->format('Y-m-d'));
+        $estado = $request->get('estado');
+        $servicioId = $request->get('servicio_farmacia_id');
+
+        $nombreArchivo = 'reporte_servicios_' . $sucursal->id . '_' . $fechaInicio . '_al_' . $fechaFin . '.xlsx';
+
+        return Excel::download(
+            new ServiciosReporteExport($sucursal, $fechaInicio, $fechaFin, $estado, $servicioId),
+            $nombreArchivo
+        );
+    }
+
+    public function serviciosInsumosExportarXlsx(Request $request)
+    {
+        $user = auth()->user();
+
+        $sucursal = $user->sucursalPrincipal()->first()
+            ?? $user->sucursales()->wherePivot('estado', 'activo')->first();
+
+        if (!$sucursal) {
+            return redirect()
+                ->route('dashboard')
+                ->with('error', 'El usuario no tiene una sucursal asignada.');
+        }
+
+        $fechaInicio = $request->get('fecha_inicio', now()->startOfMonth()->format('Y-m-d'));
+        $fechaFin = $request->get('fecha_fin', now()->format('Y-m-d'));
+        $servicioId = $request->get('servicio_farmacia_id');
+
+        $nombreArchivo = 'insumos_servicios_' . $sucursal->id . '_' . $fechaInicio . '_al_' . $fechaFin . '.xlsx';
+
+        return Excel::download(
+            new ServiciosInsumosReporteExport($sucursal, $fechaInicio, $fechaFin, $servicioId),
+            $nombreArchivo
+        );
+    }
+
+    public function promocionesExportarXlsx(Request $request)
+    {
+        $user = auth()->user();
+
+        $sucursal = $user->sucursalPrincipal()->first()
+            ?? $user->sucursales()->wherePivot('estado', 'activo')->first();
+
+        if (!$sucursal) {
+            return redirect()
+                ->route('dashboard')
+                ->with('error', 'El usuario no tiene una sucursal asignada.');
+        }
+
+        $fechaInicio = $request->get('fecha_inicio', now()->startOfMonth()->format('Y-m-d'));
+        $fechaFin = $request->get('fecha_fin', now()->format('Y-m-d'));
+
+        $nombreArchivo = 'promociones_vendidas_' . $sucursal->id . '_' . $fechaInicio . '_al_' . $fechaFin . '.xlsx';
+
+        return Excel::download(
+            new PromocionesReporteExport($sucursal, $fechaInicio, $fechaFin),
+            $nombreArchivo
+        );
+    }
+
+    public function ingresosDiariosExportarXlsx(Request $request)
+    {
+        $user = auth()->user();
+
+        $sucursal = $user->sucursalPrincipal()->first()
+            ?? $user->sucursales()->wherePivot('estado', 'activo')->first();
+
+        if (!$sucursal) {
+            return redirect()
+                ->route('dashboard')
+                ->with('error', 'El usuario no tiene una sucursal asignada.');
+        }
+
+        $fechaInicio = $request->get('fecha_inicio', now()->startOfMonth()->format('Y-m-d'));
+        $fechaFin = $request->get('fecha_fin', now()->format('Y-m-d'));
+
+        $nombreArchivo = 'ingresos_diarios_' . $sucursal->id . '_' . $fechaInicio . '_al_' . $fechaFin . '.xlsx';
+
+        return Excel::download(
+            new IngresosDiariosReporteExport($sucursal, $fechaInicio, $fechaFin),
+            $nombreArchivo
+        );
+    }
+
+    public function metodosPagoExportarXlsx(Request $request)
+    {
+        $user = auth()->user();
+
+        $sucursal = $user->sucursalPrincipal()->first()
+            ?? $user->sucursales()->wherePivot('estado', 'activo')->first();
+
+        if (!$sucursal) {
+            return redirect()
+                ->route('dashboard')
+                ->with('error', 'El usuario no tiene una sucursal asignada.');
+        }
+
+        $fechaInicio = $request->get('fecha_inicio', now()->startOfMonth()->format('Y-m-d'));
+        $fechaFin = $request->get('fecha_fin', now()->format('Y-m-d'));
+        $metodoPagoId = $request->get('metodo_pago_id');
+
+        $nombreArchivo = 'metodos_pago_' . $sucursal->id . '_' . $fechaInicio . '_al_' . $fechaFin . '.xlsx';
+
+        return Excel::download(
+            new MetodosPagoReporteExport($sucursal, $fechaInicio, $fechaFin, $metodoPagoId),
+            $nombreArchivo
+        );
+    }
+
+    public function movimientosInventarioExportarXlsx(Request $request)
+    {
+        $user = auth()->user();
+
+        $sucursal = $user->sucursalPrincipal()->first()
+            ?? $user->sucursales()->wherePivot('estado', 'activo')->first();
+
+        if (!$sucursal) {
+            return redirect()
+                ->route('dashboard')
+                ->with('error', 'El usuario no tiene una sucursal asignada.');
+        }
+
+        $fechaInicio = $request->get('fecha_inicio', now()->startOfMonth()->format('Y-m-d'));
+        $fechaFin = $request->get('fecha_fin', now()->format('Y-m-d'));
+        $tipo = $request->get('tipo');
+        $buscar = $request->get('buscar');
+
+        $nombreArchivo = 'movimientos_inventario_' . $sucursal->id . '_' . $fechaInicio . '_al_' . $fechaFin . '.xlsx';
+
+        return Excel::download(
+            new MovimientosInventarioReporteExport($sucursal, $fechaInicio, $fechaFin, $tipo, $buscar),
+            $nombreArchivo
+        );
+    }
+
+    public function bajasInventarioExportarXlsx(Request $request)
+    {
+        $user = auth()->user();
+
+        $sucursal = $user->sucursalPrincipal()->first()
+            ?? $user->sucursales()->wherePivot('estado', 'activo')->first();
+
+        if (!$sucursal) {
+            return redirect()
+                ->route('dashboard')
+                ->with('error', 'El usuario no tiene una sucursal asignada.');
+        }
+
+        $fechaInicio = $request->get('fecha_inicio', now()->startOfMonth()->format('Y-m-d'));
+        $fechaFin = $request->get('fecha_fin', now()->format('Y-m-d'));
+        $motivo = $request->get('motivo');
+        $estado = $request->get('estado');
+        $buscar = $request->get('buscar');
+
+        $nombreArchivo = 'bajas_inventario_' . $sucursal->id . '_' . $fechaInicio . '_al_' . $fechaFin . '.xlsx';
+
+        return Excel::download(
+            new BajasInventarioReporteExport($sucursal, $fechaInicio, $fechaFin, $motivo, $estado, $buscar),
+            $nombreArchivo
+        );
+    }
+
+    public function inventarioCriticoExportarXlsx(Request $request)
+    {
+        $user = auth()->user();
+
+        $sucursal = $user->sucursalPrincipal()->first()
+            ?? $user->sucursales()->wherePivot('estado', 'activo')->first();
+
+        if (!$sucursal) {
+            return redirect()
+                ->route('dashboard')
+                ->with('error', 'El usuario no tiene una sucursal asignada.');
+        }
+
+        $buscar = $request->get('buscar');
+        $tipo = $request->get('tipo');
+
+        $nombreArchivo = 'inventario_critico_' . $sucursal->id . '_' . now()->format('Y-m-d') . '.xlsx';
+
+        return Excel::download(
+            new InventarioCriticoReporteExport($sucursal, $buscar, $tipo),
+            $nombreArchivo
+        );
+    }
+
+    public function productosVendidosExportarXlsx(Request $request)
+    {
+        $user = auth()->user();
+
+        $sucursal = $user->sucursalPrincipal()->first()
+            ?? $user->sucursales()->wherePivot('estado', 'activo')->first();
+
+        if (!$sucursal) {
+            return redirect()
+                ->route('dashboard')
+                ->with('error', 'El usuario no tiene una sucursal asignada.');
+        }
+
+        $fechaInicio = $request->get('fecha_inicio', now()->startOfMonth()->format('Y-m-d'));
+        $fechaFin = $request->get('fecha_fin', now()->format('Y-m-d'));
+        $buscar = $request->get('buscar');
+
+        $nombreArchivo = 'productos_vendidos_' . $sucursal->id . '_' . $fechaInicio . '_al_' . $fechaFin . '.xlsx';
+
+        return Excel::download(
+            new ProductosVendidosReporteExport($sucursal, $fechaInicio, $fechaFin, $buscar),
+            $nombreArchivo
+        );
+    }
+
+    public function clientesFrecuentesExportarXlsx(Request $request)
+    {
+        $user = auth()->user();
+
+        $sucursal = $user->sucursalPrincipal()->first()
+            ?? $user->sucursales()->wherePivot('estado', 'activo')->first();
+
+        if (!$sucursal) {
+            return redirect()
+                ->route('dashboard')
+                ->with('error', 'El usuario no tiene una sucursal asignada.');
+        }
+
+        $fechaInicio = $request->get('fecha_inicio', now()->startOfMonth()->format('Y-m-d'));
+        $fechaFin = $request->get('fecha_fin', now()->format('Y-m-d'));
+        $buscar = $request->get('buscar');
+
+        $nombreArchivo = 'clientes_frecuentes_' . $sucursal->id . '_' . $fechaInicio . '_al_' . $fechaFin . '.xlsx';
+
+        return Excel::download(
+            new ClientesFrecuentesReporteExport($sucursal, $fechaInicio, $fechaFin, $buscar),
+            $nombreArchivo
+        );
+    }
+
+    public function productosReponerExportarXlsx(Request $request)
+    {
+        $user = auth()->user();
+
+        $sucursal = $user->sucursalPrincipal()->first()
+            ?? $user->sucursales()->wherePivot('estado', 'activo')->first();
+
+        if (!$sucursal) {
+            return redirect()
+                ->route('dashboard')
+                ->with('error', 'El usuario no tiene una sucursal asignada.');
+        }
+
+        $dias = (int) $request->get('dias', 30);
+        $buscar = $request->get('buscar');
+
+        $nombreArchivo = 'productos_reponer_' . $sucursal->id . '_' . now()->format('Y-m-d') . '.xlsx';
+
+        return Excel::download(
+            new ProductosReponerReporteExport($sucursal, $dias, $buscar),
+            $nombreArchivo
+        );
+    }
+
+    public function utilidadEstimadaExportarXlsx(Request $request)
+    {
+        $user = auth()->user();
+
+        $sucursal = $user->sucursalPrincipal()->first()
+            ?? $user->sucursales()->wherePivot('estado', 'activo')->first();
+
+        if (!$sucursal) {
+            return redirect()
+                ->route('dashboard')
+                ->with('error', 'El usuario no tiene una sucursal asignada.');
+        }
+
+        $fechaInicio = $request->get('fecha_inicio', now()->startOfMonth()->format('Y-m-d'));
+        $fechaFin = $request->get('fecha_fin', now()->format('Y-m-d'));
+        $buscar = $request->get('buscar');
+
+        $nombreArchivo = 'utilidad_estimada_' . $sucursal->id . '_' . $fechaInicio . '_al_' . $fechaFin . '.xlsx';
+
+        return Excel::download(
+            new UtilidadEstimadaReporteExport($sucursal, $fechaInicio, $fechaFin, $buscar),
+            $nombreArchivo
+        );
+    }
+
+    public function resumenAdministrativoExportarXlsx(Request $request)
+    {
+        $user = auth()->user();
+
+        $sucursal = $user->sucursalPrincipal()->first()
+            ?? $user->sucursales()->wherePivot('estado', 'activo')->first();
+
+        if (!$sucursal) {
+            return redirect()
+                ->route('dashboard')
+                ->with('error', 'El usuario no tiene una sucursal asignada.');
+        }
+
+        $fechaInicio = $request->get('fecha_inicio', now()->startOfMonth()->format('Y-m-d'));
+        $fechaFin = $request->get('fecha_fin', now()->format('Y-m-d'));
+
+        $nombreArchivo = 'resumen_administrativo_' . $sucursal->id . '_' . $fechaInicio . '_al_' . $fechaFin . '.xlsx';
+
+        return Excel::download(
+            new ResumenAdministrativoReporteExport($sucursal, $fechaInicio, $fechaFin),
+            $nombreArchivo
+        );
+    }
+
 }

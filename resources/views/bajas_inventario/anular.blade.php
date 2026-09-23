@@ -6,69 +6,205 @@
 
 @section('content')
 
-<div class="card">
-
-    <h2 style="margin-top: 0; color: #991B1B;">Anular baja de inventario</h2>
-
-    <p style="color: #6B7280;">
-        Esta acción devolverá al inventario la cantidad retirada en esta baja.
-    </p>
-
-    <div class="card" style="background: #FAFAFA; margin-bottom: 22px;">
-        <p>
-            <strong>Producto:</strong>
-            {{ $bajaInventario->producto->nombre_comercial ?? '-' }}
-            <br>
-
-            <strong>Lote:</strong>
-            {{ $bajaInventario->lote->numero_lote ?? 'Sin lote' }}
-            <br>
-
-            <strong>Cantidad retirada:</strong>
-            {{ $bajaInventario->cantidad }}
-            <br>
-
-            <strong>Motivo original:</strong>
-            {{ $bajaInventario->motivo }}
-        </p>
+@if ($errors->any())
+    <div class="alert-danger">
+        <strong>Revise los siguientes errores:</strong>
+        <ul style="margin-bottom: 0;">
+            @foreach ($errors->all() as $error)
+                <li>{{ $error }}</li>
+            @endforeach
+        </ul>
     </div>
+@endif
 
-    @if ($errors->any())
-        <div class="alert-danger">
-            <strong>Revise los siguientes errores:</strong>
-            <ul style="margin-bottom: 0;">
-                @foreach ($errors->all() as $error)
-                    <li>{{ $error }}</li>
-                @endforeach
-            </ul>
+<div class="cancel-stock-layout">
+
+    <section class="cancel-stock-main">
+
+        <div class="compact-card">
+            <div class="compact-header">
+                <div>
+                    <h2>
+                        <i class="bi bi-x-octagon"></i>
+                        Anular baja #{{ $bajaInventario->numero_baja ?? 'BAJ-' . str_pad($bajaInventario->id, 6, '0', STR_PAD_LEFT) }}
+                    </h2>
+
+                    <p>
+                        Esta acción devolverá al inventario la cantidad retirada en esta baja.
+                    </p>
+                </div>
+
+                <a href="{{ route('bajas-inventario.show', $bajaInventario) }}" class="btn-secondary">
+                    <i class="bi bi-arrow-left"></i>
+                    Volver
+                </a>
+            </div>
+
+            <div class="detail-stat-grid">
+                <div class="detail-stat-card detail-stat-main">
+                    <span>Cantidad a devolver</span>
+                    <strong>{{ $bajaInventario->cantidad }}</strong>
+                </div>
+
+                <div class="detail-stat-card">
+                    <span>Stock actual</span>
+                    <strong>{{ $bajaInventario->stock_nuevo }}</strong>
+                </div>
+
+                <div class="detail-stat-card">
+                    <span>Stock después de anular</span>
+                    <strong>{{ $bajaInventario->stock_anterior }}</strong>
+                </div>
+
+                <div class="detail-stat-card">
+                    <span>Motivo original</span>
+                    <strong>
+                        @if ($bajaInventario->motivo === 'vencimiento')
+                            Vencimiento
+                        @elseif ($bajaInventario->motivo === 'danado')
+                            Dañado
+                        @elseif ($bajaInventario->motivo === 'perdido')
+                            Perdido
+                        @elseif ($bajaInventario->motivo === 'ajuste_autorizado')
+                            Ajuste autorizado
+                        @else
+                            Otro
+                        @endif
+                    </strong>
+                </div>
+            </div>
         </div>
-    @endif
 
-    <form method="POST" action="{{ route('bajas-inventario.anular.store', $bajaInventario) }}" id="form_anular_baja">
-        @csrf
+        <div class="detail-section-card">
+            <div class="detail-section-head">
+                <h3>
+                    <i class="bi bi-capsule"></i>
+                    Producto afectado
+                </h3>
+            </div>
 
-        <div class="form-group">
-            <label>Motivo de anulación *</label>
-            <textarea
-                name="motivo_anulacion"
-                rows="4"
-                required
-                placeholder="Explique por qué se anula esta baja"
-            >{{ old('motivo_anulacion') }}</textarea>
+            <div class="detail-info-grid">
+                <div class="detail-info-item detail-info-full">
+                    <span>Producto</span>
+                    <strong>{{ $bajaInventario->producto->nombre_comercial ?? '-' }}</strong>
+                </div>
+
+                <div class="detail-info-item">
+                    <span>Nombre genérico</span>
+                    <strong>{{ $bajaInventario->producto->nombre_generico ?? '-' }}</strong>
+                </div>
+
+                <div class="detail-info-item">
+                    <span>Concentración</span>
+                    <strong>{{ $bajaInventario->producto->concentracion ?? '-' }}</strong>
+                </div>
+
+                <div class="detail-info-item">
+                    <span>Laboratorio</span>
+                    <strong>{{ $bajaInventario->producto->laboratorio->nombre ?? '-' }}</strong>
+                </div>
+
+                <div class="detail-info-item">
+                    <span>Lote</span>
+                    <strong>{{ $bajaInventario->lote->numero_lote ?? 'Sin lote' }}</strong>
+                </div>
+
+                <div class="detail-info-item">
+                    <span>Vencimiento</span>
+                    <strong>
+                        {{ $bajaInventario->lote?->fecha_vencimiento?->format('d/m/Y') ?? '-' }}
+                    </strong>
+                </div>
+
+                <div class="detail-info-item">
+                    <span>Sucursal</span>
+                    <strong>{{ $bajaInventario->sucursal->nombre ?? '-' }}</strong>
+                </div>
+
+                <div class="detail-info-item">
+                    <span>Registrado por</span>
+                    <strong>{{ $bajaInventario->usuario->nombre ?? '-' }}</strong>
+                </div>
+
+                <div class="detail-info-item detail-info-full">
+                    <span>Observación original</span>
+                    <strong>{{ $bajaInventario->observacion ?? '-' }}</strong>
+                </div>
+            </div>
         </div>
 
-        <div style="display: flex; gap: 12px; flex-wrap: wrap; margin-top: 16px;">
-            <button type="submit" class="btn-danger">
-                Confirmar anulación
-            </button>
+    </section>
 
-            <a href="{{ route('bajas-inventario.show', $bajaInventario) }}" class="btn-secondary">
-                Cancelar
-            </a>
+    <aside class="cancel-stock-side">
+
+        <div class="cancel-warning-card">
+            <div class="cancel-warning-icon">
+                <i class="bi bi-exclamation-triangle"></i>
+            </div>
+
+            <div>
+                <h3>Acción delicada</h3>
+                <p>
+                    Al confirmar, el stock retirado será devuelto al inventario y se registrará el movimiento de reversión.
+                </p>
+            </div>
         </div>
-    </form>
+
+        <div class="cancel-form-card">
+            <div class="detail-section-head">
+                <h3>
+                    <i class="bi bi-pencil-square"></i>
+                    Confirmar anulación
+                </h3>
+            </div>
+
+            <form method="POST" action="{{ route('bajas-inventario.anular.store', $bajaInventario) }}" id="form_anular_baja">
+                @csrf
+
+                <div class="form-group">
+                    <label>Motivo de anulación *</label>
+                    <textarea
+                        name="motivo_anulacion"
+                        rows="7"
+                        required
+                        placeholder="Explique por qué se anula esta baja"
+                    >{{ old('motivo_anulacion') }}</textarea>
+
+                    <small class="cancel-help-text">
+                        Debe registrar un motivo claro para auditoría.
+                    </small>
+                </div>
+
+                <div class="cancel-final-summary">
+                    <div>
+                        <span>Stock a devolver</span>
+                        <strong>{{ $bajaInventario->cantidad }}</strong>
+                    </div>
+
+                    <div>
+                        <span>Stock final</span>
+                        <strong>{{ $bajaInventario->stock_anterior }}</strong>
+                    </div>
+                </div>
+
+                <div class="cancel-stock-actions">
+                    <a href="{{ route('bajas-inventario.show', $bajaInventario) }}" class="btn-secondary">
+                        <i class="bi bi-arrow-left"></i>
+                        Cancelar
+                    </a>
+
+                    <button type="submit" class="btn-danger">
+                        <i class="bi bi-x-octagon"></i>
+                        Confirmar
+                    </button>
+                </div>
+            </form>
+        </div>
+
+    </aside>
 
 </div>
+
 <script>
 document.getElementById('form_anular_baja').addEventListener('submit', function (event) {
     event.preventDefault();
@@ -102,4 +238,5 @@ document.getElementById('form_anular_baja').addEventListener('submit', function 
     });
 });
 </script>
+
 @endsection

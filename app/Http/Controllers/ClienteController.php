@@ -130,4 +130,35 @@ class ClienteController extends Controller
             ->route('clientes.index')
             ->with('success', 'Cliente desactivado correctamente.');
     }
+
+    public function clienteRapido(Request $request)
+    {
+        $datos = $request->validate([
+            'nombre' => ['required', 'string', 'max:150'],
+            'ci_nit' => ['nullable', 'string', 'max:50', 'unique:clientes,ci_nit'],
+            'telefono' => ['nullable', 'string', 'max:50'],
+            'descuento_default' => ['nullable', 'numeric', 'min:0', 'max:100'],
+        ], [
+            'nombre.required' => 'Ingrese el nombre del cliente.',
+            'ci_nit.unique' => 'Ya existe un cliente con ese CI/NIT.',
+        ]);
+
+        $cliente = Cliente::create([
+            'nombre' => $datos['nombre'],
+            'ci_nit' => $datos['ci_nit'] ?? null,
+            'telefono' => $datos['telefono'] ?? null,
+            'descuento_default' => $datos['descuento_default'] ?? 0,
+            'estado' => 'activo',
+        ]);
+
+        return response()->json([
+            'cliente' => [
+                'id' => $cliente->id,
+                'nombre' => $cliente->nombre,
+                'ci_nit' => $cliente->ci_nit,
+                'descuento_default' => $cliente->descuento_default,
+                'texto' => $cliente->nombre . ($cliente->ci_nit ? ' - CI/NIT: ' . $cliente->ci_nit : ''),
+            ],
+        ]);
+    }
 }

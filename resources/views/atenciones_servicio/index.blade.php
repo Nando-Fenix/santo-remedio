@@ -151,14 +151,14 @@
                                     <i class="bi bi-eye"></i>
                                 </a>
 
-                                <a
-                                    href="{{ route('atenciones-servicio.recibo', $atencion) }}"
+                                <button
+                                    type="button"
                                     class="icon-action icon-action-print"
+                                    onclick="abrirModalImpresion('{{ route('atenciones-servicio.recibo', $atencion) }}')"
                                     title="Imprimir recibo"
-                                    target="_blank"
                                 >
                                     <i class="bi bi-printer"></i>
-                                </a>
+                                </button>
 
                                 @if (
                                     $atencion->estado === 'completada'

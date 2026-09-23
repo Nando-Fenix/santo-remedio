@@ -1,0 +1,70 @@
+// Rutas Excel .xlsx diseñadas para reportes
+// Colocar junto a las rutas actuales de reportes, dentro del grupo auth.
+
+Route::get('/reportes/ventas/exportar-xlsx', [ReporteController::class, 'ventasExportarXlsx'])
+    ->middleware('permiso:ver_reportes')
+    ->name('reportes.ventas.exportar-xlsx');
+
+Route::get('/reportes/caja-diaria/exportar-xlsx', [ReporteController::class, 'cajaDiariaExportarXlsx'])
+    ->middleware('permiso:ver_reportes')
+    ->name('reportes.caja-diaria.exportar-xlsx');
+
+Route::get('/reportes/compras/exportar-xlsx', [ReporteController::class, 'comprasExportarXlsx'])
+    ->middleware('permiso:ver_reportes')
+    ->name('reportes.compras.exportar-xlsx');
+
+Route::get('/reportes/deudas-proveedores/exportar-xlsx', [ReporteController::class, 'deudasProveedoresExportarXlsx'])
+    ->middleware('permiso:ver_reportes')
+    ->name('reportes.deudas-proveedores.exportar-xlsx');
+
+Route::get('/reportes/servicios/exportar-xlsx', [ReporteController::class, 'serviciosExportarXlsx'])
+    ->middleware('permiso:ver_reportes')
+    ->name('reportes.servicios.exportar-xlsx');
+
+Route::get('/reportes/servicios/insumos/exportar-xlsx', [ReporteController::class, 'serviciosInsumosExportarXlsx'])
+    ->middleware('permiso:ver_reportes')
+    ->name('reportes.servicios.exportar-insumos-xlsx');
+
+Route::get('/reportes/promociones/exportar-xlsx', [ReporteController::class, 'promocionesExportarXlsx'])
+    ->middleware('permiso:ver_reportes')
+    ->name('reportes.promociones.exportar-xlsx');
+
+Route::get('/reportes/ingresos-diarios/exportar-xlsx', [ReporteController::class, 'ingresosDiariosExportarXlsx'])
+    ->middleware('permiso:ver_reportes')
+    ->name('reportes.ingresos-diarios.exportar-xlsx');
+
+Route::get('/reportes/metodos-pago/exportar-xlsx', [ReporteController::class, 'metodosPagoExportarXlsx'])
+    ->middleware('permiso:ver_reportes')
+    ->name('reportes.metodos-pago.exportar-xlsx');
+
+Route::get('/reportes/movimientos-inventario/exportar-xlsx', [ReporteController::class, 'movimientosInventarioExportarXlsx'])
+    ->middleware('permiso:ver_reportes')
+    ->name('reportes.movimientos-inventario.exportar-xlsx');
+
+Route::get('/reportes/bajas-inventario/exportar-xlsx', [ReporteController::class, 'bajasInventarioExportarXlsx'])
+    ->middleware('permiso:ver_reportes')
+    ->name('reportes.bajas-inventario.exportar-xlsx');
+
+Route::get('/reportes/inventario-critico/exportar-xlsx', [ReporteController::class, 'inventarioCriticoExportarXlsx'])
+    ->middleware('permiso:ver_reportes')
+    ->name('reportes.inventario-critico.exportar-xlsx');
+
+Route::get('/reportes/productos-vendidos/exportar-xlsx', [ReporteController::class, 'productosVendidosExportarXlsx'])
+    ->middleware('permiso:ver_reportes')
+    ->name('reportes.productos-vendidos.exportar-xlsx');
+
+Route::get('/reportes/clientes-frecuentes/exportar-xlsx', [ReporteController::class, 'clientesFrecuentesExportarXlsx'])
+    ->middleware('permiso:ver_reportes')
+    ->name('reportes.clientes-frecuentes.exportar-xlsx');
+
+Route::get('/reportes/productos-reponer/exportar-xlsx', [ReporteController::class, 'productosReponerExportarXlsx'])
+    ->middleware('permiso:ver_reportes')
+    ->name('reportes.productos-reponer.exportar-xlsx');
+
+Route::get('/reportes/utilidad-estimada/exportar-xlsx', [ReporteController::class, 'utilidadEstimadaExportarXlsx'])
+    ->middleware('permiso:ver_reportes')
+    ->name('reportes.utilidad-estimada.exportar-xlsx');
+
+Route::get('/reportes/resumen-administrativo/exportar-xlsx', [ReporteController::class, 'resumenAdministrativoExportarXlsx'])
+    ->middleware('permiso:ver_reportes')
+    ->name('reportes.resumen-administrativo.exportar-xlsx');

@@ -18,4 +18,9 @@ class Configuracion extends Model
         'mensaje_recibo',
         'logo',
     ];
+
+    protected $casts = [
+        'created_at' => 'datetime',
+        'updated_at' => 'datetime',
+    ];
 }

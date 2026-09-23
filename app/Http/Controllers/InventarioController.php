@@ -6,6 +6,7 @@ use App\Models\Inventario;
 use App\Models\Lote;
 use App\Models\MovimientoInventario;
 use App\Models\Producto;
+use App\Models\Categoria;
 use App\Models\Sucursal;
 use Illuminate\Http\Request;
 use Carbon\Carbon;
@@ -24,7 +25,11 @@ class InventarioController extends Controller
 
     public function index(Request $request)
     {
-        $buscar = $request->get('buscar');
+        $buscar = trim((string) $request->get('buscar'));
+        $categoriaId = $request->get('categoria_id');
+        $estadoStock = $request->get('estado_stock');
+        $estadoVencimiento = $request->get('estado_vencimiento');
+
         $sucursal = $this->obtenerSucursalActual();
 
         if (!$sucursal) {
@@ -33,23 +38,82 @@ class InventarioController extends Controller
                 ->with('error', 'El usuario no tiene una sucursal asignada.');
         }
 
-        $inventarios = Inventario::with(['producto', 'sucursal', 'lote'])
+        $inventarios = Inventario::with(['producto.categoria', 'sucursal', 'lote'])
             ->where('sucursal_id', $sucursal->id)
-            ->when($buscar, function ($query, $buscar) {
+            ->when($buscar, function ($query) use ($buscar) {
                 $query->whereHas('producto', function ($q) use ($buscar) {
                     $q->where('nombre_comercial', 'like', "%{$buscar}%")
                         ->orWhere('nombre_generico', 'like', "%{$buscar}%")
                         ->orWhere('concentracion', 'like', "%{$buscar}%");
                 });
             })
+            ->when($categoriaId, function ($query) use ($categoriaId) {
+                $query->whereHas('producto', function ($q) use ($categoriaId) {
+                    $q->where('categoria_id', $categoriaId);
+                });
+            })
+            ->when($estadoStock === 'disponible', function ($query) {
+                $query->whereColumn('stock_actual', '>', 'stock_minimo');
+            })
+            ->when($estadoStock === 'bajo', function ($query) {
+                $query->where('stock_actual', '>', 0)
+                    ->whereColumn('stock_actual', '<=', 'stock_minimo');
+            })
+            ->when($estadoStock === 'agotado', function ($query) {
+                $query->where('stock_actual', '<=', 0);
+            })
+            ->when($estadoVencimiento === 'vigente', function ($query) {
+                $query->whereHas('lote', function ($q) {
+                    $q->whereNotNull('fecha_vencimiento')
+                        ->whereDate('fecha_vencimiento', '>', now()->addDays(30)->toDateString());
+                });
+            })
+            ->when($estadoVencimiento === 'proximo', function ($query) {
+                $query->where('stock_actual', '>', 0)
+                    ->whereHas('lote', function ($q) {
+                        $q->whereNotNull('fecha_vencimiento')
+                            ->whereBetween('fecha_vencimiento', [
+                                now()->toDateString(),
+                                now()->addDays(30)->toDateString(),
+                            ]);
+                    });
+            })
+            ->when($estadoVencimiento === 'vencido', function ($query) {
+                $query->where('stock_actual', '>', 0)
+                    ->whereHas('lote', function ($q) {
+                        $q->whereNotNull('fecha_vencimiento')
+                            ->whereDate('fecha_vencimiento', '<', now()->toDateString());
+                    });
+            })
+            ->when($estadoVencimiento === 'sin_fecha', function ($query) {
+                $query->where(function ($q) {
+                    $q->whereDoesntHave('lote')
+                        ->orWhereHas('lote', function ($loteQuery) {
+                            $loteQuery->whereNull('fecha_vencimiento');
+                        });
+                });
+            })
             ->latest()
             ->paginate(15)
             ->withQueryString();
 
+        $categorias = Categoria::where('estado', 'activo')
+            ->orderBy('nombre')
+            ->get();
+
         $sucursales = collect([$sucursal]);
         $sucursalId = $sucursal->id;
 
-        return view('inventario.index', compact('inventarios', 'sucursales', 'buscar', 'sucursalId'));
+        return view('inventario.index', compact(
+            'inventarios',
+            'sucursales',
+            'categorias',
+            'buscar',
+            'sucursalId',
+            'categoriaId',
+            'estadoStock',
+            'estadoVencimiento'
+        ));
     }
 
     public function create()
@@ -62,13 +126,17 @@ class InventarioController extends Controller
                 ->with('error', 'El usuario no tiene una sucursal asignada.');
         }
 
+        $categorias = Categoria::where('estado', 'activo')
+            ->orderBy('nombre')
+            ->get();
+            
         $productos = Producto::where('estado', 'activo')
             ->orderBy('nombre_comercial')
             ->get();
 
         $sucursales = collect([$sucursal]);
 
-        return view('inventario.create', compact('productos', 'sucursales', 'sucursal'));
+        return view('inventario.create', compact('productos', 'sucursales', 'sucursal', 'categorias'));
     }
 
     public function store(Request $request)
@@ -280,6 +348,54 @@ class InventarioController extends Controller
             'hoy'
         ));
     }
+
+    public function categoriaRapida(Request $request)
+    {
+        $datos = $request->validate([
+            'nombre' => ['required', 'string', 'max:100', 'unique:categorias,nombre'],
+        ]);
+
+        $categoria = Categoria::create([
+            'nombre' => $datos['nombre'],
+            'descripcion' => 'Categoría creada desde entrada de inventario',
+            'estado' => 'activo',
+        ]);
+
+        return response()->json([
+            'categoria' => [
+                'id' => $categoria->id,
+                'nombre' => $categoria->nombre,
+            ],
+        ]);
+    }
+
+    public function productoRapido(Request $request)
+    {
+        $datos = $request->validate([
+            'nombre_comercial' => ['required', 'string', 'max:150'],
+            'nombre_generico' => ['nullable', 'string', 'max:150'],
+            'concentracion' => ['nullable', 'string', 'max:100'],
+            'tipo_producto' => ['required', 'string', 'in:medicamento,insumo_medico,producto_general,higiene,bebe,otro'],
+            'categoria_id' => ['required', 'exists:categorias,id'],
+        ]);
+
+
+        $producto = Producto::create([
+            'nombre_comercial' => $datos['nombre_comercial'],
+            'nombre_generico' => $datos['nombre_generico'] ?? null,
+            'concentracion' => $datos['concentracion'] ?? null,
+            'tipo_producto' => $datos['tipo_producto'],
+            'categoria_id' => $datos['categoria_id'],
+            'laboratorio_id' => null,
+            'proveedor_id' => null,
+            'estado' => 'activo',
+        ]);
+
+        return response()->json([
+            'producto' => [
+                'id' => $producto->id,
+                'nombre' => trim($producto->nombre_comercial . ' ' . ($producto->concentracion ? '- ' . $producto->concentracion : '')),
+            ],
+        ]);
+    }
 }
-
-

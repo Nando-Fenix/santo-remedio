@@ -6,379 +6,563 @@
 
 @section('content')
 
-<div class="card" style="margin-bottom: 22px;">
-    <div style="display: flex; justify-content: space-between; align-items: center; gap: 14px;">
-        <div>
-            <h2 style="margin: 0; color: #4C1D95;">Cambio de producto - Venta {{ $venta->numero_venta }}</h2>
-            <p style="margin: 6px 0 0; color: #6B7280;">
-                Seleccione el producto que el cliente devuelve y el producto nuevo que se entregará.
-            </p>
-        </div>
-
-        <a href="{{ route('ventas.show', $venta) }}" class="btn-secondary">
-            Volver
-        </a>
+@if (!auth()->user()->tienePermiso('cambiar_producto'))
+    <div class="alert-danger">
+        No tiene permiso para registrar cambios de producto.
     </div>
+@else
 
-    <div class="grid" style="grid-template-columns: repeat(4, 1fr); margin-top: 22px; margin-bottom: 0;">
-        <div class="stat-card">
-            <span>Total venta</span>
-            <h3>{{ number_format($venta->total, 2) }} Bs</h3>
-        </div>
-
-        <div class="stat-card">
-            <span>Cliente</span>
-            <h3>{{ $venta->cliente->nombre ?? 'Consumidor final' }}</h3>
-        </div>
-
-        <div class="stat-card">
-            <span>Sucursal</span>
-            <h3>{{ $venta->sucursal->nombre ?? '-' }}</h3>
-        </div>
-
-        <div class="stat-card">
-            <span>Vendedor</span>
-            <h3>{{ $venta->usuario->nombre ?? '-' }}</h3>
-        </div>
+@if ($errors->any())
+    <div class="alert-danger">
+        <strong>Revise los siguientes errores:</strong>
+        <ul style="margin-bottom: 0;">
+            @foreach ($errors->all() as $error)
+                <li>{{ $error }}</li>
+            @endforeach
+        </ul>
     </div>
-</div>
+@endif
 
-<div class="card">
-    @if (!auth()->user()->tienePermiso('cambiar_producto'))
-        <div class="alert-danger">
-            No tiene permiso para registrar cambios de producto.
-        </div>
-    @else
-        @if ($errors->any())
-            <div class="alert-danger">
-                <strong>Revise los siguientes errores:</strong>
-                <ul style="margin-bottom: 0;">
-                    @foreach ($errors->all() as $error)
-                        <li>{{ $error }}</li>
-                    @endforeach
-                </ul>
-            </div>
-        @endif
+<form method="POST" action="{{ route('cambios-producto.store', $venta) }}" id="form_cambio_producto">
+    @csrf
 
-    <form method="POST" action="{{ route('cambios-producto.store', $venta) }}" onsubmit="return confirmarFormulario(event, '¿Confirmar cambio de producto?')">
-        @csrf
+    <div class="exchange-layout">
 
-        <h3 style="margin-top: 0; color: #4C1D95;">1. Producto que el cliente devuelve</h3>
+        <section class="exchange-main">
 
-        <div class="table-container" style="margin-bottom: 22px;">
-            <table class="table">
-                <thead>
-                    <tr>
-                        <th>Seleccionar</th>
-                        <th>Producto vendido</th>
-                        <th>Presentación</th>
-                        <th>Cantidad vendida</th>
-                        <th>Ya devuelto/reembolsado</th>
-                        <th>Disponible</th>
-                        <th>Precio unitario</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach ($venta->detalles as $detalle)
-                        @php
-                            $cantidadYaReembolsada = $detalle->reembolsos()
-                                ->whereHas('reembolso', function ($query) {
-                                    $query->where('estado', 'registrado');
-                                })
-                                ->sum('cantidad_devuelta');
+            <div class="compact-card">
+                <div class="compact-header">
+                    <div>
+                        <h2>
+                            <i class="bi bi-arrow-left-right"></i>
+                            Cambio de producto - Venta {{ $venta->numero_venta }}
+                        </h2>
 
-                            $cantidadYaCambiada = $detalle->cambiosProductoDevueltos()
-                                ->whereHas('cambioProducto', function ($query) {
-                                    $query->where('estado', 'registrado');
-                                })
-                                ->sum('cantidad_devuelta');
+                        <p>
+                            Seleccione el producto devuelto y el producto nuevo que se entregará.
+                        </p>
+                    </div>
 
-                            $cantidadUsada = $cantidadYaReembolsada + $cantidadYaCambiada;
-                            $cantidadDisponible = $detalle->cantidad - $cantidadUsada;
-                        @endphp
+                    <a href="{{ route('ventas.show', $venta) }}" class="btn-secondary">
+                        <i class="bi bi-arrow-left"></i>
+                        Volver
+                    </a>
+                </div>
 
-                        <tr>
-                            <td>
-                                <input
-                                    type="radio"
-                                    name="detalle_venta_devuelto_id"
-                                    value="{{ $detalle->id }}"
-                                    data-precio="{{ $detalle->precio_unitario }}"
-                                    data-disponible="{{ $cantidadDisponible }}"
-                                    {{ $cantidadDisponible <= 0 ? 'disabled' : '' }}
-                                    required
-                                >
-                            </td>
+                <div class="detail-stat-grid compact-detail-stats">
+                    <div class="detail-stat-card detail-stat-main">
+                        <span>Total venta</span>
+                        <strong>{{ number_format($venta->total, 2) }} Bs</strong>
+                    </div>
 
-                            <td>
-                                <strong>{{ $detalle->producto->nombre_comercial ?? '-' }}</strong>
+                    <div class="detail-stat-card">
+                        <span>Cliente</span>
+                        <strong>{{ $venta->cliente->nombre ?? 'Consumidor final' }}</strong>
+                    </div>
 
-                                @if ($detalle->producto?->concentracion)
-                                    <br>
-                                    <small style="color: #6B7280;">
-                                        {{ $detalle->producto->concentracion }}
-                                    </small>
-                                @endif
+                    <div class="detail-stat-card">
+                        <span>Sucursal</span>
+                        <strong>{{ $venta->sucursal->nombre ?? '-' }}</strong>
+                    </div>
 
-                                <br>
-                                <small style="color: #6B7280;">
-                                    Lotes:
-                                    @forelse ($detalle->lotesDescontados as $loteDescontado)
-                                        {{ $loteDescontado->lote->numero_lote ?? 'Sin lote' }}
-                                        ({{ $loteDescontado->unidades_descontadas }} unidades)
-                                    @empty
-                                        Sin lote
-                                    @endforelse
-                                </small>
-                            </td>
-
-                            <td>{{ $detalle->productoPresentacion->nombre_mostrado ?? '-' }}</td>
-                            <td>{{ $detalle->cantidad }}</td>
-                            <td>{{ $cantidadUsada }}</td>
-
-                            <td>
-                                @if ($cantidadDisponible > 0)
-                                    <span class="badge badge-success">{{ $cantidadDisponible }}</span>
-                                @else
-                                    <span class="badge badge-danger">0</span>
-                                @endif
-                            </td>
-
-                            <td>{{ number_format($detalle->precio_unitario, 2) }} Bs</td>
-                        </tr>
-                    @endforeach
-                </tbody>
-            </table>
-        </div>
-
-        <div class="form-group">
-            <label>Cantidad devuelta *</label>
-            <input
-                type="number"
-                name="cantidad_devuelta"
-                id="cantidad_devuelta"
-                min="1"
-                value="{{ old('cantidad_devuelta', 1) }}"
-                required
-            >
-        </div>
-
-        <hr style="margin: 26px 0; border: none; border-top: 1px solid #E5E7EB;">
-
-        <h3 style="margin-top: 0; color: #4C1D95;">2. Producto nuevo que se entregará</h3>
-
-        <div class="form-group">
-            <label>Buscar producto nuevo *</label>
-            <input
-                type="text"
-                id="buscador_producto_nuevo"
-                placeholder="Buscar por nombre, concentración o código de barras..."
-                autocomplete="off"
-            >
-
-            <div id="resultados_producto_nuevo" style="margin-top: 10px;"></div>
-        </div>
-
-        <input type="hidden" name="producto_presentacion_nueva_id" id="producto_presentacion_nueva_id" value="{{ old('producto_presentacion_nueva_id') }}">
-
-        <div id="producto_nuevo_seleccionado" class="alert-success" style="display: none; margin-bottom: 18px;">
-            <strong>Producto nuevo seleccionado:</strong>
-            <span id="nombre_producto_nuevo"></span>
-        </div>
-
-        <div class="form-group">
-            <label>Cantidad nueva *</label>
-            <input
-                type="number"
-                name="cantidad_nueva"
-                id="cantidad_nueva"
-                min="1"
-                value="{{ old('cantidad_nueva', 1) }}"
-                required
-            >
-        </div>
-
-        <div class="grid" style="grid-template-columns: repeat(3, 1fr); margin-top: 22px;">
-            <div class="stat-card">
-                <span>Monto devuelto</span>
-                <h3 id="monto_devuelto_preview">0.00 Bs</h3>
+                    <div class="detail-stat-card">
+                        <span>Vendedor</span>
+                        <strong>{{ $venta->usuario->nombre ?? '-' }}</strong>
+                    </div>
+                </div>
             </div>
 
-            <div class="stat-card">
-                <span>Monto producto nuevo</span>
-                <h3 id="monto_nuevo_preview">0.00 Bs</h3>
+            <div class="detail-section-card compact-section">
+                <div class="detail-section-head">
+                    <h3>
+                        <i class="bi bi-arrow-return-left"></i>
+                        1. Producto que el cliente devuelve
+                    </h3>
+                </div>
+
+                <div class="table-container compact-table-container">
+                    <table class="table compact-table exchange-table">
+                        <thead>
+                            <tr>
+                                <th></th>
+                                <th>Producto vendido</th>
+                                <th>Presentación</th>
+                                <th>Vendida</th>
+                                <th>Usada</th>
+                                <th>Disponible</th>
+                                <th>P. Unit.</th>
+                            </tr>
+                        </thead>
+
+                        <tbody>
+                            @foreach ($venta->detalles as $detalle)
+                                @php
+                                    $cantidadYaReembolsada = $detalle->reembolsos()
+                                        ->whereHas('reembolso', function ($query) {
+                                            $query->where('estado', 'registrado');
+                                        })
+                                        ->sum('cantidad_devuelta');
+
+                                    $cantidadYaCambiada = $detalle->cambiosProductoDevueltos()
+                                        ->whereHas('cambioProducto', function ($query) {
+                                            $query->where('estado', 'registrado');
+                                        })
+                                        ->sum('cantidad_devuelta');
+
+                                    $cantidadUsada = $cantidadYaReembolsada + $cantidadYaCambiada;
+                                    $cantidadDisponible = $detalle->cantidad - $cantidadUsada;
+                                @endphp
+
+                                <tr>
+                                    <td>
+                                        <input
+                                            type="radio"
+                                            name="detalle_venta_devuelto_id"
+                                            value="{{ $detalle->id }}"
+                                            data-precio="{{ $detalle->precio_unitario }}"
+                                            data-disponible="{{ $cantidadDisponible }}"
+                                            {{ $cantidadDisponible <= 0 ? 'disabled' : '' }}
+                                            required
+                                        >
+                                    </td>
+
+                                    <td>
+                                        <strong>{{ $detalle->producto->nombre_comercial ?? '-' }}</strong>
+
+                                        @if ($detalle->producto?->concentracion)
+                                            <br>
+                                            <small style="color:#6B7280;">
+                                                {{ $detalle->producto->concentracion }}
+                                            </small>
+                                        @endif
+
+                                        <div class="mini-lot-list" style="margin-top:5px;">
+                                            @forelse ($detalle->lotesDescontados as $loteDescontado)
+                                                <div class="mini-lot-line">
+                                                    <strong>{{ $loteDescontado->lote->numero_lote ?? 'Sin lote' }}</strong>
+                                                    <small>
+                                                        {{ $loteDescontado->unidades_descontadas }} unidad(es)
+                                                    </small>
+                                                </div>
+                                            @empty
+                                                <small style="color:#6B7280;">Sin lote</small>
+                                            @endforelse
+                                        </div>
+                                    </td>
+
+                                    <td>
+                                        {{ $detalle->productoPresentacion->nombre_mostrado ?? '-' }}
+
+                                        @if ($detalle->productoPresentacion?->unidades_equivalentes)
+                                            <br>
+                                            <small style="color:#6B7280;">
+                                                {{ $detalle->productoPresentacion->unidades_equivalentes }} unidad(es)
+                                            </small>
+                                        @endif
+                                    </td>
+
+                                    <td><strong>{{ $detalle->cantidad }}</strong></td>
+                                    <td>{{ $cantidadUsada }}</td>
+
+                                    <td>
+                                        @if ($cantidadDisponible > 0)
+                                            <span class="badge badge-success">{{ $cantidadDisponible }}</span>
+                                        @else
+                                            <span class="badge badge-danger">0</span>
+                                        @endif
+                                    </td>
+
+                                    <td>{{ number_format($detalle->precio_unitario, 2) }} Bs</td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="exchange-quantity-row">
+                    <div class="form-group">
+                        <label>Cantidad devuelta *</label>
+                        <input
+                            type="number"
+                            name="cantidad_devuelta"
+                            id="cantidad_devuelta"
+                            min="1"
+                            value="{{ old('cantidad_devuelta', 1) }}"
+                            required
+                        >
+                    </div>
+                </div>
             </div>
 
-            <div class="stat-card">
-                <span>Diferencia</span>
-                <h3 id="diferencia_preview">0.00 Bs</h3>
-                <small id="tipo_diferencia_preview" style="color: #6B7280;"></small>
+            <div class="detail-section-card compact-section">
+                <div class="detail-section-head">
+                    <h3>
+                        <i class="bi bi-box-seam"></i>
+                        2. Producto nuevo que se entregará
+                    </h3>
+                </div>
+
+                <div class="exchange-new-product-grid">
+                    <div class="form-group">
+                        <label>Buscar producto nuevo *</label>
+
+                        <div class="promo-search-box">
+                            <i class="bi bi-search"></i>
+                            <input
+                                type="text"
+                                id="buscador_producto_nuevo"
+                                placeholder="Nombre, concentración o código de barras"
+                                autocomplete="off"
+                            >
+                        </div>
+
+                        <div id="resultados_producto_nuevo" class="exchange-results"></div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Cantidad nueva *</label>
+                        <input
+                            type="number"
+                            name="cantidad_nueva"
+                            id="cantidad_nueva"
+                            min="1"
+                            value="{{ old('cantidad_nueva', 1) }}"
+                            required
+                        >
+                    </div>
+                </div>
+
+                <input
+                    type="hidden"
+                    name="producto_presentacion_nueva_id"
+                    id="producto_presentacion_nueva_id"
+                    value="{{ old('producto_presentacion_nueva_id') }}"
+                >
+
+                <div id="producto_nuevo_seleccionado" class="exchange-selected-product" style="display:none;">
+                    <i class="bi bi-check-circle"></i>
+                    <div>
+                        <span>Producto nuevo seleccionado</span>
+                        <strong id="nombre_producto_nuevo"></strong>
+                    </div>
+                </div>
             </div>
-        </div>
 
-        <div class="form-group" style="margin-top: 22px;">
-            <label>Motivo del cambio *</label>
-            <textarea
-                name="motivo"
-                rows="4"
-                required
-                placeholder="Ej: Cliente solicitó cambio por medicamento equivocado, presentación incorrecta, autorización de farmacia..."
-            >{{ old('motivo') }}</textarea>
-        </div>
+        </section>
 
-        <div class="alert-danger" style="margin-top: 18px;">
-            El sistema devolverá stock del producto anterior, descontará stock del producto nuevo y ajustará la caja si existe diferencia.
-        </div>
+        <aside class="exchange-side">
 
-        <div style="display: flex; gap: 12px; margin-top: 24px;">
-            @if (auth()->user()->tienePermiso('cambiar_producto'))
-                <button type="submit" class="btn-danger">
-                    Registrar cambio
-                </button>
-            @endif
+            <div class="cancel-warning-card">
+                <div class="cancel-warning-icon">
+                    <i class="bi bi-exclamation-triangle"></i>
+                </div>
 
-            <a href="{{ route('ventas.show', $venta) }}" class="btn-secondary">
-                Cancelar
-            </a>
-        </div>
-    </form>
-    @endif
-</div>
+                <div>
+                    <h3>Acción delicada</h3>
+                    <p>
+                        Se devolverá stock del producto anterior, se descontará stock del producto nuevo y se ajustará la caja si existe diferencia.
+                    </p>
+                </div>
+            </div>
+
+            <div class="cancel-form-card">
+                <div class="detail-section-head">
+                    <h3>
+                        <i class="bi bi-calculator"></i>
+                        Diferencia del cambio
+                    </h3>
+                </div>
+
+                <div class="exchange-preview">
+                    <div>
+                        <span>Monto devuelto</span>
+                        <strong id="monto_devuelto_preview">0.00 Bs</strong>
+                    </div>
+
+                    <div>
+                        <span>Monto producto nuevo</span>
+                        <strong id="monto_nuevo_preview">0.00 Bs</strong>
+                    </div>
+
+                    <div class="exchange-preview-main">
+                        <span>Diferencia</span>
+                        <strong id="diferencia_preview">0.00 Bs</strong>
+                        <small id="tipo_diferencia_preview"></small>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Motivo del cambio *</label>
+                    <textarea
+                        name="motivo"
+                        rows="7"
+                        required
+                        placeholder="Ej: Medicamento equivocado, presentación incorrecta, autorización de farmacia..."
+                    >{{ old('motivo') }}</textarea>
+
+                    <small class="cancel-help-text">
+                        El motivo debe ser claro para mantener trazabilidad.
+                    </small>
+                </div>
+
+                <div class="exchange-actions">
+                    <a href="{{ route('ventas.show', $venta) }}" class="btn-secondary">
+                        <i class="bi bi-arrow-left"></i>
+                        Cancelar
+                    </a>
+
+                    <button type="submit" class="btn-danger">
+                        <i class="bi bi-arrow-left-right"></i>
+                        Registrar
+                    </button>
+                </div>
+            </div>
+
+        </aside>
+
+    </div>
+</form>
 
 <script>
-    const inputBuscador = document.getElementById('buscador_producto_nuevo');
-    const contenedorResultados = document.getElementById('resultados_producto_nuevo');
-    const inputPresentacionNueva = document.getElementById('producto_presentacion_nueva_id');
-    const boxProductoSeleccionado = document.getElementById('producto_nuevo_seleccionado');
-    const textoProductoNuevo = document.getElementById('nombre_producto_nuevo');
+const formCambioProducto = document.getElementById('form_cambio_producto');
 
-    const inputCantidadDevuelta = document.getElementById('cantidad_devuelta');
-    const inputCantidadNueva = document.getElementById('cantidad_nueva');
+const inputBuscador = document.getElementById('buscador_producto_nuevo');
+const contenedorResultados = document.getElementById('resultados_producto_nuevo');
+const inputPresentacionNueva = document.getElementById('producto_presentacion_nueva_id');
+const boxProductoSeleccionado = document.getElementById('producto_nuevo_seleccionado');
+const textoProductoNuevo = document.getElementById('nombre_producto_nuevo');
 
-    const montoDevueltoPreview = document.getElementById('monto_devuelto_preview');
-    const montoNuevoPreview = document.getElementById('monto_nuevo_preview');
-    const diferenciaPreview = document.getElementById('diferencia_preview');
-    const tipoDiferenciaPreview = document.getElementById('tipo_diferencia_preview');
+const inputCantidadDevuelta = document.getElementById('cantidad_devuelta');
+const inputCantidadNueva = document.getElementById('cantidad_nueva');
 
-    let precioDevuelto = 0;
-    let precioNuevo = 0;
-    let stockProductoNuevo = 0;
+const montoDevueltoPreview = document.getElementById('monto_devuelto_preview');
+const montoNuevoPreview = document.getElementById('monto_nuevo_preview');
+const diferenciaPreview = document.getElementById('diferencia_preview');
+const tipoDiferenciaPreview = document.getElementById('tipo_diferencia_preview');
 
-    function obtenerDetalleSeleccionado() {
-        return document.querySelector('input[name="detalle_venta_devuelto_id"]:checked');
-    }
+let precioDevuelto = 0;
+let precioNuevo = 0;
+let stockProductoNuevo = 0;
 
-    function calcularVistaPrevia() {
-        const detalleSeleccionado = obtenerDetalleSeleccionado();
+function obtenerDetalleSeleccionado() {
+    return document.querySelector('input[name="detalle_venta_devuelto_id"]:checked');
+}
 
-        if (detalleSeleccionado) {
-            precioDevuelto = Number(detalleSeleccionado.dataset.precio || 0);
-            const disponible = Number(detalleSeleccionado.dataset.disponible || 0);
+function calcularVistaPrevia() {
+    const detalleSeleccionado = obtenerDetalleSeleccionado();
 
-            inputCantidadDevuelta.max = disponible;
+    if (detalleSeleccionado) {
+        precioDevuelto = Number(detalleSeleccionado.dataset.precio || 0);
+        const disponible = Number(detalleSeleccionado.dataset.disponible || 0);
 
-            if (Number(inputCantidadDevuelta.value) > disponible) {
-                inputCantidadDevuelta.value = disponible;
-            }
-        }
+        inputCantidadDevuelta.max = disponible;
 
-        const cantidadDevuelta = Number(inputCantidadDevuelta.value || 0);
-        const cantidadNueva = Number(inputCantidadNueva.value || 0);
-
-        const montoDevuelto = cantidadDevuelta * precioDevuelto;
-        const montoNuevo = cantidadNueva * precioNuevo;
-        const diferencia = Math.abs(montoNuevo - montoDevuelto);
-
-        montoDevueltoPreview.textContent = montoDevuelto.toFixed(2) + ' Bs';
-        montoNuevoPreview.textContent = montoNuevo.toFixed(2) + ' Bs';
-        diferenciaPreview.textContent = diferencia.toFixed(2) + ' Bs';
-
-        if (montoNuevo > montoDevuelto) {
-            tipoDiferenciaPreview.textContent = 'El cliente debe pagar la diferencia.';
-        } else if (montoNuevo < montoDevuelto) {
-            tipoDiferenciaPreview.textContent = 'La farmacia debe devolver la diferencia.';
-        } else {
-            tipoDiferenciaPreview.textContent = 'No existe diferencia de monto.';
+        if (Number(inputCantidadDevuelta.value) > disponible) {
+            inputCantidadDevuelta.value = disponible;
         }
     }
 
-    document.querySelectorAll('input[name="detalle_venta_devuelto_id"]').forEach(radio => {
-        radio.addEventListener('change', calcularVistaPrevia);
-    });
-
-    inputCantidadDevuelta.addEventListener('input', calcularVistaPrevia);
-    inputCantidadNueva.addEventListener('input', calcularVistaPrevia);
-
-    inputBuscador.addEventListener('input', async function () {
-        const termino = this.value.trim();
-
-        inputPresentacionNueva.value = '';
-        boxProductoSeleccionado.style.display = 'none';
-        contenedorResultados.innerHTML = '';
-
-        if (termino.length < 2) {
-            return;
-        }
-
-        const url = `{{ route('cambios-producto.buscar-productos') }}?busqueda=${encodeURIComponent(termino)}`;
-        const respuesta = await fetch(url);
-        const productos = await respuesta.json();
-
-        if (productos.length === 0) {
-            contenedorResultados.innerHTML = `
-                <div class="alert-danger">
-                    No se encontraron productos con stock disponible.
-                </div>
-            `;
-            return;
-        }
-
-        contenedorResultados.innerHTML = productos.map(producto => `
-            <div
-                class="card"
-                style="padding: 12px; margin-bottom: 8px; cursor: pointer;"
-                onclick="seleccionarProductoNuevo(
-                    ${producto.producto_presentacion_id},
-                    '${String(producto.nombre_producto).replace(/'/g, "\\'")}',
-                    '${String(producto.presentacion).replace(/'/g, "\\'")}',
-                    ${producto.precio_venta},
-                    ${producto.stock_disponible}
-                )"
-            >
-                <strong>${producto.nombre_producto}</strong>
-                <br>
-                <small style="color: #6B7280;">
-                    ${producto.nombre_generico ?? ''} ${producto.concentracion ?? ''} |
-                    ${producto.presentacion} |
-                    Stock: ${producto.stock_disponible} |
-                    Precio: ${Number(producto.precio_venta).toFixed(2)} Bs
-                </small>
-            </div>
-        `).join('');
-    });
-
-    function seleccionarProductoNuevo(id, nombre, presentacion, precio, stock) {
-        inputPresentacionNueva.value = id;
-        precioNuevo = Number(precio || 0);
-        stockProductoNuevo = Number(stock || 0);
-
-        textoProductoNuevo.textContent = `${nombre} - ${presentacion} | Precio: ${precioNuevo.toFixed(2)} Bs | Stock: ${stockProductoNuevo}`;
-        boxProductoSeleccionado.style.display = 'block';
-        contenedorResultados.innerHTML = '';
-        inputBuscador.value = '';
-
+    if (stockProductoNuevo > 0) {
         inputCantidadNueva.max = stockProductoNuevo;
 
         if (Number(inputCantidadNueva.value) > stockProductoNuevo) {
             inputCantidadNueva.value = stockProductoNuevo;
         }
-
-        calcularVistaPrevia();
     }
 
-    window.seleccionarProductoNuevo = seleccionarProductoNuevo;
+    const cantidadDevuelta = Number(inputCantidadDevuelta.value || 0);
+    const cantidadNueva = Number(inputCantidadNueva.value || 0);
+
+    const montoDevuelto = cantidadDevuelta * precioDevuelto;
+    const montoNuevo = cantidadNueva * precioNuevo;
+    const diferencia = Math.abs(montoNuevo - montoDevuelto);
+
+    montoDevueltoPreview.textContent = montoDevuelto.toFixed(2) + ' Bs';
+    montoNuevoPreview.textContent = montoNuevo.toFixed(2) + ' Bs';
+    diferenciaPreview.textContent = diferencia.toFixed(2) + ' Bs';
+
+    if (montoNuevo > montoDevuelto) {
+        tipoDiferenciaPreview.textContent = 'El cliente debe pagar la diferencia.';
+    } else if (montoNuevo < montoDevuelto) {
+        tipoDiferenciaPreview.textContent = 'La farmacia debe devolver la diferencia.';
+    } else {
+        tipoDiferenciaPreview.textContent = 'No existe diferencia de monto.';
+    }
+}
+
+document.querySelectorAll('input[name="detalle_venta_devuelto_id"]').forEach(radio => {
+    radio.addEventListener('change', calcularVistaPrevia);
+});
+
+inputCantidadDevuelta.addEventListener('input', calcularVistaPrevia);
+inputCantidadNueva.addEventListener('input', calcularVistaPrevia);
+
+inputBuscador.addEventListener('input', async function () {
+    const termino = this.value.trim();
+
+    inputPresentacionNueva.value = '';
+    boxProductoSeleccionado.style.display = 'none';
+    contenedorResultados.innerHTML = '';
+
+    if (termino.length < 2) {
+        return;
+    }
+
+    const url = `{{ route('cambios-producto.buscar-productos') }}?busqueda=${encodeURIComponent(termino)}`;
+    const respuesta = await fetch(url);
+    const productos = await respuesta.json();
+
+    if (productos.length === 0) {
+        contenedorResultados.innerHTML = `
+            <div class="alert-danger">
+                No se encontraron productos con stock disponible.
+            </div>
+        `;
+        return;
+    }
+
+    contenedorResultados.innerHTML = productos.map(producto => {
+        const nombre = String(producto.nombre_producto).replace(/'/g, "\\'");
+        const presentacion = String(producto.presentacion).replace(/'/g, "\\'");
+        const generico = producto.nombre_generico ?? '';
+        const concentracion = producto.concentracion ?? '';
+
+        return `
+            <div
+                class="exchange-result-item"
+                onclick="seleccionarProductoNuevo(
+                    ${producto.producto_presentacion_id},
+                    '${nombre}',
+                    '${presentacion}',
+                    ${producto.precio_venta},
+                    ${producto.stock_disponible}
+                )"
+            >
+                <div>
+                    <strong>${producto.nombre_producto}</strong>
+                    <small>
+                        ${generico} ${concentracion} ·
+                        ${producto.presentacion} ·
+                        Stock: ${producto.stock_disponible} ·
+                        Precio: ${Number(producto.precio_venta).toFixed(2)} Bs
+                    </small>
+                </div>
+
+                <i class="bi bi-plus-circle"></i>
+            </div>
+        `;
+    }).join('');
+});
+
+function seleccionarProductoNuevo(id, nombre, presentacion, precio, stock) {
+    inputPresentacionNueva.value = id;
+    precioNuevo = Number(precio || 0);
+    stockProductoNuevo = Number(stock || 0);
+
+    textoProductoNuevo.textContent = `${nombre} - ${presentacion} | Precio: ${precioNuevo.toFixed(2)} Bs | Stock: ${stockProductoNuevo}`;
+    boxProductoSeleccionado.style.display = 'flex';
+    contenedorResultados.innerHTML = '';
+    inputBuscador.value = '';
+
+    inputCantidadNueva.max = stockProductoNuevo;
+
+    if (Number(inputCantidadNueva.value) > stockProductoNuevo) {
+        inputCantidadNueva.value = stockProductoNuevo;
+    }
 
     calcularVistaPrevia();
+}
+
+window.seleccionarProductoNuevo = seleccionarProductoNuevo;
+
+formCambioProducto.addEventListener('submit', function (event) {
+    event.preventDefault();
+
+    const detalleSeleccionado = obtenerDetalleSeleccionado();
+    const productoNuevo = inputPresentacionNueva.value;
+    const cantidadDevuelta = Number(inputCantidadDevuelta.value || 0);
+    const cantidadNueva = Number(inputCantidadNueva.value || 0);
+    const motivo = document.querySelector('textarea[name="motivo"]').value.trim();
+
+    if (!detalleSeleccionado) {
+        Swal.fire({
+            icon: 'warning',
+            title: 'Producto devuelto requerido',
+            text: 'Debe seleccionar el producto que el cliente está devolviendo.',
+            confirmButtonColor: '#6D28D9'
+        });
+        return;
+    }
+
+    if (cantidadDevuelta <= 0) {
+        Swal.fire({
+            icon: 'warning',
+            title: 'Cantidad devuelta inválida',
+            text: 'La cantidad devuelta debe ser mayor a 0.',
+            confirmButtonColor: '#6D28D9'
+        });
+        return;
+    }
+
+    if (!productoNuevo) {
+        Swal.fire({
+            icon: 'warning',
+            title: 'Producto nuevo requerido',
+            text: 'Debe seleccionar el producto nuevo que se entregará.',
+            confirmButtonColor: '#6D28D9'
+        });
+        return;
+    }
+
+    if (cantidadNueva <= 0) {
+        Swal.fire({
+            icon: 'warning',
+            title: 'Cantidad nueva inválida',
+            text: 'La cantidad nueva debe ser mayor a 0.',
+            confirmButtonColor: '#6D28D9'
+        });
+        return;
+    }
+
+    if (stockProductoNuevo > 0 && cantidadNueva > stockProductoNuevo) {
+        Swal.fire({
+            icon: 'warning',
+            title: 'Stock insuficiente',
+            text: 'La cantidad nueva supera el stock disponible.',
+            confirmButtonColor: '#6D28D9'
+        });
+        return;
+    }
+
+    if (motivo.length < 5) {
+        Swal.fire({
+            icon: 'warning',
+            title: 'Motivo requerido',
+            text: 'El motivo debe tener al menos 5 caracteres.',
+            confirmButtonColor: '#6D28D9'
+        });
+        return;
+    }
+
+    Swal.fire({
+        icon: 'warning',
+        title: '¿Confirmar cambio de producto?',
+        text: 'Se devolverá stock del producto anterior, se descontará stock del nuevo producto y se ajustará caja si existe diferencia.',
+        showCancelButton: true,
+        confirmButtonText: 'Sí, registrar',
+        cancelButtonText: 'Cancelar',
+        confirmButtonColor: '#DC2626',
+        cancelButtonColor: '#6B7280'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            event.target.submit();
+        }
+    });
+});
+
+calcularVistaPrevia();
 </script>
+
+@endif
 
 @endsection

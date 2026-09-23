@@ -12,17 +12,29 @@ use Illuminate\Validation\Rule;
 
 class UsuarioController extends Controller
 {
-     public function index()
+    public function index(Request $request)
     {
+        $buscar = $request->get('buscar');
+
         $usuarios = User::with([
                 'rol',
                 'sucursales',
                 'permisosDirectos',
             ])
+            ->when($buscar, function ($query) use ($buscar) {
+                $query->where('nombre', 'like', "%{$buscar}%")
+                    ->orWhere('usuario', 'like', "%{$buscar}%")
+                    ->orWhere('ci', 'like', "%{$buscar}%")
+                    ->orWhereHas('rol', function ($rolQuery) use ($buscar) {
+                        $rolQuery->where('nombre', 'like', "%{$buscar}%");
+                    });
+            })
+            ->orderByRaw("CASE WHEN estado = 'activo' THEN 0 ELSE 1 END")
             ->orderBy('nombre')
-            ->get();
+            ->paginate(10)
+            ->withQueryString();
 
-        return view('usuarios.index', compact('usuarios'));
+        return view('usuarios.index', compact('usuarios', 'buscar'));
     }
 
     public function create()
@@ -107,7 +119,13 @@ class UsuarioController extends Controller
 
         $user->sucursales()->sync($syncSucursales);
 
-        $user->permisosDirectos()->sync($datos['permisos'] ?? []);
+        $rolSeleccionado = Rol::find($datos['rol_id']);
+
+        if ($rolSeleccionado && $rolSeleccionado->nombre === 'Administrador') {
+            $user->permisosDirectos()->sync([]);
+        } else {
+            $user->permisosDirectos()->sync($datos['permisos'] ?? []);
+        }
 
         return redirect()
             ->route('usuarios.index')
@@ -218,7 +236,13 @@ class UsuarioController extends Controller
 
         $user->sucursales()->sync($syncSucursales);
 
-        $user->permisosDirectos()->sync($datos['permisos'] ?? []);
+        $rolSeleccionado = Rol::find($datos['rol_id']);
+
+        if ($rolSeleccionado && $rolSeleccionado->nombre === 'Administrador') {
+            $user->permisosDirectos()->sync([]);
+        } else {
+            $user->permisosDirectos()->sync($datos['permisos'] ?? []);
+        }
 
         return redirect()
             ->route('usuarios.index')

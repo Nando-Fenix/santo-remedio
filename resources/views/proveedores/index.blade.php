@@ -6,54 +6,75 @@
 
 @section('content')
 
-<div class="card" style="margin-bottom: 22px;">
-    <div style="display: flex; justify-content: space-between; align-items: center; gap: 14px;">
+@if (session('success'))
+    <div class="alert-success">
+        {{ session('success') }}
+    </div>
+@endif
+
+@if (session('error'))
+    <div class="alert-danger">
+        {{ session('error') }}
+    </div>
+@endif
+
+<div class="compact-card">
+
+    <div class="compact-header">
         <div>
-            <h2 style="margin: 0; color: #4C1D95;">Proveedores registrados</h2>
-            <p style="margin: 6px 0 0; color: #6B7280;">
-                Administre proveedores para compras, productos y futuros registros de deuda.
+            <h2>
+                <i class="bi bi-truck"></i>
+                Proveedores registrados
+            </h2>
+
+            <p>
+                Administre proveedores para compras, productos y registros de deuda.
             </p>
         </div>
 
         @if (auth()->user()->tienePermiso('crear_proveedor'))
             <a href="{{ route('proveedores.create') }}" class="btn-primary">
+                <i class="bi bi-plus-circle"></i>
                 Nuevo proveedor
             </a>
         @endif
     </div>
 
-    <form method="GET" action="{{ route('proveedores.index') }}" style="margin-top: 18px;">
-        <div class="form-grid">
-            <div class="form-group">
-                <label>Buscar proveedor</label>
-                <input type="text" name="busqueda" value="{{ $busqueda }}" placeholder="Nombre, teléfono, contacto o dirección">
-            </div>
-
-            <div class="form-group">
-                <label>Estado</label>
-                <select name="estado">
-                    <option value="activo" {{ $estado === 'activo' ? 'selected' : '' }}>Activos</option>
-                    <option value="inactivo" {{ $estado === 'inactivo' ? 'selected' : '' }}>Inactivos</option>
-                    <option value="" {{ $estado === '' ? 'selected' : '' }}>Todos</option>
-                </select>
-            </div>
+    <form method="GET" action="{{ route('proveedores.index') }}" class="filter-bar">
+        <div class="filter-search">
+            <label>Buscar proveedor</label>
+            <input
+                type="text"
+                name="busqueda"
+                value="{{ $busqueda }}"
+                placeholder="Nombre, teléfono, contacto o dirección"
+            >
         </div>
 
-        <div style="display: flex; gap: 10px; margin-top: 14px;">
+        <div class="form-group">
+            <label>Estado</label>
+            <select name="estado">
+                <option value="activo" @selected($estado === 'activo')>Activos</option>
+                <option value="inactivo" @selected($estado === 'inactivo')>Inactivos</option>
+                <option value="" @selected($estado === '')>Todos</option>
+            </select>
+        </div>
+
+        <div class="filter-actions">
             <button type="submit" class="btn-primary">
+                <i class="bi bi-search"></i>
                 Buscar
             </button>
 
             <a href="{{ route('proveedores.index') }}" class="btn-secondary">
+                <i class="bi bi-x-circle"></i>
                 Limpiar
             </a>
         </div>
     </form>
-</div>
 
-<div class="card">
-    <div class="table-container">
-        <table class="table">
+    <div class="table-container compact-table-container">
+        <table class="table compact-table providers-table">
             <thead>
                 <tr>
                     <th>Proveedor</th>
@@ -61,16 +82,38 @@
                     <th>Teléfono</th>
                     <th>Dirección</th>
                     <th>Estado</th>
-                    <th style="width: 220px;">Acciones</th>
+                    <th class="table-actions-cell">Acciones</th>
                 </tr>
             </thead>
+
             <tbody>
                 @forelse ($proveedores as $proveedor)
                     <tr>
-                        <td><strong>{{ $proveedor->nombre }}</strong></td>
-                        <td>{{ $proveedor->contacto ?? '-' }}</td>
-                        <td>{{ $proveedor->telefono ?? '-' }}</td>
-                        <td>{{ $proveedor->direccion ?? '-' }}</td>
+                        <td>
+                            <strong>{{ $proveedor->nombre }}</strong>
+                        </td>
+
+                        <td>
+                            {{ $proveedor->contacto ?? '-' }}
+                        </td>
+
+                        <td>
+                            @if ($proveedor->telefono)
+                                <span class="provider-phone">
+                                    <i class="bi bi-telephone"></i>
+                                    {{ $proveedor->telefono }}
+                                </span>
+                            @else
+                                -
+                            @endif
+                        </td>
+
+                        <td>
+                            <span class="provider-address">
+                                {{ $proveedor->direccion ?? '-' }}
+                            </span>
+                        </td>
+
                         <td>
                             @if ($proveedor->estado === 'activo')
                                 <span class="badge badge-success">Activo</span>
@@ -78,29 +121,44 @@
                                 <span class="badge badge-danger">Inactivo</span>
                             @endif
                         </td>
+
                         <td>
-                            <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                            <div class="action-group">
                                 @if (auth()->user()->tienePermiso('ver_proveedores'))
-                                    <a href="{{ route('proveedores.show', $proveedor) }}" class="btn-secondary">
-                                        Ver
+                                    <a
+                                        href="{{ route('proveedores.show', $proveedor) }}"
+                                        class="icon-action icon-action-primary"
+                                        title="Ver proveedor"
+                                    >
+                                        <i class="bi bi-eye"></i>
                                     </a>
                                 @endif
 
                                 @if (auth()->user()->tienePermiso('editar_proveedor'))
-                                    <a href="{{ route('proveedores.edit', $proveedor) }}" class="btn-secondary">
-                                        Editar
+                                    <a
+                                        href="{{ route('proveedores.edit', $proveedor) }}"
+                                        class="icon-action icon-action-edit"
+                                        title="Editar proveedor"
+                                    >
+                                        <i class="bi bi-pencil"></i>
                                     </a>
                                 @endif
 
                                 @if ($proveedor->estado === 'activo' && auth()->user()->tienePermiso('eliminar_proveedor'))
-                                    <form method="POST"
+                                    <form
+                                        method="POST"
                                         action="{{ route('proveedores.destroy', $proveedor) }}"
-                                        onsubmit="return confirmarFormulario(event, '¿Desea desactivar este proveedor?')">
+                                        class="form-desactivar-proveedor"
+                                    >
                                         @csrf
                                         @method('DELETE')
 
-                                        <button type="submit" class="btn-danger">
-                                            Desactivar
+                                        <button
+                                            type="submit"
+                                            class="icon-action icon-action-danger"
+                                            title="Desactivar proveedor"
+                                        >
+                                            <i class="bi bi-power"></i>
                                         </button>
                                     </form>
                                 @endif
@@ -109,7 +167,7 @@
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="6" style="text-align: center; color: #6B7280;">
+                        <td colspan="6" class="empty-table-message">
                             No hay proveedores registrados.
                         </td>
                     </tr>
@@ -118,9 +176,33 @@
         </table>
     </div>
 
-    <div style="margin-top: 18px;">
+    <div class="pagination-wrapper">
         {{ $proveedores->links() }}
     </div>
+
 </div>
+
+<script>
+document.querySelectorAll('.form-desactivar-proveedor').forEach(form => {
+    form.addEventListener('submit', function (event) {
+        event.preventDefault();
+
+        Swal.fire({
+            icon: 'warning',
+            title: '¿Desactivar proveedor?',
+            text: 'El proveedor quedará inactivo y no debería usarse para nuevas compras.',
+            showCancelButton: true,
+            confirmButtonText: 'Sí, desactivar',
+            cancelButtonText: 'Cancelar',
+            confirmButtonColor: '#DC2626',
+            cancelButtonColor: '#6B7280'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                event.target.submit();
+            }
+        });
+    });
+});
+</script>
 
 @endsection

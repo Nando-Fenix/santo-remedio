@@ -103,21 +103,30 @@
 
                 <div class="form-group">
                     <label>Cliente registrado</label>
-                    <select name="cliente_id" id="cliente_id">
-                        <option value="">Consumidor final</option>
 
-                        @foreach ($clientes as $cliente)
-                            <option
-                                value="{{ $cliente->id }}"
-                                data-descuento="{{ $cliente->descuento_default }}"
-                                {{ old('cliente_id') == $cliente->id ? 'selected' : '' }}>
-                                {{ $cliente->nombre }}
-                                @if ($cliente->ci_nit)
-                                    - CI/NIT: {{ $cliente->ci_nit }}
-                                @endif
-                            </option>
-                        @endforeach
-                    </select>
+                    <div class="sale-client-row">
+                        <select name="cliente_id" id="cliente_id">
+                            <option value="">Consumidor final</option>
+
+                            @foreach ($clientes as $cliente)
+                                <option
+                                    value="{{ $cliente->id }}"
+                                    data-descuento="{{ $cliente->descuento_default }}"
+                                    {{ old('cliente_id') == $cliente->id ? 'selected' : '' }}>
+                                    {{ $cliente->nombre }}
+                                    @if ($cliente->ci_nit)
+                                        - CI/NIT: {{ $cliente->ci_nit }}
+                                    @endif
+                                </option>
+                            @endforeach
+                        </select>
+
+                        @if (auth()->user()->tienePermiso('crear_cliente'))
+                            <button type="button" class="btn-secondary btn-client-quick" onclick="abrirModalClienteRapido()">
+                                <i class="bi bi-person-plus"></i>
+                            </button>
+                        @endif
+                    </div>
 
                     @error('cliente_id')
                         <small class="error">{{ $message }}</small>
@@ -240,6 +249,59 @@
 
     </div>
 </form>
+<div id="clienteRapidoModal" class="quick-modal">
+    <div class="quick-modal-backdrop" onclick="cerrarModalClienteRapido()"></div>
+
+    <div class="quick-modal-card">
+        <div class="quick-modal-header">
+            <div>
+                <h3>
+                    <i class="bi bi-person-plus"></i>
+                    Nuevo cliente
+                </h3>
+                <p>Registre un cliente sin salir de la venta.</p>
+            </div>
+
+            <button type="button" class="quick-modal-close" onclick="cerrarModalClienteRapido()">
+                <i class="bi bi-x-lg"></i>
+            </button>
+        </div>
+
+        <div class="quick-modal-body">
+            <div class="form-group">
+                <label>Nombre *</label>
+                <input type="text" id="cliente_rapido_nombre" placeholder="Nombre del cliente">
+                <small class="error" id="cliente_rapido_nombre_error"></small>
+            </div>
+
+            <div class="form-group">
+                <label>CI/NIT</label>
+                <input type="text" id="cliente_rapido_ci_nit" placeholder="Ej. 1234567">
+            </div>
+
+            <div class="form-group">
+                <label>Teléfono</label>
+                <input type="text" id="cliente_rapido_telefono" placeholder="Opcional">
+            </div>
+
+            <div class="form-group">
+                <label>Descuento por defecto %</label>
+                <input type="number" id="cliente_rapido_descuento" min="0" max="100" step="0.01" value="0">
+            </div>
+        </div>
+
+        <div class="quick-modal-actions">
+            <button type="button" class="btn-secondary" onclick="cerrarModalClienteRapido()">
+                Cancelar
+            </button>
+
+            <button type="button" class="btn-primary" id="btn_guardar_cliente_rapido" onclick="guardarClienteRapido()">
+                <i class="bi bi-check2-circle"></i>
+                Guardar cliente
+            </button>
+        </div>
+    </div>
+</div>
 @php
     $itemsAntiguosVenta = collect(old('items', []))->map(function ($item) {
         return [
@@ -292,6 +354,9 @@
 <script>
     const buscarUrl = "{{ route('ventas.buscar-productos') }}";
     const buscarPromocionesUrl = "{{ route('ventas.buscar-promociones') }}";
+
+    const crearClienteRapidoUrl = "{{ route('clientes.rapido') }}";
+    const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
 
     const buscador = document.getElementById('buscador_producto');
     const resultados = document.getElementById('resultados_busqueda');
@@ -584,6 +649,130 @@
     function quitarProducto(id) {
         carrito = carrito.filter(item => String(item.id) !== String(id));
         renderCarrito();
+    }
+
+    function abrirModalClienteRapido() {
+        const modal = document.getElementById('clienteRapidoModal');
+
+        if (!modal) return;
+
+        document.getElementById('cliente_rapido_nombre').value = '';
+        document.getElementById('cliente_rapido_ci_nit').value = '';
+        document.getElementById('cliente_rapido_telefono').value = '';
+        document.getElementById('cliente_rapido_descuento').value = 0;
+        document.getElementById('cliente_rapido_nombre_error').textContent = '';
+
+        modal.classList.add('show');
+
+        setTimeout(() => {
+            document.getElementById('cliente_rapido_nombre').focus();
+        }, 100);
+    }
+
+    function cerrarModalClienteRapido() {
+        const modal = document.getElementById('clienteRapidoModal');
+
+        if (!modal) return;
+
+        modal.classList.remove('show');
+    }
+
+    async function guardarClienteRapido() {
+        const btn = document.getElementById('btn_guardar_cliente_rapido');
+        const nombreInput = document.getElementById('cliente_rapido_nombre');
+        const ciNitInput = document.getElementById('cliente_rapido_ci_nit');
+        const telefonoInput = document.getElementById('cliente_rapido_telefono');
+        const descuentoInputCliente = document.getElementById('cliente_rapido_descuento');
+        const errorNombre = document.getElementById('cliente_rapido_nombre_error');
+
+        const nombre = nombreInput.value.trim();
+        const ciNit = ciNitInput.value.trim();
+        const telefono = telefonoInput.value.trim();
+        const descuentoDefault = Number(descuentoInputCliente.value || 0);
+
+        errorNombre.textContent = '';
+
+        if (!nombre) {
+            errorNombre.textContent = 'El nombre del cliente es obligatorio.';
+            nombreInput.focus();
+            return;
+        }
+
+        btn.disabled = true;
+        btn.innerHTML = '<i class="bi bi-hourglass-split"></i> Guardando...';
+
+        try {
+            const response = await fetch(crearClienteRapidoUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': csrfToken,
+                    'Accept': 'application/json'
+                },
+                body: JSON.stringify({
+                    nombre: nombre,
+                    ci_nit: ciNit,
+                    telefono: telefono,
+                    descuento_default: descuentoDefault
+                })
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                if (data.errors && data.errors.nombre) {
+                    errorNombre.textContent = data.errors.nombre[0];
+                } else {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'No se pudo crear el cliente',
+                        text: data.message || 'Revise los datos ingresados.',
+                        confirmButtonColor: '#6D28D9'
+                    });
+                }
+
+                return;
+            }
+
+            const option = document.createElement('option');
+            option.value = data.cliente.id;
+            option.textContent = data.cliente.texto;
+            option.setAttribute('data-descuento', data.cliente.descuento_default ?? 0);
+            option.selected = true;
+
+            clienteSelect.appendChild(option);
+            clienteSelect.value = data.cliente.id;
+
+            if (puedeAplicarDescuento) {
+                descuentoInput.value = data.cliente.descuento_default ?? 0;
+            } else {
+                descuentoInput.value = 0;
+            }
+
+            actualizarTotales();
+            cerrarModalClienteRapido();
+
+            Swal.fire({
+                icon: 'success',
+                title: 'Cliente creado',
+                text: 'El cliente fue agregado a la venta.',
+                timer: 1400,
+                showConfirmButton: false
+            });
+
+        } catch (error) {
+            console.error('Error al crear cliente:', error);
+
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: 'No se pudo crear el cliente.',
+                confirmButtonColor: '#6D28D9'
+            });
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="bi bi-check2-circle"></i> Guardar cliente';
+        }
     }
 
     function renderCarrito() {

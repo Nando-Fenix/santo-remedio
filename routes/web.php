@@ -19,6 +19,7 @@ use App\Http\Controllers\PromocionController;
 use App\Http\Controllers\ReembolsoController;
 use App\Http\Controllers\ReporteController;
 use App\Http\Controllers\ServicioFarmaciaController;
+use App\Http\Controllers\SucursalController;
 use App\Http\Controllers\AuthController;
 use Illuminate\Support\Facades\Route;
 
@@ -30,7 +31,7 @@ Route::get('/login', [AuthController::class, 'mostrarLogin'])->name('login');
 Route::post('/login', [AuthController::class, 'login'])->name('login.post');
 Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 
-Route::middleware('auth')->group(function () {
+Route::middleware('auth','prevent-back-history')->group(function () {
 
     /*
     |--------------------------------------------------------------------------
@@ -175,6 +176,9 @@ Route::middleware('auth')->group(function () {
 
         Route::post('/clientes', [ClienteController::class, 'store'])
             ->name('clientes.store');
+
+        Route::post('/clientes/rapido', [ClienteController::class, 'clienteRapido'])
+            ->name('clientes.rapido');
     });
 
     Route::middleware('permiso:editar_cliente')->group(function () {
@@ -243,7 +247,11 @@ Route::middleware('auth')->group(function () {
         Route::post('/productos', [ProductoController::class, 'store'])
             ->name('productos.store');
 
-        
+        Route::post('/inventario/producto-rapido', [InventarioController::class, 'productoRapido'])
+            ->name('inventario.producto-rapido');
+
+        Route::post('/inventario/categoria-rapida', [InventarioController::class, 'categoriaRapida'])
+            ->name('inventario.categoria-rapida');
     });
 
     Route::middleware('permiso:editar_producto')->group(function () {
@@ -517,6 +525,57 @@ Route::middleware('auth')->group(function () {
 
         Route::get('/reportes/bajas-inventario/exportar-csv', [ReporteController::class, 'bajasInventarioExportarCsv'])
             ->name('reportes.bajas-inventario.exportar-csv');
+
+        Route::get('/reportes/ventas/exportar-xlsx', [ReporteController::class, 'ventasExportarXlsx'])
+            ->name('reportes.ventas.exportar-xlsx');
+
+        Route::get('/reportes/caja-diaria/exportar-xlsx', [ReporteController::class, 'cajaDiariaExportarXlsx'])
+            ->name('reportes.caja-diaria.exportar-xlsx');
+
+        Route::get('/reportes/compras/exportar-xlsx', [ReporteController::class, 'comprasExportarXlsx'])
+            ->name('reportes.compras.exportar-xlsx');
+
+        Route::get('/reportes/deudas-proveedores/exportar-xlsx', [ReporteController::class, 'deudasProveedoresExportarXlsx'])
+            ->name('reportes.deudas-proveedores.exportar-xlsx');
+
+        Route::get('/reportes/servicios/exportar-xlsx', [ReporteController::class, 'serviciosExportarXlsx'])
+            ->name('reportes.servicios.exportar-xlsx');
+
+        Route::get('/reportes/servicios/insumos/exportar-xlsx', [ReporteController::class, 'serviciosInsumosExportarXlsx'])
+            ->name('reportes.servicios.exportar-insumos-xlsx');
+
+        Route::get('/reportes/promociones/exportar-xlsx', [ReporteController::class, 'promocionesExportarXlsx'])
+            ->name('reportes.promociones.exportar-xlsx');
+
+        Route::get('/reportes/ingresos-diarios/exportar-xlsx', [ReporteController::class, 'ingresosDiariosExportarXlsx'])
+            ->name('reportes.ingresos-diarios.exportar-xlsx');
+
+        Route::get('/reportes/metodos-pago/exportar-xlsx', [ReporteController::class, 'metodosPagoExportarXlsx'])
+            ->name('reportes.metodos-pago.exportar-xlsx');
+
+        Route::get('/reportes/movimientos-inventario/exportar-xlsx', [ReporteController::class, 'movimientosInventarioExportarXlsx'])
+            ->name('reportes.movimientos-inventario.exportar-xlsx');
+
+        Route::get('/reportes/bajas-inventario/exportar-xlsx', [ReporteController::class, 'bajasInventarioExportarXlsx'])
+            ->name('reportes.bajas-inventario.exportar-xlsx');
+
+        Route::get('/reportes/inventario-critico/exportar-xlsx', [ReporteController::class, 'inventarioCriticoExportarXlsx'])
+            ->name('reportes.inventario-critico.exportar-xlsx');
+
+        Route::get('/reportes/productos-vendidos/exportar-xlsx', [ReporteController::class, 'productosVendidosExportarXlsx'])
+            ->name('reportes.productos-vendidos.exportar-xlsx');
+
+        Route::get('/reportes/clientes-frecuentes/exportar-xlsx', [ReporteController::class, 'clientesFrecuentesExportarXlsx'])
+            ->name('reportes.clientes-frecuentes.exportar-xlsx');
+
+        Route::get('/reportes/productos-reponer/exportar-xlsx', [ReporteController::class, 'productosReponerExportarXlsx'])
+            ->name('reportes.productos-reponer.exportar-xlsx');
+
+        Route::get('/reportes/utilidad-estimada/exportar-xlsx', [ReporteController::class, 'utilidadEstimadaExportarXlsx'])
+            ->name('reportes.utilidad-estimada.exportar-xlsx');
+
+        Route::get('/reportes/resumen-administrativo/exportar-xlsx', [ReporteController::class, 'resumenAdministrativoExportarXlsx'])
+            ->name('reportes.resumen-administrativo.exportar-xlsx');
     });
 
     /*
@@ -676,6 +735,33 @@ Route::middleware('auth')->group(function () {
 
             Route::put('/configuracion', [ConfiguracionController::class, 'update'])
                 ->name('configuracion.update');
+        });
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | Sucursales
+        |--------------------------------------------------------------------------
+        */
+
+        Route::middleware('permiso:administrar_sucursales')->group(function () {
+            Route::get('/sucursales', [SucursalController::class, 'index'])
+                ->name('sucursales.index');
+
+            Route::get('/sucursales/crear', [SucursalController::class, 'create'])
+                ->name('sucursales.create');
+
+            Route::post('/sucursales', [SucursalController::class, 'store'])
+                ->name('sucursales.store');
+
+            Route::get('/sucursales/{sucursal}/editar', [SucursalController::class, 'edit'])
+                ->name('sucursales.edit');
+
+            Route::put('/sucursales/{sucursal}', [SucursalController::class, 'update'])
+                ->name('sucursales.update');
+
+            Route::delete('/sucursales/{sucursal}', [SucursalController::class, 'destroy'])
+                ->name('sucursales.destroy');
         });
 
         

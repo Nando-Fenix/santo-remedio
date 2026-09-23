@@ -364,8 +364,8 @@
                         </div>
                     </div>
 
-                    <button type="button" class="btn-primary" data-producto="${dataProducto}" onclick="agregarItemPromocionDesdeBoton(this)">
-                        Agregar
+                    <button type="button" class="icon-action icon-action-primary" data-producto="${dataProducto}" onclick="agregarItemPromocionDesdeBoton(this)" title="Agregar">
+                        <i class="bi bi-plus-lg"></i>
                     </button>
                 </div>
             `;

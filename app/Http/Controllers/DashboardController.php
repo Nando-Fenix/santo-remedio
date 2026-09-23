@@ -7,6 +7,8 @@ use App\Models\Caja;
 use App\Models\Inventario;
 use App\Models\Venta;
 use Carbon\Carbon;
+use App\Models\DetalleVenta;
+use Illuminate\Support\Facades\DB;
 
 class DashboardController extends Controller
 {
@@ -32,6 +34,11 @@ class DashboardController extends Controller
                 'serviciosAnuladosHoy' => 0,
                 'ingresosTotalesHoy' => 0,
                 'ultimasAtencionesServicio' => collect(),
+                'productosMasVendidos' => collect(),
+                'graficoProductosVendidosLabels' => collect(),
+                'graficoProductosVendidosDatos' => collect(),
+                'productoMasVendidoNombre' => 'Sin ventas',
+                'productoMasVendidoCantidad' => 0,
             ])->with('error', 'El usuario no tiene una sucursal asignada.');
         }
 
@@ -133,6 +140,42 @@ class DashboardController extends Controller
             ->limit(5)
             ->get();
 
+        /*
+        |--------------------------------------------------------------------------
+        | Productos más vendidos últimos 30 días
+        |--------------------------------------------------------------------------
+        */
+
+        $productosMasVendidos = DetalleVenta::query()
+            ->select(
+                'detalle_ventas.producto_id',
+                DB::raw('SUM(detalle_ventas.cantidad) as total_vendido')
+            )
+            ->with('producto')
+            ->whereHas('venta', function ($query) use ($sucursal) {
+                $query->where('sucursal_id', $sucursal->id)
+                    ->where('estado', 'completada')
+                    ->whereBetween('fecha_hora', [
+                        now()->subDays(30)->startOfDay(),
+                        now()->endOfDay(),
+                    ]);
+            })
+            ->groupBy('detalle_ventas.producto_id')
+            ->orderByDesc('total_vendido')
+            ->limit(5)
+            ->get();
+
+        $graficoProductosVendidosLabels = $productosMasVendidos
+            ->map(fn ($item) => $item->producto->nombre_comercial ?? 'Producto')
+            ->values();
+
+        $graficoProductosVendidosDatos = $productosMasVendidos
+            ->map(fn ($item) => (float) $item->total_vendido)
+            ->values();
+
+        $productoMasVendidoNombre = $productosMasVendidos->first()?->producto?->nombre_comercial ?? 'Sin ventas';
+        $productoMasVendidoCantidad = (float) ($productosMasVendidos->first()?->total_vendido ?? 0);
+
         return view('dashboard', compact(
             'sucursal',
             'totalVentasDia',
@@ -146,7 +189,12 @@ class DashboardController extends Controller
             'ultimasAtencionesServicio',
             'atencionesServiciosHoy',
             'serviciosAnuladosHoy',
-            'ingresosTotalesHoy'
+            'ingresosTotalesHoy',
+            'productosMasVendidos',
+            'graficoProductosVendidosLabels',
+            'graficoProductosVendidosDatos',
+            'productoMasVendidoNombre',
+            'productoMasVendidoCantidad'
         ));
     }
 }

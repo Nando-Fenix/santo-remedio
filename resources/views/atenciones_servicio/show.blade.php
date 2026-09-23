@@ -18,176 +18,222 @@
     </div>
 @endif
 
-<div class="card" style="margin-bottom:22px;">
-    <div style="display:flex; justify-content:space-between; align-items:center; gap:16px;">
+<div class="compact-card">
+
+    <div class="compact-header">
         <div>
-            <h2 style="margin:0; color:#4C1D95;">
-                Atención de servicio #{{ $atencionServicio->numero_atencion ?? 'SER-' . str_pad($atencionServicio->id, 6, '0', STR_PAD_LEFT) }}
+            <h2>
+                <i class="bi bi-heart-pulse"></i>
+                Atención #{{ $atencionServicio->numero_atencion ?? 'SER-' . str_pad($atencionServicio->id, 6, '0', STR_PAD_LEFT) }}
             </h2>
-            <p style="margin:6px 0 0; color:#6B7280;">
+
+            <p>
                 Registrada el {{ $atencionServicio->fecha_hora->format('d/m/Y H:i') }}
+                ·
+                Servicio: <strong>{{ $atencionServicio->servicio->nombre ?? '-' }}</strong>
             </p>
         </div>
 
-        <div style="display:flex; gap:10px; flex-wrap:wrap;">
+        <div class="detail-actions">
+            @if ($atencionServicio->estado === 'completada')
+                <span class="badge badge-success">
+                    Completada
+                </span>
+            @else
+                <span class="badge badge-danger">
+                    Anulada
+                </span>
+            @endif
+
+            <button
+                type="button"
+                class="btn-primary"
+                onclick="abrirModalImpresion('{{ route('atenciones-servicio.recibo', $atencionServicio) }}')"
+            >
+                <i class="bi bi-printer"></i>
+                Imprimir
+            </button>
+
             @if ($atencionServicio->estado === 'completada' && auth()->user()->tienePermiso('anular_atencion_servicio'))
-                <a href="{{ route('atenciones-servicio.anular.create', $atencionServicio) }}" class="btn-danger">
-                    Anular atención
+                <a
+                    href="{{ route('atenciones-servicio.anular.create', $atencionServicio) }}"
+                    class="btn-danger"
+                >
+                    <i class="bi bi-x-octagon"></i>
+                    Anular
                 </a>
             @endif
 
-            <a href="{{ route('atenciones-servicio.recibo', $atencionServicio) }}" class="btn-primary" target="_blank">
-                Imprimir comprobante
-            </a>
-
             <a href="{{ route('atenciones-servicio.index') }}" class="btn-secondary">
+                <i class="bi bi-arrow-left"></i>
                 Volver
             </a>
         </div>
     </div>
-</div>
 
-<div class="grid" style="grid-template-columns: repeat(4, 1fr); margin-bottom:22px;">
-    <div class="stat-card">
-        <span>Subtotal</span>
-        <h3>{{ number_format($atencionServicio->subtotal, 2) }} Bs</h3>
+    <div class="detail-stat-grid">
+        <div class="detail-stat-card">
+            <span>Subtotal</span>
+            <strong>{{ number_format($atencionServicio->subtotal, 2) }} Bs</strong>
+        </div>
+
+        <div class="detail-stat-card">
+            <span>Descuento</span>
+            <strong>{{ number_format($atencionServicio->descuento, 2) }} Bs</strong>
+        </div>
+
+        <div class="detail-stat-card detail-stat-main">
+            <span>Total cobrado</span>
+            <strong>{{ number_format($atencionServicio->total, 2) }} Bs</strong>
+        </div>
+
+        <div class="detail-stat-card">
+            <span>Método</span>
+            <strong>{{ $atencionServicio->metodoPago->nombre ?? '-' }}</strong>
+        </div>
     </div>
 
-    <div class="stat-card">
-        <span>Descuento</span>
-        <h3>{{ number_format($atencionServicio->descuento, 2) }} Bs</h3>
-    </div>
+    <div class="detail-layout">
 
-    <div class="stat-card">
-        <span>Total</span>
-        <h3>{{ number_format($atencionServicio->total, 2) }} Bs</h3>
-    </div>
+        <section class="detail-section-card">
+            <div class="detail-section-head">
+                <h3>
+                    <i class="bi bi-clipboard2-pulse"></i>
+                    Datos de la atención
+                </h3>
+            </div>
 
-    <div class="stat-card">
-        <span>Estado</span>
-        <h3 style="font-size:18px;">
-            {{ ucfirst($atencionServicio->estado) }}
-        </h3>
-    </div>
-</div>
+            <div class="detail-info-grid">
+                <div class="detail-info-item">
+                    <span>Servicio</span>
+                    <strong>{{ $atencionServicio->servicio->nombre ?? '-' }}</strong>
+                </div>
 
-<div class="card" style="margin-bottom:22px;">
-    <h3 style="margin-top:0; color:#4C1D95;">Datos de la atención</h3>
+                <div class="detail-info-item">
+                    <span>Cantidad</span>
+                    <strong>{{ $atencionServicio->cantidad }}</strong>
+                </div>
 
-    <p>
-        <strong>Servicio:</strong>
-        {{ $atencionServicio->servicio->nombre ?? '-' }}
+                <div class="detail-info-item">
+                    <span>Precio unitario</span>
+                    <strong>{{ number_format($atencionServicio->precio_unitario, 2) }} Bs</strong>
+                </div>
 
-        <br>
-        <strong>Cantidad:</strong>
-        {{ $atencionServicio->cantidad }}
+                <div class="detail-info-item">
+                    <span>Cliente</span>
+                    <strong>{{ $atencionServicio->cliente->nombre ?? 'Consumidor final' }}</strong>
+                </div>
 
-        <br>
-        <strong>Precio unitario:</strong>
-        {{ number_format($atencionServicio->precio_unitario, 2) }} Bs
+                <div class="detail-info-item">
+                    <span>Sucursal</span>
+                    <strong>{{ $atencionServicio->sucursal->nombre ?? '-' }}</strong>
+                </div>
 
-        <br>
-        <strong>Cliente:</strong>
-        {{ $atencionServicio->cliente->nombre ?? 'Consumidor final' }}
+                <div class="detail-info-item">
+                    <span>Registrado por</span>
+                    <strong>{{ $atencionServicio->usuario->nombre ?? '-' }}</strong>
+                </div>
 
-        <br>
-        <strong>Método de pago:</strong>
-        {{ $atencionServicio->metodoPago->nombre ?? '-' }}
+                <div class="detail-info-item detail-info-full">
+                    <span>Observación</span>
+                    <strong>{{ $atencionServicio->observacion ?? '-' }}</strong>
+                </div>
+            </div>
+        </section>
 
-        <br>
-        <strong>Sucursal:</strong>
-        {{ $atencionServicio->sucursal->nombre ?? '-' }}
+        <section class="detail-section-card">
+            <div class="detail-section-head">
+                <h3>
+                    <i class="bi bi-box-seam"></i>
+                    Insumos descontados
+                </h3>
+            </div>
 
-        <br>
-        <strong>Registrado por:</strong>
-        {{ $atencionServicio->usuario->nombre ?? '-' }}
+            <div class="table-container compact-table-container">
+                <table class="table compact-table">
+                    <thead>
+                        <tr>
+                            <th>Insumo</th>
+                            <th>Lote</th>
+                            <th>Desc.</th>
+                        </tr>
+                    </thead>
 
-        <br>
-        <strong>Observación:</strong>
-        {{ $atencionServicio->observacion ?? '-' }}
-    </p>
-</div>
+                    <tbody>
+                        @forelse ($atencionServicio->insumos as $insumo)
+                            <tr>
+                                <td>
+                                    <strong>
+                                        {{ $insumo->productoPresentacion->nombre_mostrado ?? $insumo->producto->nombre_comercial ?? '-' }}
+                                    </strong>
 
-<div class="card" style="margin-bottom:22px;">
-    <h3 style="margin-top:0; color:#4C1D95;">Insumos descontados</h3>
+                                    <br>
 
-    <div class="table-container">
-        <table class="table">
-            <thead>
-                <tr>
-                    <th>Insumo</th>
-                    <th>Presentación</th>
-                    <th>Lote</th>
-                    <th>Unidades descontadas</th>
-                </tr>
-            </thead>
+                                    <small style="color:#6B7280;">
+                                        {{ $insumo->productoPresentacion->presentacion->nombre ?? '-' }}
 
-            <tbody>
-                @forelse ($atencionServicio->insumos as $insumo)
-                    <tr>
-                        <td>
-                            <strong>
-                                {{ $insumo->productoPresentacion->nombre_mostrado ?? $insumo->producto->nombre_comercial ?? '-' }}
-                            </strong>
+                                        @if ($insumo->producto?->laboratorio)
+                                            · {{ $insumo->producto->laboratorio->nombre }}
+                                        @endif
 
-                            @if ($insumo->producto?->laboratorio || $insumo->producto?->concentracion)
-                                <br>
-                                <small style="color:#6B7280;">
-                                    @if ($insumo->producto?->laboratorio)
-                                        {{ $insumo->producto->laboratorio->nombre }}
+                                        @if ($insumo->producto?->concentracion)
+                                            · {{ $insumo->producto->concentracion }}
+                                        @endif
+                                    </small>
+                                </td>
+
+                                <td>
+                                    {{ $insumo->lote->numero_lote ?? 'Sin lote' }}
+
+                                    @if ($insumo->lote?->fecha_vencimiento)
+                                        <br>
+                                        <small style="color:#6B7280;">
+                                            Vence: {{ $insumo->lote->fecha_vencimiento->format('d/m/Y') }}
+                                        </small>
                                     @endif
+                                </td>
 
-                                    @if ($insumo->producto?->laboratorio && $insumo->producto?->concentracion)
-                                        |
-                                    @endif
+                                <td>
+                                    <strong>{{ $insumo->unidades_descontadas }}</strong>
+                                    <br>
+                                    <small style="color:#6B7280;">unidad(es)</small>
+                                </td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="3" class="empty-table-message">
+                                    Este servicio no descontó insumos.
+                                </td>
+                            </tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
+        </section>
 
-                                    @if ($insumo->producto?->concentracion)
-                                        {{ $insumo->producto->concentracion }}
-                                    @endif
-                                </small>
-                            @endif
-                        </td>
-
-                        <td>{{ $insumo->productoPresentacion->presentacion->nombre ?? '-' }}</td>
-
-                        <td>
-                            {{ $insumo->lote->numero_lote ?? 'Sin lote' }}
-
-                            @if ($insumo->lote?->fecha_vencimiento)
-                                <br>
-                                <small style="color:#6B7280;">
-                                    Vence: {{ $insumo->lote->fecha_vencimiento->format('d/m/Y') }}
-                                </small>
-                            @endif
-                        </td>
-
-                        <td>{{ $insumo->unidades_descontadas }}</td>
-                    </tr>
-                @empty
-                    <tr>
-                        <td colspan="4" style="text-align:center; color:#6B7280;">
-                            Este servicio no descontó insumos.
-                        </td>
-                    </tr>
-                @endforelse
-            </tbody>
-        </table>
     </div>
+
+    @if ($atencionServicio->estado === 'anulada')
+        <div class="detail-cancel-card">
+            <div>
+                <h3>
+                    <i class="bi bi-x-octagon"></i>
+                    Datos de anulación
+                </h3>
+
+                <p>
+                    <strong>Fecha:</strong>
+                    {{ $atencionServicio->fecha_anulacion?->format('d/m/Y H:i') ?? '-' }}
+                </p>
+
+                <p>
+                    <strong>Motivo:</strong>
+                    {{ $atencionServicio->motivo_anulacion ?? '-' }}
+                </p>
+            </div>
+        </div>
+    @endif
+
 </div>
-
-@if ($atencionServicio->estado === 'anulada')
-    <div class="card">
-        <h3 style="margin-top:0; color:#991B1B;">Datos de anulación</h3>
-
-        <p>
-            <strong>Fecha de anulación:</strong>
-            {{ $atencionServicio->fecha_anulacion?->format('d/m/Y H:i') ?? '-' }}
-
-            <br>
-            <strong>Motivo:</strong>
-            {{ $atencionServicio->motivo_anulacion ?? '-' }}
-        </p>
-    </div>
-@endif
 
 @endsection

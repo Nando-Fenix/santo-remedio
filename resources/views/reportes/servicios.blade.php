@@ -6,53 +6,75 @@
 
 @section('content')
 
-<div class="card" style="margin-bottom: 22px;">
-    <div style="display:flex; justify-content:space-between; align-items:center; gap:16px;">
+<div class="report-detail-page">
+
+    <div class="compact-card report-detail-header">
         <div>
-            <h2 style="margin:0; color:#4C1D95;">Reporte de servicios</h2>
-            <p style="margin:6px 0 0; color:#6B7280;">
-                Revise ingresos por servicios, atenciones realizadas e insumos descontados.
-            </p>
-            <p style="margin:6px 0 0; color:#4B5563;">
+            <h2>
+                <i class="bi bi-heart-pulse"></i>
+                Reporte de servicios
+            </h2>
+
+            <p>
                 Sucursal:
                 <strong>{{ $sucursal?->nombre ?? 'Sin sucursal' }}</strong>
+                |
+                Periodo:
+                <strong>{{ $fechaInicio }}</strong>
+                al
+                <strong>{{ $fechaFin }}</strong>
             </p>
         </div>
 
-        <div style="display:flex; gap:10px; flex-wrap:wrap;">
+        <div class="detail-actions">
             <a
-                href="{{ route('reportes.servicios.exportar-csv', request()->query()) }}"
+                href="{{ route('reportes.servicios.exportar-xlsx', request()->query()) }}"
                 class="btn-primary"
             >
-                Exportar atenciones
+                <i class="bi bi-file-earmark-spreadsheet"></i>
+                Excel atenciones
+            </a>
+
+            <a
+                href="{{ route('reportes.servicios.exportar-insumos-xlsx', request()->query()) }}"
+                class="btn-primary"
+            >
+                <i class="bi bi-box-seam"></i>
+                Excel insumos
+            </a>
+
+            <a
+                href="{{ route('reportes.servicios.exportar-csv', request()->query()) }}"
+                class="btn-secondary"
+            >
+                <i class="bi bi-file-earmark-excel"></i>
+                CSV atenciones
             </a>
 
             <a
                 href="{{ route('reportes.servicios.exportar-insumos-csv', request()->query()) }}"
                 class="btn-secondary"
             >
-                Exportar insumos
+                <i class="bi bi-box-arrow-down"></i>
+                CSV insumos
             </a>
 
             <a href="{{ route('reportes.index') }}" class="btn-secondary">
-                Volver a reportes
+                <i class="bi bi-arrow-left"></i>
+                Reportes
             </a>
-        </div> 
+        </div>
     </div>
-</div>
 
-<div class="card" style="margin-bottom: 22px;">
-    <h3 style="margin-top:0; color:#4C1D95;">Filtros</h3>
-
-    <form method="GET" action="{{ route('reportes.servicios') }}">
-        <div class="form-grid">
+    <div class="compact-card report-filter-card">
+        <form method="GET" action="{{ route('reportes.servicios') }}" class="filter-bar report-filter-bar">
             <div class="form-group">
-                <label>Fecha inicio</label>
+                <label>Inicio</label>
                 <input type="date" name="fecha_inicio" value="{{ $fechaInicio }}">
             </div>
 
             <div class="form-group">
-                <label>Fecha fin</label>
+                <label>Fin</label>
                 <input type="date" name="fecha_fin" value="{{ $fechaFin }}">
             </div>
 
@@ -76,207 +98,285 @@
                     <option value="anulada" @selected($estado === 'anulada')>Anulada</option>
                 </select>
             </div>
+
+            <div class="filter-actions">
+                <button type="submit" class="btn-primary" title="Buscar">
+                    <i class="bi bi-search"></i>
+                </button>
+
+                <a href="{{ route('reportes.servicios') }}" class="btn-secondary" title="Limpiar filtros">
+                    <i class="bi bi-x-circle"></i>
+                </a>
+            </div>
+        </form>
+    </div>
+
+    <div class="report-summary-strip report-summary-five">
+        <div class="report-mini-stat">
+            <span>Total atenciones</span>
+            <strong>{{ $resumen['total_atenciones'] }}</strong>
         </div>
 
-        <div style="display:flex; gap:10px; margin-top:14px;">
-            <button type="submit" class="btn-primary">
-                Aplicar filtros
-            </button>
-
-            <a href="{{ route('reportes.servicios') }}" class="btn-secondary">
-                Limpiar
-            </a>
+        <div class="report-mini-stat">
+            <span>Completadas</span>
+            <strong>{{ $resumen['atenciones_completadas'] }}</strong>
         </div>
-    </form>
-</div>
 
-<div class="grid" style="grid-template-columns: repeat(5, 1fr); margin-bottom: 22px;">
-    <div class="stat-card">
-        <span>Total atenciones</span>
-        <h3>{{ $resumen['total_atenciones'] }}</h3>
+        <div class="report-mini-stat report-mini-danger">
+            <span>Anuladas</span>
+            <strong>{{ $resumen['atenciones_anuladas'] }}</strong>
+        </div>
+
+        <div class="report-mini-stat report-mini-total">
+            <span>Ingresos válidos</span>
+            <strong>{{ number_format($resumen['ingresos_completados'], 2) }} Bs</strong>
+        </div>
+
+        <div class="report-mini-stat report-mini-danger">
+            <span>Monto anulado</span>
+            <strong>{{ number_format($resumen['ingresos_anulados'], 2) }} Bs</strong>
+        </div>
     </div>
 
-    <div class="stat-card">
-        <span>Completadas</span>
-        <h3>{{ $resumen['atenciones_completadas'] }}</h3>
+    <div class="report-two-columns">
+        <div class="compact-card">
+            <div class="detail-section-head">
+                <h3>
+                    <i class="bi bi-graph-up"></i>
+                    Servicios más vendidos
+                </h3>
+            </div>
+
+            <div class="table-container compact-table-container">
+                <table class="table compact-table report-services-ranking-table">
+                    <thead>
+                        <tr>
+                            <th>Servicio</th>
+                            <th>Cant.</th>
+                            <th>Atenc.</th>
+                            <th>Ingresos</th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+                        @forelse ($serviciosMasVendidos as $item)
+                            <tr>
+                                <td>
+                                    <strong>{{ $item->servicio->nombre ?? '-' }}</strong>
+                                </td>
+
+                                <td>
+                                    <span class="reorder-suggested">
+                                        {{ $item->cantidad_total }}
+                                    </span>
+                                </td>
+
+                                <td>
+                                    {{ $item->atenciones_total }}
+                                </td>
+
+                                <td>
+                                    <strong class="report-money">
+                                        {{ number_format($item->ingresos_total, 2) }} Bs
+                                    </strong>
+                                </td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="4" class="empty-table-message">
+                                    No hay servicios completados en el rango seleccionado.
+                                </td>
+                            </tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="compact-card">
+            <div class="detail-section-head">
+                <h3>
+                    <i class="bi bi-box-seam"></i>
+                    Insumos consumidos
+                </h3>
+            </div>
+
+            <div class="table-container compact-table-container">
+                <table class="table compact-table report-service-supplies-table">
+                    <thead>
+                        <tr>
+                            <th>Insumo</th>
+                            <th>Presentación</th>
+                            <th>Unid.</th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+                        @forelse ($insumosConsumidos as $item)
+                            <tr>
+                                <td>
+                                    <strong>
+                                        {{ $item->productoPresentacion->nombre_mostrado ?? $item->producto->nombre_comercial ?? '-' }}
+                                    </strong>
+
+                                    @if ($item->producto?->laboratorio || $item->producto?->concentracion)
+                                        <br>
+                                        <small style="color:#6B7280;">
+                                            @if ($item->producto?->laboratorio)
+                                                {{ $item->producto->laboratorio->nombre }}
+                                            @endif
+
+                                            @if ($item->producto?->laboratorio && $item->producto?->concentracion)
+                                                |
+                                            @endif
+
+                                            @if ($item->producto?->concentracion)
+                                                {{ $item->producto->concentracion }}
+                                            @endif
+                                        </small>
+                                    @endif
+                                </td>
+
+                                <td>
+                                    <span class="badge badge-soft">
+                                        {{ $item->productoPresentacion->presentacion->nombre ?? '-' }}
+                                    </span>
+                                </td>
+
+                                <td>
+                                    <strong class="stock-out-quantity">
+                                        {{ $item->unidades_total }}
+                                    </strong>
+                                </td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="3" class="empty-table-message">
+                                    No hay insumos consumidos en el rango seleccionado.
+                                </td>
+                            </tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
+        </div>
     </div>
 
-    <div class="stat-card">
-        <span>Anuladas</span>
-        <h3>{{ $resumen['atenciones_anuladas'] }}</h3>
-    </div>
+    <div class="compact-card">
+        <div class="detail-section-head">
+            <h3>
+                <i class="bi bi-list-check"></i>
+                Detalle de atenciones
+            </h3>
+        </div>
 
-    <div class="stat-card">
-        <span>Ingresos válidos</span>
-        <h3>{{ number_format($resumen['ingresos_completados'], 2) }} Bs</h3>
-    </div>
-
-    <div class="stat-card">
-        <span>Monto anulado</span>
-        <h3>{{ number_format($resumen['ingresos_anulados'], 2) }} Bs</h3>
-    </div>
-</div>
-
-<div class="grid" style="grid-template-columns: 1fr 1fr; margin-bottom: 22px;">
-    <div class="card">
-        <h3 style="margin-top:0; color:#4C1D95;">Servicios más vendidos</h3>
-
-        <div class="table-container">
-            <table class="table">
+        <div class="table-container compact-table-container">
+            <table class="table compact-table report-services-detail-table">
                 <thead>
                     <tr>
+                        <th>N° atención</th>
+                        <th>Fecha</th>
                         <th>Servicio</th>
-                        <th>Cantidad</th>
-                        <th>Atenciones</th>
-                        <th>Ingresos</th>
+                        <th>Cliente</th>
+                        <th>Cant.</th>
+                        <th>Total</th>
+                        <th>Método</th>
+                        <th>Usuario</th>
+                        <th>Estado</th>
+                        <th class="table-actions-cell">Acciones</th>
                     </tr>
                 </thead>
 
                 <tbody>
-                    @forelse ($serviciosMasVendidos as $item)
-                        <tr>
-                            <td>{{ $item->servicio->nombre ?? '-' }}</td>
-                            <td>{{ $item->cantidad_total }}</td>
-                            <td>{{ $item->atenciones_total }}</td>
-                            <td>{{ number_format($item->ingresos_total, 2) }} Bs</td>
-                        </tr>
-                    @empty
-                        <tr>
-                            <td colspan="4" style="text-align:center; color:#6B7280;">
-                                No hay servicios completados en el rango seleccionado.
-                            </td>
-                        </tr>
-                    @endforelse
-                </tbody>
-            </table>
-        </div>
-    </div>
-
-    <div class="card">
-        <h3 style="margin-top:0; color:#4C1D95;">Insumos consumidos</h3>
-
-        <div class="table-container">
-            <table class="table">
-                <thead>
-                    <tr>
-                        <th>Insumo</th>
-                        <th>Presentación</th>
-                        <th>Unidades</th>
-                    </tr>
-                </thead>
-
-                <tbody>
-                    @forelse ($insumosConsumidos as $item)
+                    @forelse ($atenciones as $atencion)
                         <tr>
                             <td>
                                 <strong>
-                                    {{ $item->productoPresentacion->nombre_mostrado ?? $item->producto->nombre_comercial ?? '-' }}
+                                    {{ $atencion->numero_atencion ?? 'SER-' . str_pad($atencion->id, 6, '0', STR_PAD_LEFT) }}
                                 </strong>
+                            </td>
 
-                                @if ($item->producto?->laboratorio || $item->producto?->concentracion)
-                                    <br>
-                                    <small style="color:#6B7280;">
-                                        @if ($item->producto?->laboratorio)
-                                            {{ $item->producto->laboratorio->nombre }}
-                                        @endif
+                            <td>
+                                {{ $atencion->fecha_hora->format('d/m/Y') }}
+                                <br>
+                                <small style="color:#6B7280;">
+                                    {{ $atencion->fecha_hora->format('H:i') }}
+                                </small>
+                            </td>
 
-                                        @if ($item->producto?->laboratorio && $item->producto?->concentracion)
-                                            |
-                                        @endif
+                            <td>
+                                {{ $atencion->servicio->nombre ?? '-' }}
+                            </td>
 
-                                        @if ($item->producto?->concentracion)
-                                            {{ $item->producto->concentracion }}
-                                        @endif
-                                    </small>
+                            <td>
+                                {{ $atencion->cliente->nombre ?? 'Consumidor final' }}
+                            </td>
+
+                            <td>
+                                {{ $atencion->cantidad }}
+                            </td>
+
+                            <td>
+                                <strong class="report-money">
+                                    {{ number_format($atencion->total, 2) }} Bs
+                                </strong>
+                            </td>
+
+                            <td>
+                                <span class="badge badge-soft">
+                                    {{ $atencion->metodoPago->nombre ?? '-' }}
+                                </span>
+                            </td>
+
+                            <td>
+                                {{ $atencion->usuario->nombre ?? '-' }}
+                            </td>
+
+                            <td>
+                                @if ($atencion->estado === 'completada')
+                                    <span class="badge badge-success">Completada</span>
+                                @else
+                                    <span class="badge badge-danger">Anulada</span>
                                 @endif
                             </td>
 
-                            <td>{{ $item->productoPresentacion->presentacion->nombre ?? '-' }}</td>
-                            <td>{{ $item->unidades_total }}</td>
+                            <td>
+                                <div class="action-group">
+                                    <a
+                                        href="{{ route('atenciones-servicio.show', $atencion) }}"
+                                        class="icon-action icon-action-primary"
+                                        title="Ver atención"
+                                    >
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+
+                                    <button
+                                        type="button"
+                                        class="icon-action icon-action-print"
+                                        onclick="abrirModalImpresion('{{ route('atenciones-servicio.recibo', $atencion) }}')"
+                                        title="Imprimir recibo"
+                                    >
+                                        <i class="bi bi-printer"></i>
+                                    </button>
+                                </div>
+                            </td>
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="3" style="text-align:center; color:#6B7280;">
-                                No hay insumos consumidos en el rango seleccionado.
+                            <td colspan="10" class="empty-table-message">
+                                No hay atenciones en el rango seleccionado.
                             </td>
                         </tr>
                     @endforelse
                 </tbody>
             </table>
         </div>
-    </div>
-</div>
 
-<div class="card">
-    <h3 style="margin-top:0; color:#4C1D95;">Detalle de atenciones</h3>
-
-    <div class="table-container">
-        <table class="table">
-            <thead>
-                <tr>
-                    <th>N° atención</th>
-                    <th>Fecha</th>
-                    <th>Servicio</th>
-                    <th>Cliente</th>
-                    <th>Cantidad</th>
-                    <th>Total</th>
-                    <th>Método</th>
-                    <th>Usuario</th>
-                    <th>Estado</th>
-                    <th>Acciones</th>
-                </tr>
-            </thead>
-
-            <tbody>
-                @forelse ($atenciones as $atencion)
-                    <tr>
-                        <td>
-                            <strong>
-                                {{ $atencion->numero_atencion ?? 'SER-' . str_pad($atencion->id, 6, '0', STR_PAD_LEFT) }}
-                            </strong>
-                        </td>
-                        <td>{{ $atencion->fecha_hora->format('d/m/Y H:i') }}</td>
-                        <td>{{ $atencion->servicio->nombre ?? '-' }}</td>
-                        <td>{{ $atencion->cliente->nombre ?? 'Consumidor final' }}</td>
-                        <td>{{ $atencion->cantidad }}</td>
-                        <td>{{ number_format($atencion->total, 2) }} Bs</td>
-                        <td>{{ $atencion->metodoPago->nombre ?? '-' }}</td>
-                        <td>{{ $atencion->usuario->nombre ?? '-' }}</td>
-
-                        <td>
-                            @if ($atencion->estado === 'completada')
-                                <span class="badge badge-success">Completada</span>
-                            @else
-                                <span class="badge badge-danger">Anulada</span>
-                            @endif
-                        </td>
-
-                        <td>
-                            <div style="display:flex; gap:6px; flex-wrap:wrap;">
-                                <a href="{{ route('atenciones-servicio.show', $atencion) }}" class="btn-secondary">
-                                    Ver
-                                </a>
-
-                                <a href="{{ route('atenciones-servicio.recibo', $atencion) }}" class="btn-primary" target="_blank">
-                                    Imprimir
-                                </a>
-                            </div>
-                        </td>
-                    </tr>
-                @empty
-                    <tr>
-                        <td colspan="10" style="text-align:center; color:#6B7280;">
-                            No hay atenciones en el rango seleccionado.
-                        </td>
-                    </tr>
-                @endforelse
-            </tbody>
-        </table>
+        <div class="pagination-wrapper">
+            {{ $atenciones->links() }}
+        </div>
     </div>
 
-    <div style="margin-top:18px;">
-        {{ $atenciones->links() }}
-    </div>
 </div>
 
 @endsection

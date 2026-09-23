@@ -6,42 +6,50 @@
 
 @section('content')
 
-<div class="card" style="margin-bottom: 22px;">
-    <div style="display:flex; justify-content:space-between; align-items:center; gap:16px; flex-wrap:wrap;">
+<div class="report-detail-page">
+
+    <div class="compact-card report-detail-header">
         <div>
-            <h2 style="margin:0; color:#4C1D95;">Inventario crítico</h2>
+            <h2>
+                <i class="bi bi-exclamation-triangle"></i>
+                Inventario crítico
+            </h2>
 
-            <p style="margin:6px 0 0; color:#6B7280;">
-                Productos que requieren atención inmediata.
-            </p>
-
-            <p style="margin:6px 0 0; color:#4B5563;">
+            <p>
                 Sucursal:
                 <strong>{{ $sucursal?->nombre ?? 'Sin sucursal' }}</strong>
+                |
+                Productos que requieren atención inmediata.
             </p>
         </div>
 
-        <div style="display:flex; gap:10px; flex-wrap:wrap;">
+        <div class="detail-actions">
             <a
-                href="{{ route('reportes.inventario-critico.exportar-csv', request()->query()) }}"
+                href="{{ route('reportes.inventario-critico.exportar-xlsx', request()->query()) }}"
                 class="btn-primary"
             >
-                Exportar Excel
+                <i class="bi bi-file-earmark-spreadsheet"></i>
+                Excel
+            </a>
+
+            <a
+                href="{{ route('reportes.inventario-critico.exportar-csv', request()->query()) }}"
+                class="btn-secondary"
+            >
+                <i class="bi bi-file-earmark-excel"></i>
+                CSV
             </a>
 
             <a href="{{ route('reportes.index') }}" class="btn-secondary">
-                Volver a reportes
+                <i class="bi bi-arrow-left"></i>
+                Reportes
             </a>
         </div>
     </div>
-</div>
 
-<div class="card" style="margin-bottom: 22px;">
-    <h3 style="margin-top:0; color:#4C1D95;">Filtros</h3>
-
-    <form method="GET" action="{{ route('reportes.inventario-critico') }}">
-        <div class="form-grid">
-            <div class="form-group">
+    <div class="compact-card report-filter-card">
+        <form method="GET" action="{{ route('reportes.inventario-critico') }}" class="filter-bar report-filter-bar">
+            <div class="form-group filter-search">
                 <label>Buscar producto</label>
                 <input
                     type="text"
@@ -61,139 +69,188 @@
                     <option value="vencidos" @selected($tipo === 'vencidos')>Vencidos</option>
                 </select>
             </div>
+
+            <div class="filter-actions">
+                <button type="submit" class="btn-primary" title="Buscar">
+                    <i class="bi bi-search"></i>
+                </button>
+
+                <a href="{{ route('reportes.inventario-critico') }}" class="btn-secondary" title="Limpiar filtros">
+                    <i class="bi bi-x-circle"></i>
+                </a>
+            </div>
+        </form>
+    </div>
+
+    <div class="critical-summary-strip">
+        <div class="critical-mini-stat critical-danger">
+            <span>Agotados</span>
+            <strong>{{ $resumen['agotados'] }}</strong>
         </div>
 
-        <div style="display:flex; gap:10px; margin-top:14px; flex-wrap:wrap;">
-            <button type="submit" class="btn-primary">
-                Aplicar filtros
-            </button>
-
-            <a href="{{ route('reportes.inventario-critico') }}" class="btn-secondary">
-                Limpiar
-            </a>
+        <div class="critical-mini-stat critical-warning">
+            <span>Stock bajo</span>
+            <strong>{{ $resumen['stock_bajo'] }}</strong>
         </div>
-    </form>
-</div>
 
-<div class="grid" style="grid-template-columns: repeat(4, 1fr); margin-bottom: 22px;">
-    <div class="stat-card">
-        <span>Agotados</span>
-        <h3>{{ $resumen['agotados'] }}</h3>
+        <div class="critical-mini-stat critical-soft">
+            <span>Próximos a vencer</span>
+            <strong>{{ $resumen['proximos_vencer'] }}</strong>
+        </div>
+
+        <div class="critical-mini-stat critical-danger">
+            <span>Vencidos</span>
+            <strong>{{ $resumen['vencidos'] }}</strong>
+        </div>
     </div>
 
-    <div class="stat-card">
-        <span>Stock bajo</span>
-        <h3>{{ $resumen['stock_bajo'] }}</h3>
-    </div>
+    <div class="compact-card">
+        <div class="detail-section-head">
+            <h3>
+                <i class="bi bi-list-check"></i>
+                Detalle de productos críticos
+            </h3>
+        </div>
 
-    <div class="stat-card">
-        <span>Próximos a vencer</span>
-        <h3>{{ $resumen['proximos_vencer'] }}</h3>
-    </div>
+        <div class="table-container compact-table-container">
+            <table class="table compact-table report-critical-table">
+                <thead>
+                    <tr>
+                        <th>Producto</th>
+                        <th>Laboratorio</th>
+                        <th>Stock</th>
+                        <th>Mín.</th>
+                        <th>Lote</th>
+                        <th>Vencimiento</th>
+                        <th>Alerta</th>
+                        <th class="table-actions-cell">Acción</th>
+                    </tr>
+                </thead>
 
-    <div class="stat-card">
-        <span>Vencidos</span>
-        <h3>{{ $resumen['vencidos'] }}</h3>
-    </div>
-</div>
+                <tbody>
+                    @forelse ($inventarios as $inventario)
+                        @php
+                            $fechaVencimiento = $inventario->lote?->fecha_vencimiento;
+                            $alerta = 'Normal';
 
-<div class="card">
-    <h3 style="margin-top:0; color:#4C1D95;">Detalle de productos críticos</h3>
-
-    <div class="table-container">
-        <table class="table">
-            <thead>
-                <tr>
-                    <th>Producto</th>
-                    <th>Laboratorio</th>
-                    <th>Stock</th>
-                    <th>Mínimo</th>
-                    <th>Lote</th>
-                    <th>Vencimiento</th>
-                    <th>Alerta</th>
-                    <th>Acción</th>
-                </tr>
-            </thead>
-
-            <tbody>
-                @forelse ($inventarios as $inventario)
-                    @php
-                        $fechaVencimiento = $inventario->lote?->fecha_vencimiento;
-                        $alerta = 'Normal';
-
-                        if ($inventario->stock_actual <= 0) {
-                            $alerta = 'Agotado';
-                        } elseif ($inventario->stock_actual <= $inventario->stock_minimo) {
-                            $alerta = 'Stock bajo';
-                        }
-
-                        if ($fechaVencimiento && $inventario->stock_actual > 0) {
-                            if ($fechaVencimiento->lt(now()->startOfDay())) {
-                                $alerta = 'Vencido';
-                            } elseif ($fechaVencimiento->between(now()->startOfDay(), now()->addDays(30)->endOfDay())) {
-                                $alerta = 'Próximo a vencer';
+                            if ($inventario->stock_actual <= 0) {
+                                $alerta = 'Agotado';
+                            } elseif ($inventario->stock_actual <= $inventario->stock_minimo) {
+                                $alerta = 'Stock bajo';
                             }
-                        }
-                    @endphp
 
-                    <tr>
-                        <td>
-                            <strong>{{ $inventario->producto->nombre_comercial ?? '-' }}</strong>
-                            <br>
-                            <small style="color:#6B7280;">
-                                {{ $inventario->producto->nombre_generico ?? '' }}
-                                {{ $inventario->producto->concentracion ?? '' }}
-                            </small>
-                        </td>
+                            if ($fechaVencimiento && $inventario->stock_actual > 0) {
+                                if ($fechaVencimiento->lt(now()->startOfDay())) {
+                                    $alerta = 'Vencido';
+                                } elseif ($fechaVencimiento->between(now()->startOfDay(), now()->addDays(30)->endOfDay())) {
+                                    $alerta = 'Próximo a vencer';
+                                }
+                            }
+                        @endphp
 
-                        <td>{{ $inventario->producto->laboratorio->nombre ?? '-' }}</td>
-                        <td>{{ $inventario->stock_actual }}</td>
-                        <td>{{ $inventario->stock_minimo }}</td>
-                        <td>{{ $inventario->lote->numero_lote ?? '-' }}</td>
-                        <td>{{ $fechaVencimiento?->format('d/m/Y') ?? '-' }}</td>
+                        <tr>
+                            <td>
+                                <strong>{{ $inventario->producto->nombre_comercial ?? '-' }}</strong>
 
-                        <td>
-                            @if ($alerta === 'Agotado' || $alerta === 'Vencido')
-                                <span class="badge badge-danger">{{ $alerta }}</span>
-                            @elseif ($alerta === 'Stock bajo')
-                                <span class="badge badge-warning">{{ $alerta }}</span>
-                            @elseif ($alerta === 'Próximo a vencer')
-                                <span class="badge badge-soft">{{ $alerta }}</span>
-                            @else
-                                <span class="badge badge-success">{{ $alerta }}</span>
-                            @endif
-                        </td>
+                                @if (($inventario->producto->nombre_generico ?? null) || ($inventario->producto->concentracion ?? null))
+                                    <br>
+                                    <small style="color:#6B7280;">
+                                        {{ $inventario->producto->nombre_generico ?? '' }}
+                                        {{ $inventario->producto->concentracion ?? '' }}
+                                    </small>
+                                @endif
+                            </td>
 
-                        <td>
-                            @if ($inventario->stock_actual > 0 && $fechaVencimiento && $fechaVencimiento->lt(now()->startOfDay()))
-                                <a href="{{ route('bajas-inventario.create', ['inventario_id' => $inventario->id]) }}" class="btn-danger">
-                                    Dar baja
-                                </a>
-                            @elseif ($inventario->stock_actual > 0 && $fechaVencimiento && $fechaVencimiento->between(now()->startOfDay(), now()->addDays(30)->endOfDay()))
-                                <a href="{{ route('promociones.create', ['inventario_id' => $inventario->id]) }}" class="btn-primary">
-                                    Crear promoción
-                                </a>
-                            @else
-                                <a href="{{ route('inventario.index') }}" class="btn-secondary">
-                                    Inventario
-                                </a>
-                            @endif
-                        </td>
-                    </tr>
-                @empty
-                    <tr>
-                        <td colspan="8" style="text-align:center; color:#6B7280;">
-                            No hay productos críticos según los filtros aplicados.
-                        </td>
-                    </tr>
-                @endforelse
-            </tbody>
-        </table>
+                            <td>
+                                {{ $inventario->producto->laboratorio->nombre ?? '-' }}
+                            </td>
+
+                            <td>
+                                @if ($inventario->stock_actual <= 0)
+                                    <strong class="critical-stock-danger">
+                                        {{ $inventario->stock_actual }}
+                                    </strong>
+                                @elseif ($inventario->stock_actual <= $inventario->stock_minimo)
+                                    <strong class="critical-stock-warning">
+                                        {{ $inventario->stock_actual }}
+                                    </strong>
+                                @else
+                                    <strong>
+                                        {{ $inventario->stock_actual }}
+                                    </strong>
+                                @endif
+                            </td>
+
+                            <td>
+                                {{ $inventario->stock_minimo }}
+                            </td>
+
+                            <td>
+                                {{ $inventario->lote->numero_lote ?? '-' }}
+                            </td>
+
+                            <td>
+                                {{ $fechaVencimiento?->format('d/m/Y') ?? '-' }}
+                            </td>
+
+                            <td>
+                                @if ($alerta === 'Agotado' || $alerta === 'Vencido')
+                                    <span class="badge badge-danger">{{ $alerta }}</span>
+                                @elseif ($alerta === 'Stock bajo')
+                                    <span class="badge badge-warning">{{ $alerta }}</span>
+                                @elseif ($alerta === 'Próximo a vencer')
+                                    <span class="badge badge-soft">{{ $alerta }}</span>
+                                @else
+                                    <span class="badge badge-success">{{ $alerta }}</span>
+                                @endif
+                            </td>
+
+                            <td>
+                                <div class="action-group">
+                                    @if ($inventario->stock_actual > 0 && $fechaVencimiento && $fechaVencimiento->lt(now()->startOfDay()))
+                                        <a
+                                            href="{{ route('bajas-inventario.create', ['inventario_id' => $inventario->id]) }}"
+                                            class="icon-action icon-action-danger"
+                                            title="Dar baja"
+                                        >
+                                            <i class="bi bi-dash-circle"></i>
+                                        </a>
+                                    @elseif ($inventario->stock_actual > 0 && $fechaVencimiento && $fechaVencimiento->between(now()->startOfDay(), now()->addDays(30)->endOfDay()))
+                                        <a
+                                            href="{{ route('promociones.create', ['inventario_id' => $inventario->id]) }}"
+                                            class="icon-action icon-action-primary"
+                                            title="Crear promoción"
+                                        >
+                                            <i class="bi bi-tags"></i>
+                                        </a>
+                                    @else
+                                        <a
+                                            href="{{ route('inventario.index') }}"
+                                            class="icon-action icon-action-edit"
+                                            title="Ver inventario"
+                                        >
+                                            <i class="bi bi-box-seam"></i>
+                                        </a>
+                                    @endif
+                                </div>
+                            </td>
+                        </tr>
+                    @empty
+                        <tr>
+                            <td colspan="8" class="empty-table-message">
+                                No hay productos críticos según los filtros aplicados.
+                            </td>
+                        </tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
+
+        <div class="pagination-wrapper">
+            {{ $inventarios->links() }}
+        </div>
     </div>
 
-    <div style="margin-top:18px;">
-        {{ $inventarios->links() }}
-    </div>
 </div>
 
 @endsection

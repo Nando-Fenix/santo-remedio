@@ -18,96 +18,101 @@
     </div>
 @endif
 
-<div class="card">
-    <div style="display: flex; justify-content: space-between; align-items: center; gap: 16px; margin-bottom: 20px;">
+<div class="compact-card">
+
+    <div class="compact-header">
         <div>
-            <h2 style="margin: 0; color: #4C1D95;">Bajas de inventario</h2>
-            <p style="margin: 6px 0 0; color: #6B7280;">
-                Historial de productos retirados del inventario.
+            <h2>
+                <i class="bi bi-box-arrow-down"></i>
+                Bajas de inventario
+            </h2>
+
+            <p>
+                Historial de productos retirados por vencimiento, daño, pérdida u otros motivos.
             </p>
         </div>
 
         @if (auth()->user()->tienePermiso('registrar_baja_inventario'))
             <a href="{{ route('bajas-inventario.create') }}" class="btn-primary">
-                + Registrar baja
+                <i class="bi bi-plus-circle"></i>
+                Registrar baja
             </a>
         @endif
     </div>
 
-    <form method="GET" action="{{ route('bajas-inventario.index') }}" style="margin-bottom: 18px;">
-        <div class="form-grid">
-            <div class="form-group">
-                <label>Buscar producto</label>
-                <input
-                    type="text"
-                    name="buscar"
-                    value="{{ $buscar ?? '' }}"
-                    placeholder="Nombre comercial, genérico o concentración"
-                >
-            </div>
-
-            <div class="form-group">
-                <label>Motivo</label>
-                <select name="motivo">
-                    <option value="">Todos</option>
-                    <option value="vencimiento" @selected(($motivo ?? '') === 'vencimiento')>Vencimiento</option>
-                    <option value="danado" @selected(($motivo ?? '') === 'danado')>Dañado</option>
-                    <option value="perdido" @selected(($motivo ?? '') === 'perdido')>Perdido</option>
-                    <option value="ajuste_autorizado" @selected(($motivo ?? '') === 'ajuste_autorizado')>Ajuste autorizado</option>
-                    <option value="otro" @selected(($motivo ?? '') === 'otro')>Otro</option>
-                </select>
-            </div>
-
-            <div class="form-group">
-                <label>Estado</label>
-                <select name="estado">
-                    <option value="">Todos</option>
-                    <option value="registrado" @selected(($estado ?? '') === 'registrado')>Registrado</option>
-                    <option value="anulado" @selected(($estado ?? '') === 'anulado')>Anulado</option>
-                </select>
-            </div>
+    <form method="GET" action="{{ route('bajas-inventario.index') }}" class="filter-bar">
+        <div class="filter-search">
+            <label>Buscar producto</label>
+            <input
+                type="text"
+                name="buscar"
+                value="{{ $buscar ?? '' }}"
+                placeholder="Nombre comercial, genérico o concentración"
+            >
         </div>
 
-        <div style="display: flex; gap: 10px; margin-top: 14px;">
+        <div class="form-group">
+            <label>Motivo</label>
+            <select name="motivo">
+                <option value="">Todos</option>
+                <option value="vencimiento" @selected(($motivo ?? '') === 'vencimiento')>Vencimiento</option>
+                <option value="danado" @selected(($motivo ?? '') === 'danado')>Dañado</option>
+                <option value="perdido" @selected(($motivo ?? '') === 'perdido')>Perdido</option>
+                <option value="ajuste_autorizado" @selected(($motivo ?? '') === 'ajuste_autorizado')>Ajuste autorizado</option>
+                <option value="otro" @selected(($motivo ?? '') === 'otro')>Otro</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label>Estado</label>
+            <select name="estado">
+                <option value="">Todos</option>
+                <option value="registrado" @selected(($estado ?? '') === 'registrado')>Registrado</option>
+                <option value="anulado" @selected(($estado ?? '') === 'anulado')>Anulado</option>
+            </select>
+        </div>
+
+        <div class="filter-actions">
             <button type="submit" class="btn-primary">
+                <i class="bi bi-search"></i>
                 Buscar
             </button>
 
             <a href="{{ route('bajas-inventario.index') }}" class="btn-secondary">
+                <i class="bi bi-x-circle"></i>
                 Limpiar
             </a>
         </div>
     </form>
 
-    <div class="table-container">
-        <table class="table">
+    <div class="table-container compact-table-container">
+        <table class="table compact-table">
             <thead>
                 <tr>
-                    <th>N° baja</th>
+                    <th>N°</th>
                     <th>Producto</th>
                     <th>Lote</th>
-                    <th>Sucursal</th>
                     <th>Motivo</th>
-                    <th>Cantidad</th>
-                    <th>Stock anterior</th>
-                    <th>Stock nuevo</th>
+                    <th>Stock</th>
+                    <th>Sucursal</th>
                     <th>Usuario</th>
                     <th>Estado</th>
                     <th>Fecha</th>
-                    <th>Acción</th>
+                    <th class="table-actions-cell">Acción</th>
                 </tr>
             </thead>
 
-            @forelse ($bajas as $baja)
-                <tr>
-                    <td>
-                        <strong>
-                            {{ $baja->numero_baja ?? 'BAJ-' . str_pad($baja->id, 6, '0', STR_PAD_LEFT) }}
-                        </strong>
-                    </td>
+            <tbody>
+                @forelse ($bajas as $baja)
+                    <tr>
+                        <td>
+                            <strong>
+                                {{ $baja->numero_baja ?? 'BAJ-' . str_pad($baja->id, 6, '0', STR_PAD_LEFT) }}
+                            </strong>
+                        </td>
 
-                    <td>
-                        <strong>{{ $baja->producto->nombre_comercial ?? '-' }}</strong>
+                        <td>
+                            <strong>{{ $baja->producto->nombre_comercial ?? '-' }}</strong>
 
                             @if ($baja->producto?->laboratorio || $baja->producto?->concentracion)
                                 <br>
@@ -138,8 +143,6 @@
                             @endif
                         </td>
 
-                        <td>{{ $baja->sucursal->nombre ?? '-' }}</td>
-
                         <td>
                             @if ($baja->motivo === 'vencimiento')
                                 Vencimiento
@@ -154,9 +157,16 @@
                             @endif
                         </td>
 
-                        <td>{{ $baja->cantidad }}</td>
-                        <td>{{ $baja->stock_anterior }}</td>
-                        <td>{{ $baja->stock_nuevo }}</td>
+                        <td>
+                            <strong>{{ $baja->cantidad }}</strong>
+                            <br>
+                            <small style="color:#6B7280;">
+                                {{ $baja->stock_anterior }} → {{ $baja->stock_nuevo }}
+                            </small>
+                        </td>
+
+                        <td>{{ $baja->sucursal->nombre ?? '-' }}</td>
+
                         <td>{{ $baja->usuario->nombre ?? '-' }}</td>
 
                         <td>
@@ -170,20 +180,39 @@
                         <td>{{ $baja->created_at->format('d/m/Y H:i') }}</td>
 
                         <td>
-                            <div style="display:flex; gap:6px; flex-wrap:wrap;">
-                                <a href="{{ route('bajas-inventario.show', $baja) }}" class="btn-secondary">
-                                    Ver
+                            <div class="action-group">
+                                <a
+                                    href="{{ route('bajas-inventario.show', $baja) }}"
+                                    class="icon-action icon-action-primary"
+                                    title="Ver detalle"
+                                >
+                                    <i class="bi bi-eye"></i>
                                 </a>
 
-                                <a href="{{ route('bajas-inventario.recibo', $baja) }}" class="btn-primary" target="_blank">
-                                    Imprimir
-                                </a>
+                                <button
+                                    type="button"
+                                    class="icon-action icon-action-print"
+                                    onclick="abrirModalImpresion('{{ route('bajas-inventario.recibo', $baja) }}')"
+                                    title="Imprimir recibo"
+                                >
+                                    <i class="bi bi-printer"></i>
+                                </button>
+
+                                @if ($baja->estado === 'registrado' && auth()->user()->tienePermiso('anular_baja_inventario'))
+                                    <a
+                                        href="{{ route('bajas-inventario.anular.create', $baja) }}"
+                                        class="icon-action icon-action-danger"
+                                        title="Anular baja"
+                                    >
+                                        <i class="bi bi-x-octagon"></i>
+                                    </a>
+                                @endif
                             </div>
                         </td>
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="12" style="text-align: center; color: #6B7280;">
+                        <td colspan="10" class="empty-table-message">
                             No hay bajas de inventario registradas.
                         </td>
                     </tr>
@@ -192,7 +221,7 @@
         </table>
     </div>
 
-    <div style="margin-top: 18px;">
+    <div class="pagination-wrapper">
         {{ $bajas->links() }}
     </div>
 </div>

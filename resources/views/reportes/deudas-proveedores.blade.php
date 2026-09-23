@@ -6,187 +6,257 @@
 
 @section('content')
 
-<div class="card" style="margin-bottom: 22px;">
-    <div style="display:flex; justify-content:space-between; align-items:center; gap:16px; flex-wrap:wrap;">
+<div class="report-detail-page">
+
+    <div class="compact-card report-detail-header">
         <div>
-            <h2 style="margin:0; color:#4C1D95;">Deudas a proveedores</h2>
+            <h2>
+                <i class="bi bi-exclamation-circle"></i>
+                Deudas a proveedores
+            </h2>
 
-            <p style="margin:6px 0 0; color:#6B7280;">
-                Compras pendientes de pago agrupadas por proveedor.
-            </p>
-
-            <p style="margin:6px 0 0; color:#4B5563;">
+            <p>
                 Sucursal:
                 <strong>{{ $sucursal?->nombre ?? 'Sin sucursal' }}</strong>
+                |
+                Compras pendientes de pago agrupadas por proveedor.
             </p>
         </div>
 
-        <div style="display:flex; gap:10px; flex-wrap:wrap;">
+        <div class="detail-actions">
             <a
-                href="{{ route('reportes.deudas-proveedores.exportar-csv', request()->query()) }}"
+                href="{{ route('reportes.deudas-proveedores.exportar-xlsx', request()->query()) }}"
                 class="btn-primary"
             >
-                Exportar Excel
+                <i class="bi bi-file-earmark-spreadsheet"></i>
+                Excel
+            </a>
+
+            <a
+                href="{{ route('reportes.deudas-proveedores.exportar-csv', request()->query()) }}"
+                class="btn-secondary"
+            >
+                <i class="bi bi-file-earmark-excel"></i>
+                CSV
             </a>
 
             <a href="{{ route('reportes.index') }}" class="btn-secondary">
-                Volver a reportes
+                <i class="bi bi-arrow-left"></i>
+                Reportes
             </a>
         </div>
     </div>
-</div>
 
-<div class="card" style="margin-bottom: 22px;">
-    <h3 style="margin-top:0; color:#4C1D95;">Filtros</h3>
-
-    <form method="GET" action="{{ route('reportes.deudas-proveedores') }}">
-        <div class="form-grid">
+    <div class="compact-card report-filter-card">
+        <form method="GET" action="{{ route('reportes.deudas-proveedores') }}" class="filter-bar report-filter-bar">
             <div class="form-group">
-                <label>Fecha inicio</label>
+                <label>Inicio</label>
                 <input type="date" name="fecha_inicio" value="{{ $fechaInicio }}">
             </div>
 
             <div class="form-group">
-                <label>Fecha fin</label>
+                <label>Fin</label>
                 <input type="date" name="fecha_fin" value="{{ $fechaFin }}">
             </div>
 
-            <div class="form-group">
+            <div class="form-group filter-search">
                 <label>Proveedor</label>
                 <input
                     type="text"
                     name="buscar"
                     value="{{ $buscar }}"
-                    placeholder="Buscar por nombre, NIT o teléfono"
+                    placeholder="Nombre, NIT o teléfono"
                 >
             </div>
+
+            <div class="filter-actions">
+                <button type="submit" class="btn-primary" title="Buscar">
+                    <i class="bi bi-search"></i>
+                </button>
+
+                <a href="{{ route('reportes.deudas-proveedores') }}" class="btn-secondary" title="Limpiar filtros">
+                    <i class="bi bi-x-circle"></i>
+                </a>
+            </div>
+        </form>
+    </div>
+
+    <div class="report-summary-strip report-summary-four">
+        <div class="report-mini-stat report-mini-warning">
+            <span>Compras pendientes</span>
+            <strong>{{ $resumen['cantidad_deudas'] }}</strong>
         </div>
 
-        <div style="display:flex; gap:10px; margin-top:14px; flex-wrap:wrap;">
-            <button type="submit" class="btn-primary">
-                Aplicar filtros
-            </button>
-
-            <a href="{{ route('reportes.deudas-proveedores') }}" class="btn-secondary">
-                Limpiar
-            </a>
+        <div class="report-mini-stat report-mini-total">
+            <span>Total comprado</span>
+            <strong>{{ number_format($resumen['total_comprado'], 2) }} Bs</strong>
         </div>
-    </form>
-</div>
 
-<div class="grid" style="grid-template-columns: repeat(4, 1fr); margin-bottom: 22px;">
-    <div class="stat-card">
-        <span>Compras pendientes</span>
-        <h3>{{ $resumen['cantidad_deudas'] }}</h3>
+        <div class="report-mini-stat">
+            <span>Total pagado</span>
+            <strong>{{ number_format($resumen['total_pagado'], 2) }} Bs</strong>
+        </div>
+
+        <div class="report-mini-stat report-mini-danger">
+            <span>Saldo pendiente</span>
+            <strong>{{ number_format($resumen['total_deuda'], 2) }} Bs</strong>
+        </div>
     </div>
 
-    <div class="stat-card">
-        <span>Total comprado</span>
-        <h3>{{ number_format($resumen['total_comprado'], 2) }} Bs</h3>
-    </div>
+    <div class="compact-card">
+        <div class="detail-section-head">
+            <h3>
+                <i class="bi bi-people"></i>
+                Resumen por proveedor
+            </h3>
+        </div>
 
-    <div class="stat-card">
-        <span>Total pagado</span>
-        <h3>{{ number_format($resumen['total_pagado'], 2) }} Bs</h3>
-    </div>
-
-    <div class="stat-card">
-        <span>Saldo pendiente</span>
-        <h3>{{ number_format($resumen['total_deuda'], 2) }} Bs</h3>
-    </div>
-</div>
-
-<div class="card" style="margin-bottom: 22px;">
-    <h3 style="margin-top:0; color:#4C1D95;">Resumen por proveedor</h3>
-
-    <div class="table-container">
-        <table class="table">
-            <thead>
-                <tr>
-                    <th>Proveedor</th>
-                    <th>NIT</th>
-                    <th>Teléfono</th>
-                    <th>Compras pendientes</th>
-                    <th>Total comprado</th>
-                    <th>Pagado</th>
-                    <th>Saldo</th>
-                </tr>
-            </thead>
-
-            <tbody>
-                @forelse ($deudasPorProveedor as $deuda)
+        <div class="table-container compact-table-container">
+            <table class="table compact-table report-provider-debts-table">
+                <thead>
                     <tr>
-                        <td>{{ $deuda['proveedor']->nombre ?? '-' }}</td>
-                        <td>{{ $deuda['proveedor']->nit ?? '-' }}</td>
-                        <td>{{ $deuda['proveedor']->telefono ?? '-' }}</td>
-                        <td>{{ $deuda['cantidad_compras'] }}</td>
-                        <td>{{ number_format($deuda['total_comprado'], 2) }} Bs</td>
-                        <td>{{ number_format($deuda['total_pagado'], 2) }} Bs</td>
-                        <td>
-                            <strong>{{ number_format($deuda['saldo_pendiente'], 2) }} Bs</strong>
-                        </td>
+                        <th>Proveedor</th>
+                        <th>NIT</th>
+                        <th>Teléfono</th>
+                        <th>Compras</th>
+                        <th>Total comprado</th>
+                        <th>Pagado</th>
+                        <th>Saldo</th>
                     </tr>
-                @empty
-                    <tr>
-                        <td colspan="7" style="text-align:center; color:#6B7280;">
-                            No hay deudas pendientes en este rango.
-                        </td>
-                    </tr>
-                @endforelse
-            </tbody>
-        </table>
-    </div>
-</div>
+                </thead>
 
-<div class="card">
-    <h3 style="margin-top:0; color:#4C1D95;">Detalle de compras pendientes</h3>
+                <tbody>
+                    @forelse ($deudasPorProveedor as $deuda)
+                        <tr>
+                            <td>
+                                <strong>{{ $deuda['proveedor']->nombre ?? '-' }}</strong>
+                            </td>
 
-    <div class="table-container">
-        <table class="table">
-            <thead>
-                <tr>
-                    <th>N° compra</th>
-                    <th>Fecha</th>
-                    <th>Proveedor</th>
-                    <th>Total</th>
-                    <th>Pagado</th>
-                    <th>Saldo</th>
-                    <th>Ver</th>
-                </tr>
-            </thead>
+                            <td>
+                                {{ $deuda['proveedor']->nit ?? '-' }}
+                            </td>
 
-            <tbody>
-                @forelse ($compras as $compra)
-                    <tr>
-                        <td>{{ $compra->numero_compra ?? $compra->id }}</td>
-                        <td>{{ $compra->fecha_compra?->format('d/m/Y H:i') }}</td>
-                        <td>{{ $compra->proveedor->nombre ?? '-' }}</td>
-                        <td>{{ number_format($compra->total, 2) }} Bs</td>
-                        <td>{{ number_format($compra->monto_pagado, 2) }} Bs</td>
-                        <td>
-                            <strong>{{ number_format($compra->saldo_pendiente, 2) }} Bs</strong>
-                        </td>
+                            <td>
+                                {{ $deuda['proveedor']->telefono ?? '-' }}
+                            </td>
 
-                        <td>
-                            <a href="{{ route('compras.show', $compra) }}" class="btn-secondary">
-                                Ver
-                            </a>
-                        </td>
-                    </tr>
-                @empty
-                    <tr>
-                        <td colspan="7" style="text-align:center; color:#6B7280;">
-                            No hay compras pendientes en este rango.
-                        </td>
-                    </tr>
-                @endforelse
-            </tbody>
-        </table>
+                            <td>
+                                <span class="reorder-suggested">
+                                    {{ $deuda['cantidad_compras'] }}
+                                </span>
+                            </td>
+
+                            <td>
+                                {{ number_format($deuda['total_comprado'], 2) }} Bs
+                            </td>
+
+                            <td>
+                                {{ number_format($deuda['total_pagado'], 2) }} Bs
+                            </td>
+
+                            <td>
+                                <strong class="provider-debt-money">
+                                    {{ number_format($deuda['saldo_pendiente'], 2) }} Bs
+                                </strong>
+                            </td>
+                        </tr>
+                    @empty
+                        <tr>
+                            <td colspan="7" class="empty-table-message">
+                                No hay deudas pendientes en este rango.
+                            </td>
+                        </tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
     </div>
 
-    <div style="margin-top:18px;">
-        {{ $compras->links() }}
+    <div class="compact-card">
+        <div class="detail-section-head">
+            <h3>
+                <i class="bi bi-list-check"></i>
+                Detalle de compras pendientes
+            </h3>
+        </div>
+
+        <div class="table-container compact-table-container">
+            <table class="table compact-table report-provider-purchases-table">
+                <thead>
+                    <tr>
+                        <th>N° compra</th>
+                        <th>Fecha</th>
+                        <th>Proveedor</th>
+                        <th>Total</th>
+                        <th>Pagado</th>
+                        <th>Saldo</th>
+                        <th class="table-actions-cell">Acción</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    @forelse ($compras as $compra)
+                        <tr>
+                            <td>
+                                <strong>{{ $compra->numero_compra ?? $compra->id }}</strong>
+                            </td>
+
+                            <td>
+                                {{ $compra->fecha_compra?->format('d/m/Y') }}
+                                <br>
+                                <small style="color:#6B7280;">
+                                    {{ $compra->fecha_compra?->format('H:i') }}
+                                </small>
+                            </td>
+
+                            <td>
+                                {{ $compra->proveedor->nombre ?? '-' }}
+                            </td>
+
+                            <td>
+                                <strong class="report-money">
+                                    {{ number_format($compra->total, 2) }} Bs
+                                </strong>
+                            </td>
+
+                            <td>
+                                {{ number_format($compra->monto_pagado, 2) }} Bs
+                            </td>
+
+                            <td>
+                                <strong class="provider-debt-money">
+                                    {{ number_format($compra->saldo_pendiente, 2) }} Bs
+                                </strong>
+                            </td>
+
+                            <td>
+                                <div class="action-group">
+                                    <a
+                                        href="{{ route('compras.show', $compra) }}"
+                                        class="icon-action icon-action-primary"
+                                        title="Ver compra"
+                                    >
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                    @empty
+                        <tr>
+                            <td colspan="7" class="empty-table-message">
+                                No hay compras pendientes en este rango.
+                            </td>
+                        </tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
+
+        <div class="pagination-wrapper">
+            {{ $compras->links() }}
+        </div>
     </div>
+
 </div>
 
 @endsection

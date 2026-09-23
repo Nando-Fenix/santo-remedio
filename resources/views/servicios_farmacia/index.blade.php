@@ -18,70 +18,76 @@
     </div>
 @endif
 
-<div class="card">
-    <div style="display: flex; justify-content: space-between; align-items: center; gap: 16px; margin-bottom: 20px;">
+<div class="compact-card">
+
+    <div class="compact-header">
         <div>
-            <h2 style="margin: 0; color: #4C1D95;">Servicios de farmacia</h2>
-            <p style="margin: 6px 0 0; color: #6B7280;">
+            <h2>
+                <i class="bi bi-clipboard2-pulse"></i>
+                Servicios de farmacia
+            </h2>
+
+            <p>
                 Configure servicios como inyectables, controles, curaciones y otros.
             </p>
         </div>
 
         @if (auth()->user()->tienePermiso('crear_servicio_farmacia'))
             <a href="{{ route('servicios-farmacia.create') }}" class="btn-primary">
-                + Nuevo servicio
+                <i class="bi bi-plus-circle"></i>
+                Nuevo servicio
             </a>
         @endif
     </div>
 
-    <form method="GET" action="{{ route('servicios-farmacia.index') }}" style="margin-bottom: 18px;">
-        <div class="form-grid">
-            <div class="form-group">
-                <label>Buscar servicio</label>
-                <input
-                    type="text"
-                    name="buscar"
-                    value="{{ $buscar ?? '' }}"
-                    placeholder="Nombre o descripción"
-                >
-            </div>
-
-            <div class="form-group">
-                <label>Tipo</label>
-                <select name="tipo">
-                    <option value="">Todos</option>
-                    <option value="inyectable" @selected(($tipo ?? '') === 'inyectable')>Inyectable</option>
-                    <option value="control" @selected(($tipo ?? '') === 'control')>Control</option>
-                    <option value="curacion" @selected(($tipo ?? '') === 'curacion')>Curación</option>
-                    <option value="nebulizacion" @selected(($tipo ?? '') === 'nebulizacion')>Nebulización</option>
-                    <option value="orientacion" @selected(($tipo ?? '') === 'orientacion')>Orientación</option>
-                    <option value="otro" @selected(($tipo ?? '') === 'otro')>Otro</option>
-                </select>
-            </div>
-
-            <div class="form-group">
-                <label>Estado</label>
-                <select name="estado">
-                    <option value="">Todos</option>
-                    <option value="activo" @selected(($estado ?? '') === 'activo')>Activo</option>
-                    <option value="inactivo" @selected(($estado ?? '') === 'inactivo')>Inactivo</option>
-                </select>
-            </div>
+    <form method="GET" action="{{ route('servicios-farmacia.index') }}" class="filter-bar">
+        <div class="filter-search">
+            <label>Buscar servicio</label>
+            <input
+                type="text"
+                name="buscar"
+                value="{{ $buscar ?? '' }}"
+                placeholder="Nombre o descripción"
+            >
         </div>
 
-        <div style="display: flex; gap: 10px; margin-top: 14px;">
+        <div class="form-group">
+            <label>Tipo</label>
+            <select name="tipo">
+                <option value="">Todos</option>
+                <option value="inyectable" @selected(($tipo ?? '') === 'inyectable')>Inyectable</option>
+                <option value="control" @selected(($tipo ?? '') === 'control')>Control</option>
+                <option value="curacion" @selected(($tipo ?? '') === 'curacion')>Curación</option>
+                <option value="nebulizacion" @selected(($tipo ?? '') === 'nebulizacion')>Nebulización</option>
+                <option value="orientacion" @selected(($tipo ?? '') === 'orientacion')>Orientación</option>
+                <option value="otro" @selected(($tipo ?? '') === 'otro')>Otro</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label>Estado</label>
+            <select name="estado">
+                <option value="">Todos</option>
+                <option value="activo" @selected(($estado ?? '') === 'activo')>Activo</option>
+                <option value="inactivo" @selected(($estado ?? '') === 'inactivo')>Inactivo</option>
+            </select>
+        </div>
+
+        <div class="filter-actions">
             <button type="submit" class="btn-primary">
+                <i class="bi bi-search"></i>
                 Buscar
             </button>
 
             <a href="{{ route('servicios-farmacia.index') }}" class="btn-secondary">
+                <i class="bi bi-x-circle"></i>
                 Limpiar
             </a>
         </div>
     </form>
 
-    <div class="table-container">
-        <table class="table">
+    <div class="table-container compact-table-container">
+        <table class="table compact-table">
             <thead>
                 <tr>
                     <th>Servicio</th>
@@ -89,7 +95,7 @@
                     <th>Precio</th>
                     <th>Insumos</th>
                     <th>Estado</th>
-                    <th>Acciones</th>
+                    <th class="table-actions-cell">Acciones</th>
                 </tr>
             </thead>
 
@@ -98,10 +104,11 @@
                     <tr>
                         <td>
                             <strong>{{ $servicio->nombre }}</strong>
+
                             @if ($servicio->descripcion)
                                 <br>
                                 <small style="color: #6B7280;">
-                                    {{ Str::limit($servicio->descripcion, 80) }}
+                                    {{ Str::limit($servicio->descripcion, 90) }}
                                 </small>
                             @endif
                         </td>
@@ -122,9 +129,15 @@
                             @endif
                         </td>
 
-                        <td>{{ number_format($servicio->precio, 2) }} Bs</td>
+                        <td>
+                            <strong>{{ number_format($servicio->precio, 2) }} Bs</strong>
+                        </td>
 
-                        <td>{{ $servicio->insumos_count }}</td>
+                        <td>
+                            <span class="badge badge-info">
+                                {{ $servicio->insumos_count }} insumo(s)
+                            </span>
+                        </td>
 
                         <td>
                             @if ($servicio->estado === 'activo')
@@ -135,24 +148,40 @@
                         </td>
 
                         <td>
-                            <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-                                <a href="{{ route('servicios-farmacia.show', $servicio) }}" class="btn-secondary">
-                                    Ver
+                            <div class="action-group">
+                                <a
+                                    href="{{ route('servicios-farmacia.show', $servicio) }}"
+                                    class="icon-action icon-action-primary"
+                                    title="Ver detalle"
+                                >
+                                    <i class="bi bi-eye"></i>
                                 </a>
 
                                 @if (auth()->user()->tienePermiso('editar_servicio_farmacia'))
-                                    <a href="{{ route('servicios-farmacia.edit', $servicio) }}" class="btn-primary">
-                                        Editar
+                                    <a
+                                        href="{{ route('servicios-farmacia.edit', $servicio) }}"
+                                        class="icon-action icon-action-edit"
+                                        title="Editar servicio"
+                                    >
+                                        <i class="bi bi-pencil"></i>
                                     </a>
                                 @endif
 
                                 @if ($servicio->estado === 'activo' && auth()->user()->tienePermiso('desactivar_servicio_farmacia'))
-                                    <form method="POST" action="{{ route('servicios-farmacia.destroy', $servicio) }}" class="form-desactivar-servicio">
+                                    <form
+                                        method="POST"
+                                        action="{{ route('servicios-farmacia.destroy', $servicio) }}"
+                                        class="form-desactivar-servicio"
+                                    >
                                         @csrf
                                         @method('DELETE')
 
-                                        <button type="submit" class="btn-danger">
-                                            Desactivar
+                                        <button
+                                            type="submit"
+                                            class="icon-action icon-action-danger"
+                                            title="Desactivar servicio"
+                                        >
+                                            <i class="bi bi-power"></i>
                                         </button>
                                     </form>
                                 @endif
@@ -161,7 +190,7 @@
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="6" style="text-align: center; color: #6B7280;">
+                        <td colspan="6" class="empty-table-message">
                             No hay servicios registrados.
                         </td>
                     </tr>
@@ -170,7 +199,7 @@
         </table>
     </div>
 
-    <div style="margin-top: 18px;">
+    <div class="pagination-wrapper">
         {{ $servicios->links() }}
     </div>
 </div>

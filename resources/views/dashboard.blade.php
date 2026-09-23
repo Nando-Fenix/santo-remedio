@@ -1,284 +1,282 @@
 @extends('layouts.app')
 
-@section('title', 'Dashboard | Santo Remedio')
-@section('page-title', 'Dashboard')
+@section('title', 'Panel principal | Santo Remedio')
+@section('page-title', 'Panel principal')
 @section('page-subtitle', 'Resumen general de la farmacia')
 
 @section('content')
 
-<div class="card" style="margin-bottom: 22px;">
-    <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 18px; flex-wrap: wrap;">
+<div class="dashboard-page">
+
+    <div class="compact-card dashboard-hero">
         <div>
-            <h2 style="margin-top: 0; color: #4C1D95;">Bienvenido al sistema</h2>
+            <span class="dashboard-eyebrow">Bienvenido</span>
 
-            <p style="margin-bottom: 6px;">
-                Has iniciado sesión como
-                <strong>{{ auth()->user()->nombre }}</strong>.
-            </p>
+            <h2>
+                {{ auth()->user()->nombre }}
+            </h2>
 
-            <p style="margin-bottom: 0;">
+            <p>
                 Rol:
                 <strong>{{ auth()->user()->rol->nombre ?? 'Sin rol' }}</strong>
-                —
+                <span>•</span>
                 Sucursal:
                 <strong>{{ $sucursal->nombre ?? 'Sin sucursal asignada' }}</strong>
             </p>
         </div>
 
-        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+        <div class="dashboard-quick-actions">
             @if (auth()->user()->tienePermiso('realizar_venta'))
                 <a href="{{ route('ventas.create') }}" class="btn-primary">
+                    <i class="bi bi-cart-plus"></i>
                     Nueva venta
                 </a>
             @endif
 
             @if (auth()->user()->tienePermiso('registrar_atencion_servicio'))
-                <a href="{{ route('atenciones-servicio.create') }}" class="btn-primary">
-                    Registrar atención
+                <a href="{{ route('atenciones-servicio.create') }}" class="btn-secondary">
+                    <i class="bi bi-clipboard2-plus"></i>
+                    Atención
                 </a>
             @endif
+        </div>
+    </div>
 
-            @if (auth()->user()->tienePermiso('ver_atenciones_servicio'))
+    @if (auth()->user()->tienePermiso('ver_caja'))
+        @if (!$cajaAbierta)
+            <div class="dashboard-alert dashboard-alert-danger">
+                <div>
+                    <strong>Caja cerrada</strong>
+                    <span>Para registrar ventas o servicios, primero debe abrirse una caja.</span>
+                </div>
+
+                <a href="{{ route('caja.index') }}" class="btn-primary">
+                    Ir a caja
+                </a>
+            </div>
+        @else
+            <div class="dashboard-alert dashboard-alert-success">
+                <div>
+                    <strong>Caja abierta</strong>
+                    <span>
+                        Desde {{ $cajaAbierta->fecha_apertura->format('d/m/Y H:i') }}
+                        — Turno: {{ $cajaAbierta->turno->nombre ?? '-' }}
+                    </span>
+                </div>
+            </div>
+        @endif
+    @endif
+
+    <div class="dashboard-stats-grid">
+        @if (auth()->user()->tienePermiso('ver_ventas'))
+            <div class="dashboard-stat-card">
+                <span>Ventas del día</span>
+                <strong>{{ number_format($totalVentasDia ?? 0, 2) }} Bs</strong>
+            </div>
+
+            <div class="dashboard-stat-card">
+                <span>Cantidad de ventas</span>
+                <strong>{{ $cantidadVentasDia ?? 0 }}</strong>
+            </div>
+        @endif
+
+        @if (auth()->user()->tienePermiso('ver_atenciones_servicio'))
+            <div class="dashboard-stat-card">
+                <span>Servicios hoy</span>
+                <strong>{{ number_format($ingresosServiciosHoy ?? 0, 2) }} Bs</strong>
+            </div>
+
+            <div class="dashboard-stat-card">
+                <span>Atenciones hoy</span>
+                <strong>{{ $atencionesServiciosHoy ?? 0 }}</strong>
+            </div>
+        @endif
+
+        @if (auth()->user()->tienePermiso('ver_caja'))
+            <div class="dashboard-stat-card">
+                <span>Caja actual</span>
+                <strong>
+                    {{ number_format($cajaAbierta?->total_final ?? 0, 2) }} Bs
+                </strong>
+            </div>
+        @endif
+
+        @if (auth()->user()->tienePermiso('ver_ventas') || auth()->user()->tienePermiso('ver_atenciones_servicio'))
+            <div class="dashboard-stat-card dashboard-stat-main">
+                <span>Ingresos totales hoy</span>
+                <strong>{{ number_format($ingresosTotalesHoy ?? 0, 2) }} Bs</strong>
+            </div>
+        @endif
+
+        @if (auth()->user()->tienePermiso('ver_inventario'))
+            <div class="dashboard-stat-card dashboard-stat-warning">
+                <span>Stock bajo</span>
+                <strong>{{ $stockBajoCantidad ?? 0 }}</strong>
+            </div>
+
+            <div class="dashboard-stat-card dashboard-stat-danger">
+                <span>Agotados</span>
+                <strong>{{ $productosAgotadosCantidad ?? 0 }}</strong>
+            </div>
+
+            <div class="dashboard-stat-card dashboard-stat-warning">
+                <span>Por vencer</span>
+                <strong>{{ $productosPorVencerCantidad ?? 0 }}</strong>
+            </div>
+        @endif
+    </div>
+
+    <div class="dashboard-content-grid">
+        @if (auth()->user()->tienePermiso('ver_ventas'))
+            <div class="compact-card dashboard-chart-card">
+                <div class="dashboard-section-head">
+                    <div>
+                        <h3>
+                            <i class="bi bi-bar-chart"></i>
+                            Productos más vendidos
+                        </h3>
+                        <p>Top 5 de los últimos 30 días.</p>
+                    </div>
+                </div>
+
+                <div class="dashboard-top-product">
+                    <span>Más vendido</span>
+                    <strong>{{ $productoMasVendidoNombre ?? 'Sin ventas' }}</strong>
+                    <small>{{ number_format($productoMasVendidoCantidad ?? 0, 0) }} unidad(es)</small>
+                </div>
+
+                <div class="dashboard-bars">
+                    @forelse ($productosMasVendidos ?? [] as $item)
+                        @php
+                            $maximo = max(($productoMasVendidoCantidad ?? 0), 1);
+                            $porcentaje = min(100, (($item->total_vendido ?? 0) / $maximo) * 100);
+                        @endphp
+
+                        <div class="dashboard-bar-item">
+                            <div class="dashboard-bar-info">
+                                <span>{{ $item->producto->nombre_comercial ?? 'Producto' }}</span>
+                                <strong>{{ number_format($item->total_vendido ?? 0, 0) }}</strong>
+                            </div>
+
+                            <div class="dashboard-bar-track">
+                                <div class="dashboard-bar-fill" style="width: {{ $porcentaje }}%;"></div>
+                            </div>
+                        </div>
+                    @empty
+                        <div class="dashboard-empty">
+                            No hay ventas suficientes para generar el gráfico.
+                        </div>
+                    @endforelse
+                </div>
+            </div>
+        @endif
+
+        @if (auth()->user()->tienePermiso('ver_ventas'))
+            <div class="compact-card dashboard-list-card">
+                <div class="dashboard-section-head">
+                    <div>
+                        <h3>
+                            <i class="bi bi-receipt"></i>
+                            Últimas ventas
+                        </h3>
+                        <p>Movimientos recientes de la sucursal.</p>
+                    </div>
+
+                    <a href="{{ route('ventas.index') }}" class="btn-secondary">
+                        Ver
+                    </a>
+                </div>
+
+                <div class="dashboard-mini-list">
+                    @forelse ($ultimasVentas as $venta)
+                        <a href="{{ route('ventas.show', $venta) }}" class="dashboard-mini-item">
+                            <div>
+                                <strong>{{ $venta->numero_venta }}</strong>
+                                <span>{{ $venta->fecha_hora->format('d/m/Y H:i') }}</span>
+                            </div>
+
+                            <b>{{ number_format($venta->total, 2) }} Bs</b>
+                        </a>
+                    @empty
+                        <div class="dashboard-empty">
+                            No hay ventas registradas todavía.
+                        </div>
+                    @endforelse
+                </div>
+            </div>
+        @endif
+    </div>
+
+    @if (auth()->user()->tienePermiso('ver_atenciones_servicio') && isset($ultimasAtencionesServicio))
+        <div class="compact-card dashboard-list-card">
+            <div class="dashboard-section-head">
+                <div>
+                    <h3>
+                        <i class="bi bi-heart-pulse"></i>
+                        Últimas atenciones de servicio
+                    </h3>
+                    <p>Servicios registrados recientemente.</p>
+                </div>
+
                 <a href="{{ route('atenciones-servicio.index') }}" class="btn-secondary">
                     Ver atenciones
                 </a>
-            @endif
-
-            @if (auth()->user()->tienePermiso('ver_servicios_farmacia'))
-                <a href="{{ route('servicios-farmacia.index') }}" class="btn-secondary">
-                    Servicios
-                </a>
-            @endif
-        </div>
-    </div>
-
-    @if (auth()->user()->tienePermiso('ver_caja'))
-        <div style="margin-top: 18px;">
-            @if (!$cajaAbierta)
-                <div class="alert-danger" style="margin-bottom: 0;">
-                    No existe una caja abierta en esta sucursal. Para registrar ventas o servicios, primero debe abrirse una caja.
-                    <br><br>
-
-                    <a href="{{ route('caja.index') }}" class="btn-primary">
-                        Ir a caja
-                    </a>
-                </div>
-            @else
-                <div class="alert-success" style="margin-bottom: 0;">
-                    Caja abierta desde {{ $cajaAbierta->fecha_apertura->format('d/m/Y H:i') }}
-                    — Turno: {{ $cajaAbierta->turno->nombre ?? '-' }}
-                </div>
-            @endif
-        </div>
-    @endif
-</div>
-
-<div class="grid" style="grid-template-columns: repeat(4, 1fr);">
-    @if (auth()->user()->tienePermiso('ver_ventas'))
-        <div class="stat-card">
-            <span>Ventas del día</span>
-            <h3>{{ number_format($totalVentasDia ?? 0, 2) }} Bs</h3>
-        </div>
-
-        <div class="stat-card">
-            <span>Cantidad de ventas</span>
-            <h3>{{ $cantidadVentasDia ?? 0 }}</h3>
-        </div>
-    @endif
-
-    @if (auth()->user()->tienePermiso('ver_atenciones_servicio'))
-        <div class="stat-card">
-            <span>Servicios hoy</span>
-            <h3>{{ number_format($ingresosServiciosHoy ?? 0, 2) }} Bs</h3>
-        </div>
-
-        <div class="stat-card">
-            <span>Atenciones hoy</span>
-            <h3>{{ $atencionesServiciosHoy ?? 0 }}</h3>
-        </div>
-    @endif
-</div>
-
-<div class="grid" style="grid-template-columns: repeat(4, 1fr); margin-top: 22px;">
-    @if (auth()->user()->tienePermiso('ver_caja'))
-        <div class="stat-card">
-            <span>Caja actual</span>
-            <h3>
-                @if ($cajaAbierta)
-                    {{ number_format($cajaAbierta->total_final, 2) }} Bs
-                @else
-                    0.00 Bs
-                @endif
-            </h3>
-        </div>
-    @endif
-
-    @if (auth()->user()->tienePermiso('ver_ventas') || auth()->user()->tienePermiso('ver_atenciones_servicio'))
-        <div class="stat-card">
-            <span>Ingresos totales hoy</span>
-            <h3>{{ number_format($ingresosTotalesHoy ?? 0, 2) }} Bs</h3>
-        </div>
-    @endif
-
-    @if (auth()->user()->tienePermiso('ver_atenciones_servicio'))
-        <div class="stat-card">
-            <span>Servicios anulados</span>
-            <h3>{{ $serviciosAnuladosHoy ?? 0 }}</h3>
-        </div>
-    @endif
-
-    @if (auth()->user()->tienePermiso('ver_inventario'))
-        <div class="stat-card">
-            <span>Productos por vencer</span>
-            <h3>{{ $productosPorVencerCantidad ?? 0 }}</h3>
-        </div>
-    @endif
-</div>
-
-@if (auth()->user()->tienePermiso('ver_inventario'))
-    <div class="grid" style="grid-template-columns: repeat(2, 1fr); margin-top: 22px;">
-        <div class="stat-card">
-            <span>Productos con stock bajo</span>
-            <h3>{{ $stockBajoCantidad ?? 0 }}</h3>
-        </div>
-
-        <div class="stat-card">
-            <span>Productos agotados</span>
-            <h3>{{ $productosAgotadosCantidad ?? 0 }}</h3>
-        </div>
-    </div>
-@endif
-
-@if (auth()->user()->tienePermiso('ver_ventas'))
-    <div class="card" style="margin-top: 22px;">
-        <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 18px;">
-            <div>
-                <h3 style="margin: 0; color: #4C1D95;">Últimas ventas</h3>
-                <p style="margin: 6px 0 0; color: #6B7280;">
-                    Últimas ventas registradas en la sucursal actual.
-                </p>
             </div>
 
-            <a href="{{ route('ventas.index') }}" class="btn-secondary">
-                Ver ventas
-            </a>
-        </div>
-
-        <div class="table-container">
-            <table class="table">
-                <thead>
-                    <tr>
-                        <th>N° venta</th>
-                        <th>Fecha</th>
-                        <th>Vendedor</th>
-                        <th>Método</th>
-                        <th>Total</th>
-                        <th>Acción</th>
-                    </tr>
-                </thead>
-
-                <tbody>
-                    @forelse ($ultimasVentas as $venta)
+            <div class="table-container compact-table-container">
+                <table class="table compact-table">
+                    <thead>
                         <tr>
-                            <td>{{ $venta->numero_venta }}</td>
-                            <td>{{ $venta->fecha_hora->format('d/m/Y H:i') }}</td>
-                            <td>{{ $venta->usuario->nombre ?? '-' }}</td>
-
-                            <td>
-                                @foreach ($venta->pagos as $pago)
-                                    <span class="badge badge-soft">
-                                        {{ $pago->metodoPago->nombre ?? '-' }}
-                                    </span>
-                                @endforeach
-                            </td>
-
-                            <td>
-                                <strong>{{ number_format($venta->total, 2) }} Bs</strong>
-                            </td>
-
-                            <td>
-                                <a href="{{ route('ventas.show', $venta) }}" class="btn-secondary">
-                                    Ver
-                                </a>
-                            </td>
+                            <th>Servicio</th>
+                            <th>Fecha</th>
+                            <th>Cliente</th>
+                            <th>Total</th>
+                            <th>Estado</th>
+                            <th class="table-actions-cell">Acción</th>
                         </tr>
-                    @empty
-                        <tr>
-                            <td colspan="6" style="text-align: center; color: #6B7280;">
-                                No hay ventas registradas todavía.
-                            </td>
-                        </tr>
-                    @endforelse
-                </tbody>
-            </table>
-        </div>
-    </div>
-@endif
+                    </thead>
 
-@if (auth()->user()->tienePermiso('ver_atenciones_servicio') && isset($ultimasAtencionesServicio))
-    <div class="card" style="margin-top: 22px;">
-        <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 18px;">
-            <div>
-                <h3 style="margin: 0; color: #4C1D95;">Últimas atenciones de servicio</h3>
-                <p style="margin: 6px 0 0; color: #6B7280;">
-                    Servicios registrados recientemente en la sucursal actual.
-                </p>
+                    <tbody>
+                        @forelse ($ultimasAtencionesServicio as $atencion)
+                            <tr>
+                                <td>{{ $atencion->servicio->nombre ?? '-' }}</td>
+                                <td>{{ $atencion->fecha_hora->format('d/m/Y H:i') }}</td>
+                                <td>{{ $atencion->cliente->nombre ?? 'Consumidor final' }}</td>
+                                <td>
+                                    <strong>{{ number_format($atencion->total, 2) }} Bs</strong>
+                                </td>
+
+                                <td>
+                                    @if ($atencion->estado === 'completada')
+                                        <span class="badge badge-success">Completada</span>
+                                    @else
+                                        <span class="badge badge-danger">Anulada</span>
+                                    @endif
+                                </td>
+
+                                <td>
+                                    <a
+                                        href="{{ route('atenciones-servicio.show', $atencion) }}"
+                                        class="icon-action icon-action-primary"
+                                        title="Ver"
+                                    >
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="6" class="empty-table-message">
+                                    No hay atenciones registradas todavía.
+                                </td>
+                            </tr>
+                        @endforelse
+                    </tbody>
+                </table>
             </div>
-
-            <a href="{{ route('atenciones-servicio.index') }}" class="btn-secondary">
-                Ver atenciones
-            </a>
         </div>
+    @endif
 
-        <div class="table-container">
-            <table class="table">
-                <thead>
-                    <tr>
-                        <th>Servicio</th>
-                        <th>Fecha</th>
-                        <th>Cliente</th>
-                        <th>Total</th>
-                        <th>Estado</th>
-                        <th>Acción</th>
-                    </tr>
-                </thead>
-
-                <tbody>
-                    @forelse ($ultimasAtencionesServicio as $atencion)
-                        <tr>
-                            <td>{{ $atencion->servicio->nombre ?? '-' }}</td>
-                            <td>{{ $atencion->fecha_hora->format('d/m/Y H:i') }}</td>
-                            <td>{{ $atencion->cliente->nombre ?? 'Consumidor final' }}</td>
-
-                            <td>
-                                <strong>{{ number_format($atencion->total, 2) }} Bs</strong>
-                            </td>
-
-                            <td>
-                                @if ($atencion->estado === 'completada')
-                                    <span class="badge badge-success">Completada</span>
-                                @else
-                                    <span class="badge badge-danger">Anulada</span>
-                                @endif
-                            </td>
-
-                            <td>
-                                <a href="{{ route('atenciones-servicio.show', $atencion) }}" class="btn-secondary">
-                                    Ver
-                                </a>
-                            </td>
-                        </tr>
-                    @empty
-                        <tr>
-                            <td colspan="6" style="text-align: center; color: #6B7280;">
-                                No hay atenciones registradas todavía.
-                            </td>
-                        </tr>
-                    @endforelse
-                </tbody>
-            </table>
-        </div>
-    </div>
-@endif
+</div>
 
 @endsection

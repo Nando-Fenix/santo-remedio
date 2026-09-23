@@ -162,6 +162,13 @@
                 </div>
             </div>
 
+            <div class="admin-permission-note">
+                <i class="bi bi-info-circle"></i>
+                <span>
+                    Si el rol es Administrador, no es necesario marcar permisos: tendrá acceso total por lógica del sistema.
+                </span>
+            </div>
+
             <div class="permission-compact-modules">
                 @foreach ($permisos as $modulo => $items)
                     <details class="permission-compact-module">
@@ -224,11 +231,34 @@
         const selectedOption = selectRol.options[selectRol.selectedIndex];
         const rolNombre = selectedOption?.dataset?.nombre || '';
         const bloquePermisos = document.getElementById('bloque_permisos');
+        const checkboxes = document.querySelectorAll('.permiso-checkbox');
+        const botonesPermisos = document.querySelectorAll('.user-mini-actions button');
+
+        if (!bloquePermisos) {
+            return;
+        }
 
         if (rolNombre === 'Administrador') {
-            bloquePermisos.style.opacity = '0.55';
+            bloquePermisos.classList.add('permissions-disabled-by-admin');
+
+            checkboxes.forEach(input => {
+                input.checked = false;
+                input.disabled = true;
+            });
+
+            botonesPermisos.forEach(button => {
+                button.disabled = true;
+            });
         } else {
-            bloquePermisos.style.opacity = '1';
+            bloquePermisos.classList.remove('permissions-disabled-by-admin');
+
+            checkboxes.forEach(input => {
+                input.disabled = false;
+            });
+
+            botonesPermisos.forEach(button => {
+                button.disabled = false;
+            });
         }
     }
 

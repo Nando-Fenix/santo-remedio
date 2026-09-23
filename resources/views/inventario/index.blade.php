@@ -6,118 +6,190 @@
 
 @section('content')
 
-<div class="card">
+@if (session('success'))
+    <div class="alert-success">
+        {{ session('success') }}
+    </div>
+@endif
 
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; gap: 12px;">
+@if (session('error'))
+    <div class="alert-danger">
+        {{ session('error') }}
+    </div>
+@endif
+
+<div class="compact-card">
+
+    <div class="compact-header">
         <div>
-            <h2 style="margin: 0; color: #4C1D95;">Stock actual</h2>
-            <p style="margin: 6px 0 0; color: #6B7280;">
-                Consulta de productos disponibles por sucursal y lote.
+            <h2>
+                <i class="bi bi-box-seam"></i>
+                Stock actual
+            </h2>
+
+            <p>
+                Consulta de productos disponibles por sucursal, lote y vencimiento.
             </p>
         </div>
 
-        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+        <div class="detail-actions">
             @if (auth()->user()->tienePermiso('ver_movimientos_inventario'))
                 <a href="{{ route('inventario.movimientos') }}" class="btn-secondary">
-                    Ver movimientos
+                    <i class="bi bi-arrow-left-right"></i>
+                    Movimientos
                 </a>
             @endif
 
             @if (auth()->user()->tienePermiso('ver_inventario'))
                 <a href="{{ route('inventario.proximos-vencer') }}" class="btn-secondary">
-                    Próximos a vencer
+                    <i class="bi bi-calendar-warning"></i>
+                    Próximos
                 </a>
 
                 <a href="{{ route('inventario.productos-vencidos') }}" class="btn-danger">
-                    Productos vencidos
+                    <i class="bi bi-exclamation-octagon"></i>
+                    Vencidos
                 </a>
             @endif
-            
+
             @if (auth()->user()->tienePermiso('ver_bajas_inventario'))
                 <a href="{{ route('bajas-inventario.index') }}" class="btn-secondary">
-                    Bajas de inventario
+                    <i class="bi bi-archive"></i>
+                    Bajas
                 </a>
             @endif
 
             @if (auth()->user()->tienePermiso('registrar_baja_inventario'))
                 <a href="{{ route('bajas-inventario.create') }}" class="btn-primary">
+                    <i class="bi bi-dash-circle"></i>
                     Registrar baja
                 </a>
             @endif
 
             @if (auth()->user()->tienePermiso('ajustar_inventario'))
                 <a href="{{ route('inventario.create') }}" class="btn-primary">
-                    + Entrada de inventario
+                    <i class="bi bi-plus-circle"></i>
+                    Entrada
                 </a>
             @endif
         </div>
     </div>
 
-    @if (session('success'))
-        <div class="alert-success">
-            {{ session('success') }}
-        </div>
-    @endif
-
-    <form method="GET" action="{{ route('inventario.index') }}" style="margin-bottom: 18px;">
-        <div class="form-grid">
-            <div class="form-group">
-                <label>Buscar producto</label>
-                <input
-                    type="text"
-                    name="buscar"
-                    value="{{ $buscar ?? '' }}"
-                    placeholder="Nombre comercial, genérico o concentración"
-                >
-            </div>
-
-            <div class="form-group">
-                <label>Sucursal</label>
-                <select name="sucursal_id">
-                    <option value="">Todas las sucursales</option>
-                    @foreach ($sucursales as $sucursal)
-                        <option value="{{ $sucursal->id }}" @selected(($sucursalId ?? '') == $sucursal->id)>
-                            {{ $sucursal->nombre }}
-                        </option>
-                    @endforeach
-                </select>
-            </div>
+    <form method="GET" action="{{ route('inventario.index') }}" class="filter-bar">
+        <div class="filter-search">
+            <label>Buscar producto</label>
+            <input
+                type="text"
+                name="buscar"
+                value="{{ $buscar ?? '' }}"
+                placeholder="Nombre comercial, genérico o concentración"
+            >
         </div>
 
-        <div style="display: flex; gap: 10px; margin-top: 14px;">
+        <div class="form-group">
+            <label>Sucursal</label>
+            <select name="sucursal_id">
+                <option value="">Todas las sucursales</option>
+
+                @foreach ($sucursales as $sucursal)
+                    <option value="{{ $sucursal->id }}" @selected(($sucursalId ?? '') == $sucursal->id)>
+                        {{ $sucursal->nombre }}
+                    </option>
+                @endforeach
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label>Categoría</label>
+            <select name="categoria_id">
+                <option value="">Todas las categorías</option>
+
+                @foreach ($categorias as $categoria)
+                    <option value="{{ $categoria->id }}" @selected(($categoriaId ?? '') == $categoria->id)>
+                        {{ $categoria->nombre }}
+                    </option>
+                @endforeach
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label>Estado</label>
+            <select name="estado_stock">
+                <option value="">Todos</option>
+                <option value="disponible" @selected(($estadoStock ?? '') === 'disponible')>Disponible</option>
+                <option value="bajo" @selected(($estadoStock ?? '') === 'bajo')>Stock bajo</option>
+                <option value="agotado" @selected(($estadoStock ?? '') === 'agotado')>Agotado</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label>Vencimiento</label>
+            <select name="estado_vencimiento">
+                <option value="">Todos</option>
+                <option value="vigente" @selected(($estadoVencimiento ?? '') === 'vigente')>Vigente</option>
+                <option value="proximo" @selected(($estadoVencimiento ?? '') === 'proximo')>Próximo a vencer</option>
+                <option value="vencido" @selected(($estadoVencimiento ?? '') === 'vencido')>Vencido</option>
+                <option value="sin_fecha" @selected(($estadoVencimiento ?? '') === 'sin_fecha')>Sin fecha</option>
+            </select>
+        </div>
+
+        <div class="filter-actions">
             <button type="submit" class="btn-primary">
+                <i class="bi bi-search"></i>
                 Buscar
             </button>
 
             <a href="{{ route('inventario.index') }}" class="btn-secondary">
+                <i class="bi bi-x-circle"></i>
                 Limpiar
             </a>
         </div>
     </form>
 
-    <div class="table-container">
-        <table class="table">
+    <div class="table-container compact-table-container">
+        <table class="table compact-table inventory-table">
             <thead>
                 <tr>
                     <th>Producto</th>
-                    <th>Genérico</th>
-                    <th>Concentración</th>
                     <th>Sucursal</th>
                     <th>Lote</th>
                     <th>Vencimiento</th>
                     <th>Stock</th>
-                    <th>Mínimo</th>
+                    <th>Mín.</th>
                     <th>Estado</th>
+                    <th>Acciones</th>
                 </tr>
             </thead>
+
             <tbody>
                 @forelse ($inventarios as $inventario)
                     <tr>
-                        <td>{{ $inventario->producto->nombre_comercial ?? '-' }}</td>
-                        <td>{{ $inventario->producto->nombre_generico ?? '-' }}</td>
-                        <td>{{ $inventario->producto->concentracion ?? '-' }}</td>
-                        <td>{{ $inventario->sucursal->nombre ?? '-' }}</td>
-                        <td>{{ $inventario->lote->numero_lote ?? 'Sin lote' }}</td>
+                        <td>
+                            <strong>{{ $inventario->producto->nombre_comercial ?? '-' }}</strong>
+
+                            @if ($inventario->producto?->nombre_generico)
+                                <br>
+                                <small style="color:#6B7280;">
+                                    Genérico: {{ $inventario->producto->nombre_generico }}
+                                </small>
+                            @endif
+
+                            @if ($inventario->producto?->concentracion)
+                                <br>
+                                <small style="color:#6B7280;">
+                                    {{ $inventario->producto->concentracion }}
+                                </small>
+                            @endif
+                        </td>
+
+                        <td>
+                            {{ $inventario->sucursal->nombre ?? '-' }}
+                        </td>
+
+                        <td>
+                            <strong>{{ $inventario->lote->numero_lote ?? 'Sin lote' }}</strong>
+                        </td>
+
                         <td>
                             @if ($inventario->lote?->fecha_vencimiento)
                                 {{ $inventario->lote->fecha_vencimiento->format('d/m/Y') }}
@@ -125,10 +197,27 @@
                                 -
                             @endif
                         </td>
+
                         <td>
-                            <strong>{{ $inventario->stock_actual }}</strong>
+                            @if ($inventario->stock_actual <= 0)
+                                <strong class="inventory-stock-empty">
+                                    {{ $inventario->stock_actual }}
+                                </strong>
+                            @elseif ($inventario->stock_actual <= $inventario->stock_minimo)
+                                <strong class="inventory-stock-low">
+                                    {{ $inventario->stock_actual }}
+                                </strong>
+                            @else
+                                <strong class="inventory-stock-ok">
+                                    {{ $inventario->stock_actual }}
+                                </strong>
+                            @endif
                         </td>
-                        <td>{{ $inventario->stock_minimo }}</td>
+
+                        <td>
+                            {{ $inventario->stock_minimo }}
+                        </td>
+
                         <td>
                             @if ($inventario->stock_actual <= 0)
                                 <span class="badge badge-danger">Agotado</span>
@@ -138,10 +227,37 @@
                                 <span class="badge badge-success">Disponible</span>
                             @endif
                         </td>
+                        <td>
+                            <div class="table-actions">
+                                @if (auth()->user()->tienePermiso('editar_producto'))
+                                    <a href="{{ route('productos.edit', $inventario->producto_id) }}"
+                                    class="icon-action"
+                                    title="Editar producto">
+                                        <i class="bi bi-pencil"></i>
+                                    </a>
+                                @endif
+
+                                @if (auth()->user()->tienePermiso('ajustar_inventario'))
+                                    <a href="{{ route('inventario.create', ['producto_id' => $inventario->producto_id]) }}"
+                                    class="icon-action"
+                                    title="Agregar entrada">
+                                        <i class="bi bi-plus-circle"></i>
+                                    </a>
+                                @endif
+
+                                @if (auth()->user()->tienePermiso('registrar_baja_inventario'))
+                                    <a href="{{ route('bajas-inventario.create', ['inventario_id' => $inventario->id]) }}"
+                                    class="icon-action danger"
+                                    title="Registrar baja">
+                                        <i class="bi bi-dash-circle"></i>
+                                    </a>
+                                @endif
+                            </div>
+                        </td>
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="9" style="text-align: center; color: #6B7280;">
+                        <td colspan="8" class="empty-table-message">
                             Todavía no hay inventario registrado.
                         </td>
                     </tr>
@@ -150,7 +266,7 @@
         </table>
     </div>
 
-    <div style="margin-top: 18px;">
+    <div class="pagination-wrapper">
         {{ $inventarios->links() }}
     </div>
 

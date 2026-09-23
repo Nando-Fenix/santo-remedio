@@ -15,6 +15,8 @@ class ConfiguracionController extends Controller
             [
                 'nombre_farmacia' => 'Santo Remedio',
                 'moneda' => 'Bs',
+                'mensaje_recibo' => 'Gracias por su compra. Vuelva pronto.',
+                'ciudad' => 'Patacamaya',
             ]
         );
 
@@ -28,6 +30,8 @@ class ConfiguracionController extends Controller
             [
                 'nombre_farmacia' => 'Santo Remedio',
                 'moneda' => 'Bs',
+                'mensaje_recibo' => 'Gracias por su compra. Vuelva pronto.',
+                'ciudad' => 'Patacamaya',
             ]
         );
 

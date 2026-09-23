@@ -18,146 +18,223 @@
     </div>
 @endif
 
-<div class="card" style="margin-bottom: 22px;">
-    <div style="display: flex; justify-content: space-between; align-items: center; gap: 16px;">
+<div class="compact-card">
+
+    <div class="compact-header">
         <div>
-            <h2 style="margin: 0; color: #4C1D95;">
-                Baja de inventario #{{ $bajaInventario->id }}
+            <h2>
+                <i class="bi bi-box-arrow-down"></i>
+                Baja #{{ $bajaInventario->numero_baja ?? 'BAJ-' . str_pad($bajaInventario->id, 6, '0', STR_PAD_LEFT) }}
             </h2>
-            <p style="margin: 6px 0 0; color: #6B7280;">
+
+            <p>
                 Registrada el {{ $bajaInventario->created_at->format('d/m/Y H:i') }}
+                ·
+                Producto: <strong>{{ $bajaInventario->producto->nombre_comercial ?? '-' }}</strong>
             </p>
         </div>
 
-        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+        <div class="detail-actions">
+            @if ($bajaInventario->estado === 'registrado')
+                <span class="badge badge-success">Registrado</span>
+            @else
+                <span class="badge badge-danger">Anulado</span>
+            @endif
+
+            <button
+                type="button"
+                class="btn-primary"
+                onclick="abrirModalImpresion('{{ route('bajas-inventario.recibo', $bajaInventario) }}')"
+            >
+                <i class="bi bi-printer"></i>
+                Imprimir
+            </button>
+
             @if ($bajaInventario->estado === 'registrado' && auth()->user()->tienePermiso('anular_baja_inventario'))
-                <a href="{{ route('bajas-inventario.anular.create', $bajaInventario) }}" class="btn-danger">
-                    Anular baja
+                <a
+                    href="{{ route('bajas-inventario.anular.create', $bajaInventario) }}"
+                    class="btn-danger"
+                >
+                    <i class="bi bi-x-octagon"></i>
+                    Anular
                 </a>
             @endif
 
-            <a href="{{ route('bajas-inventario.recibo', $bajaInventario) }}" class="btn-primary" target="_blank">
-                Imprimir comprobante
-            </a>
-
             @if (auth()->user()->tienePermiso('ver_bajas_inventario'))
                 <a href="{{ route('bajas-inventario.index') }}" class="btn-secondary">
+                    <i class="bi bi-arrow-left"></i>
                     Volver
                 </a>
             @endif
         </div>
     </div>
+
+    <div class="detail-stat-grid">
+        <div class="detail-stat-card detail-stat-main">
+            <span>Cantidad retirada</span>
+            <strong>{{ $bajaInventario->cantidad }}</strong>
+        </div>
+
+        <div class="detail-stat-card">
+            <span>Stock anterior</span>
+            <strong>{{ $bajaInventario->stock_anterior }}</strong>
+        </div>
+
+        <div class="detail-stat-card">
+            <span>Stock nuevo</span>
+            <strong>{{ $bajaInventario->stock_nuevo }}</strong>
+        </div>
+
+        <div class="detail-stat-card">
+            <span>Motivo</span>
+            <strong>
+                @if ($bajaInventario->motivo === 'vencimiento')
+                    Vencimiento
+                @elseif ($bajaInventario->motivo === 'danado')
+                    Dañado
+                @elseif ($bajaInventario->motivo === 'perdido')
+                    Perdido
+                @elseif ($bajaInventario->motivo === 'ajuste_autorizado')
+                    Ajuste autorizado
+                @else
+                    Otro
+                @endif
+            </strong>
+        </div>
+    </div>
+
+    <div class="stock-out-detail-layout">
+
+        <section class="detail-section-card">
+            <div class="detail-section-head">
+                <h3>
+                    <i class="bi bi-capsule"></i>
+                    Producto retirado
+                </h3>
+            </div>
+
+            <div class="detail-info-grid">
+                <div class="detail-info-item detail-info-full">
+                    <span>Producto</span>
+                    <strong>{{ $bajaInventario->producto->nombre_comercial ?? '-' }}</strong>
+                </div>
+
+                <div class="detail-info-item">
+                    <span>Nombre genérico</span>
+                    <strong>{{ $bajaInventario->producto->nombre_generico ?? '-' }}</strong>
+                </div>
+
+                <div class="detail-info-item">
+                    <span>Concentración</span>
+                    <strong>{{ $bajaInventario->producto->concentracion ?? '-' }}</strong>
+                </div>
+
+                <div class="detail-info-item">
+                    <span>Laboratorio</span>
+                    <strong>{{ $bajaInventario->producto->laboratorio->nombre ?? '-' }}</strong>
+                </div>
+
+                <div class="detail-info-item">
+                    <span>Sucursal</span>
+                    <strong>{{ $bajaInventario->sucursal->nombre ?? '-' }}</strong>
+                </div>
+
+                <div class="detail-info-item">
+                    <span>Lote</span>
+                    <strong>{{ $bajaInventario->lote->numero_lote ?? 'Sin lote' }}</strong>
+                </div>
+
+                <div class="detail-info-item">
+                    <span>Vencimiento</span>
+                    <strong>
+                        {{ $bajaInventario->lote?->fecha_vencimiento?->format('d/m/Y') ?? '-' }}
+                    </strong>
+                </div>
+            </div>
+        </section>
+
+        <section class="detail-section-card">
+            <div class="detail-section-head">
+                <h3>
+                    <i class="bi bi-card-text"></i>
+                    Motivo y observación
+                </h3>
+            </div>
+
+            <div class="detail-info-grid">
+                <div class="detail-info-item">
+                    <span>Motivo</span>
+                    <strong>
+                        @if ($bajaInventario->motivo === 'vencimiento')
+                            Vencimiento
+                        @elseif ($bajaInventario->motivo === 'danado')
+                            Dañado
+                        @elseif ($bajaInventario->motivo === 'perdido')
+                            Perdido
+                        @elseif ($bajaInventario->motivo === 'ajuste_autorizado')
+                            Ajuste autorizado
+                        @else
+                            Otro
+                        @endif
+                    </strong>
+                </div>
+
+                <div class="detail-info-item">
+                    <span>Registrado por</span>
+                    <strong>{{ $bajaInventario->usuario->nombre ?? '-' }}</strong>
+                </div>
+
+                <div class="detail-info-item detail-info-full">
+                    <span>Observación</span>
+                    <strong>{{ $bajaInventario->observacion ?? '-' }}</strong>
+                </div>
+            </div>
+
+            <div class="stock-out-impact-card">
+                <div>
+                    <span>Impacto en inventario</span>
+                    <strong>
+                        {{ $bajaInventario->stock_anterior }}
+                        →
+                        {{ $bajaInventario->stock_nuevo }}
+                    </strong>
+                </div>
+
+                <div>
+                    <span>Unidades retiradas</span>
+                    <strong>{{ $bajaInventario->cantidad }}</strong>
+                </div>
+            </div>
+        </section>
+
+    </div>
+
+    @if ($bajaInventario->estado === 'anulado')
+        <div class="detail-cancel-card">
+            <div>
+                <h3>
+                    <i class="bi bi-x-octagon"></i>
+                    Datos de anulación
+                </h3>
+
+                <p>
+                    <strong>Anulado por:</strong>
+                    {{ $bajaInventario->usuarioAnulacion->nombre ?? '-' }}
+                </p>
+
+                <p>
+                    <strong>Fecha:</strong>
+                    {{ $bajaInventario->fecha_anulacion?->format('d/m/Y H:i') ?? '-' }}
+                </p>
+
+                <p>
+                    <strong>Motivo:</strong>
+                    {{ $bajaInventario->motivo_anulacion ?? '-' }}
+                </p>
+            </div>
+        </div>
+    @endif
+
 </div>
-
-<div class="grid" style="grid-template-columns: repeat(4, 1fr); margin-bottom: 22px;">
-    <div class="stat-card">
-        <span>Cantidad retirada</span>
-        <h3>{{ $bajaInventario->cantidad }}</h3>
-    </div>
-
-    <div class="stat-card">
-        <span>Stock anterior</span>
-        <h3>{{ $bajaInventario->stock_anterior }}</h3>
-    </div>
-
-    <div class="stat-card">
-        <span>Stock nuevo</span>
-        <h3>{{ $bajaInventario->stock_nuevo }}</h3>
-    </div>
-
-    <div class="stat-card">
-        <span>Estado</span>
-        <h3 style="font-size: 18px;">
-            {{ ucfirst($bajaInventario->estado) }}
-        </h3>
-    </div>
-</div>
-
-<div class="card" style="margin-bottom: 22px;">
-    <h3 style="margin-top: 0; color: #4C1D95;">Producto retirado</h3>
-
-    <p>
-        <strong>Producto:</strong>
-        {{ $bajaInventario->producto->nombre_comercial ?? '-' }}
-
-        @if ($bajaInventario->producto?->nombre_generico)
-            <br>
-            <strong>Nombre genérico:</strong>
-            {{ $bajaInventario->producto->nombre_generico }}
-        @endif
-
-        @if ($bajaInventario->producto?->concentracion)
-            <br>
-            <strong>Concentración:</strong>
-            {{ $bajaInventario->producto->concentracion }}
-        @endif
-
-        @if ($bajaInventario->producto?->laboratorio)
-            <br>
-            <strong>Laboratorio:</strong>
-            {{ $bajaInventario->producto->laboratorio->nombre }}
-        @endif
-
-        <br>
-        <strong>Sucursal:</strong>
-        {{ $bajaInventario->sucursal->nombre ?? '-' }}
-
-        <br>
-        <strong>Lote:</strong>
-        {{ $bajaInventario->lote->numero_lote ?? 'Sin lote' }}
-
-        @if ($bajaInventario->lote?->fecha_vencimiento)
-            <br>
-            <strong>Vencimiento:</strong>
-            {{ $bajaInventario->lote->fecha_vencimiento->format('d/m/Y') }}
-        @endif
-    </p>
-</div>
-
-<div class="card" style="margin-bottom: 22px;">
-    <h3 style="margin-top: 0; color: #4C1D95;">Motivo y observación</h3>
-
-    <p>
-        <strong>Motivo:</strong>
-        @if ($bajaInventario->motivo === 'vencimiento')
-            Vencimiento
-        @elseif ($bajaInventario->motivo === 'danado')
-            Dañado
-        @elseif ($bajaInventario->motivo === 'perdido')
-            Perdido
-        @elseif ($bajaInventario->motivo === 'ajuste_autorizado')
-            Ajuste autorizado
-        @else
-            Otro
-        @endif
-
-        <br>
-        <strong>Observación:</strong>
-        {{ $bajaInventario->observacion ?? '-' }}
-
-        <br>
-        <strong>Registrado por:</strong>
-        {{ $bajaInventario->usuario->nombre ?? '-' }}
-    </p>
-</div>
-
-@if ($bajaInventario->estado === 'anulado')
-    <div class="card">
-        <h3 style="margin-top: 0; color: #991B1B;">Anulación</h3>
-
-        <p>
-            <strong>Anulado por:</strong>
-            {{ $bajaInventario->usuarioAnulacion->nombre ?? '-' }}
-
-            <br>
-            <strong>Fecha de anulación:</strong>
-            {{ $bajaInventario->fecha_anulacion?->format('d/m/Y H:i') ?? '-' }}
-
-            <br>
-            <strong>Motivo de anulación:</strong>
-            {{ $bajaInventario->motivo_anulacion ?? '-' }}
-        </p>
-    </div>
-@endif
 
 @endsection

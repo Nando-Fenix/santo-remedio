@@ -35,24 +35,38 @@
                 </a>
             @endif
 
-            <details class="menu-group" {{ request()->routeIs('dashboard') ? 'open' : '' }}>
-                <summary>
-                    <span><i class="bi bi-house-door"></i> Inicio</span>
-                    <span class="menu-arrow">⌄</span>
-                </summary>
+            @if ($user->tienePermiso('ver_dashboard'))
+                <a href="{{ route('dashboard') }}"
+                class="menu-link {{ request()->routeIs('dashboard') ? 'active' : '' }}"
+                title="Inicio">
+                    <span class="menu-icon"><i class="bi bi-house-door"></i></span>
+                    <span class="menu-text">Inicio</span>
+                </a>
+            @endif
 
-                @if ($user->tienePermiso('ver_dashboard'))
-                    <a href="{{ route('dashboard') }}"
-                    class="menu-link {{ request()->routeIs('dashboard') ? 'active' : '' }}">
-                        <span class="menu-icon"><i class="bi bi-speedometer2"></i></span>
-                        <span class="menu-text">Panel principal</span>
-                    </a>
-                @endif
-            </details>
+            @if ($user->tienePermiso('ver_caja'))
+                <a href="{{ route('caja.index') }}"
+                class="menu-link {{ request()->routeIs('caja.*') ? 'active' : '' }}"
+                title="Caja">
+                    <span class="menu-icon"><i class="bi bi-cash-coin"></i></span>
+                    <span class="menu-text">Caja</span>
+                </a>
+            @endif
 
-            <details class="menu-group" {{ request()->routeIs('ventas.*') || request()->routeIs('caja.*') || request()->routeIs('atenciones-servicio.*') ? 'open' : '' }}>
+            <details class="menu-group" {{
+                (
+                    request()->routeIs('ventas.*')
+                    && !request()->routeIs('ventas.create')
+                )
+                || (
+                    request()->routeIs('atenciones-servicio.*')
+                    && !request()->routeIs('atenciones-servicio.create')
+                )
+                    ? 'open'
+                    : ''
+            }}>
                 <summary>
-                    <span><i class="bi bi-lightning-charge"></i> Operación</span>
+                    <span><i class="bi bi-receipt"></i> Ventas</span>
                     <span class="menu-arrow">⌄</span>
                 </summary>
 
@@ -61,14 +75,6 @@
                     class="menu-link {{ request()->routeIs('ventas.*') && !request()->routeIs('ventas.create') ? 'active' : '' }}">
                         <span class="menu-icon"><i class="bi bi-receipt"></i></span>
                         <span class="menu-text">Ventas realizadas</span>
-                    </a>
-                @endif
-
-                @if ($user->tienePermiso('ver_caja'))
-                    <a href="{{ route('caja.index') }}"
-                    class="menu-link {{ request()->routeIs('caja.*') ? 'active' : '' }}">
-                        <span class="menu-icon"><i class="bi bi-cash-coin"></i></span>
-                        <span class="menu-text">Caja</span>
                     </a>
                 @endif
 
@@ -89,9 +95,17 @@
                 @endif
             </details>
 
-            <details class="menu-group" {{ request()->routeIs('inventario.*') || request()->routeIs('productos.*') || request()->routeIs('compras.*') || request()->routeIs('bajas-inventario.*') || request()->routeIs('promociones.*') ? 'open' : '' }}>
+            <details class="menu-group" {{
+                request()->routeIs('inventario.*')
+                || request()->routeIs('productos.*')
+                || request()->routeIs('compras.create')
+                || request()->routeIs('bajas-inventario.*')
+                || request()->routeIs('promociones.*')
+                    ? 'open'
+                    : ''
+            }}>
                 <summary>
-                    <span><i class="bi bi-box-seam"></i> Inventario</span>
+                    <span><i class="bi bi-box-seam"></i> Inventario y productos</span>
                     <span class="menu-arrow">⌄</span>
                 </summary>
 
@@ -158,9 +172,20 @@
                 @endif
             </details>
 
-            <details class="menu-group" {{ request()->routeIs('clientes.*') || request()->routeIs('proveedores.*') || request()->routeIs('servicios-farmacia.*') || request()->routeIs('compras.deudas') || request()->routeIs('compras.index') || request()->routeIs('compras.show') ? 'open' : '' }}>
+            <details class="menu-group" {{
+                request()->routeIs('clientes.*')
+                || request()->routeIs('proveedores.*')
+                || request()->routeIs('servicios-farmacia.*')
+                || request()->routeIs('compras.deudas')
+                || request()->routeIs('compras.index')
+                || request()->routeIs('compras.show')
+                || request()->routeIs('compras.pago.*')
+                || request()->routeIs('compras.anular.*')
+                    ? 'open'
+                    : ''
+            }}>
                 <summary>
-                    <span><i class="bi bi-folder2-open"></i> Gestión</span>
+                    <span><i class="bi bi-folder2-open"></i> Compras y terceros</span>
                     <span class="menu-arrow">⌄</span>
                 </summary>
 
@@ -205,7 +230,14 @@
                 @endif
             </details>
 
-            <details class="menu-group" {{ request()->routeIs('usuarios.*') || request()->routeIs('reportes.*') ? 'open' : '' }}>
+            <details class="menu-group" {{
+                request()->routeIs('usuarios.*')
+                || request()->routeIs('sucursales.*')
+                || request()->routeIs('reportes.*')
+                || request()->routeIs('configuracion.*')
+                    ? 'open'
+                    : ''
+            }}>
                 <summary>
                     <span><i class="bi bi-shield-lock"></i> Administración</span>
                     <span class="menu-arrow">⌄</span>
@@ -216,6 +248,14 @@
                     class="menu-link {{ request()->routeIs('usuarios.*') ? 'active' : '' }}">
                         <span class="menu-icon"><i class="bi bi-person-lock"></i></span>
                         <span class="menu-text">Usuarios</span>
+                    </a>
+                @endif
+
+                @if ($user->tienePermiso('administrar_sucursales'))
+                    <a href="{{ route('sucursales.index') }}"
+                    class="menu-link {{ request()->routeIs('sucursales.*') ? 'active' : '' }}">
+                        <span class="menu-icon"><i class="bi bi-buildings"></i></span>
+                        <span class="menu-text">Sucursales</span>
                     </a>
                 @endif
 
@@ -271,6 +311,88 @@
                 </div>
 
                 <div class="topbar-icon-actions">
+                    <div class="notification-dropdown">
+                        <button
+                            type="button"
+                            class="topbar-icon-btn notification-btn"
+                            id="notificationBtn"
+                            title="Notificaciones"
+                        >
+                            <i class="bi bi-bell"></i>
+
+                            @if ($totalNotificaciones > 0)
+                                <span class="notification-count">
+                                    {{ $totalNotificaciones > 99 ? '99+' : $totalNotificaciones }}
+                                </span>
+                            @endif
+                        </button>
+
+                        <div class="notification-menu" id="notificationMenu">
+                            <div class="notification-menu-header">
+                                <strong>Alertas</strong>
+                                <span>{{ $totalNotificaciones }} pendiente(s)</span>
+                            </div>
+
+                            @if ($totalNotificaciones > 0)
+
+                                @if ($cajaCerradaNotificacion)
+                                    <a href="{{ route('caja.index') }}" class="notification-item notification-danger">
+                                        <i class="bi bi-cash-coin"></i>
+                                        <div>
+                                            <strong>Caja cerrada</strong>
+                                            <span>No existe una caja abierta.</span>
+                                        </div>
+                                    </a>
+                                @endif
+
+                                @if ($agotadosNotificacion > 0)
+                                    <a href="{{ route('inventario.index', ['estado_stock' => 'agotado']) }}" class="notification-item notification-danger">
+                                        <i class="bi bi-exclamation-octagon"></i>
+                                        <div>
+                                            <strong>Productos agotados</strong>
+                                            <span>{{ $agotadosNotificacion }} producto(s)</span>
+                                        </div>
+                                    </a>
+                                @endif
+
+                                @if ($stockBajoNotificacion > 0)
+                                    <a href="{{ route('inventario.index', ['estado_stock' => 'bajo']) }}" class="notification-item notification-warning">
+                                        <i class="bi bi-box-seam"></i>
+                                        <div>
+                                            <strong>Stock bajo</strong>
+                                            <span>{{ $stockBajoNotificacion }} producto(s)</span>
+                                        </div>
+                                    </a>
+                                @endif
+
+                                @if ($vencidosNotificacion > 0)
+                                    <a href="{{ route('inventario.index', ['estado_vencimiento' => 'vencido']) }}" class="notification-item notification-danger">
+                                        <i class="bi bi-calendar2-x"></i>
+                                        <div>
+                                            <strong>Productos vencidos</strong>
+                                            <span>{{ $vencidosNotificacion }} producto(s)</span>
+                                        </div>
+                                    </a>
+                                @endif
+
+                                @if ($proximosVencerNotificacion > 0)
+                                    <a href="{{ route('inventario.index', ['estado_vencimiento' => 'proximo']) }}" class="notification-item notification-warning">
+                                        <i class="bi bi-calendar2-week"></i>
+                                        <div>
+                                            <strong>Próximos a vencer</strong>
+                                            <span>{{ $proximosVencerNotificacion }} producto(s)</span>
+                                        </div>
+                                    </a>
+                                @endif
+
+                            @else
+                                <div class="notification-empty">
+                                    <i class="bi bi-check-circle"></i>
+                                    <span>Sin alertas importantes.</span>
+                                </div>
+                            @endif
+                        </div>
+                    </div>
                     @if ($user->tienePermiso('administrar_configuracion'))
                         <a href="{{ route('configuracion.edit') }}"
                         class="topbar-icon-btn {{ request()->routeIs('configuracion.*') ? 'active' : '' }}"
@@ -294,6 +416,42 @@
         </section>
     </main>
 
+</div>
+
+<div id="printReceiptModal" class="print-modal">
+    <div class="print-modal-backdrop" onclick="cerrarModalImpresion()"></div>
+
+    <div class="print-modal-content">
+        <div class="print-modal-header">
+            <div>
+                <h3>
+                    <i class="bi bi-printer"></i>
+                    Recibo imprimible
+                </h3>
+                <p>Vista previa del comprobante antes de imprimir.</p>
+            </div>
+
+            <button type="button" class="print-modal-close" onclick="cerrarModalImpresion()">
+                <i class="bi bi-x-lg"></i>
+            </button>
+        </div>
+
+        <div class="print-modal-body">
+            <iframe id="printReceiptFrame" src=""></iframe>
+        </div>
+
+        <div class="print-modal-actions">
+            <button type="button" class="btn-primary" onclick="imprimirReciboModal()">
+                <i class="bi bi-printer"></i>
+                Imprimir
+            </button>
+
+            <button type="button" class="btn-secondary" onclick="cerrarModalImpresion()">
+                <i class="bi bi-x-circle"></i>
+                Cerrar
+            </button>
+        </div>
+    </div>
 </div>
 
 @if (session('success'))
@@ -384,8 +542,82 @@
                 });
             });
         }
+        const notificationBtn = document.getElementById('notificationBtn');
+        const notificationMenu = document.getElementById('notificationMenu');
+
+        if (notificationBtn && notificationMenu) {
+            notificationBtn.addEventListener('click', function (event) {
+                event.stopPropagation();
+                notificationMenu.classList.toggle('show');
+            });
+
+            notificationMenu.addEventListener('click', function (event) {
+                event.stopPropagation();
+            });
+
+            document.addEventListener('click', function () {
+                notificationMenu.classList.remove('show');
+            });
+
+            document.addEventListener('keydown', function (event) {
+                if (event.key === 'Escape') {
+                    notificationMenu.classList.remove('show');
+                }
+            });
+        }
+    });
+</script>
+
+<script>
+    function abrirModalImpresion(url) {
+        const modal = document.getElementById('printReceiptModal');
+        const frame = document.getElementById('printReceiptFrame');
+
+        if (!modal || !frame) {
+            window.location.href = url;
+            return;
+        }
+
+        frame.src = url;
+        modal.classList.add('show');
+        document.body.classList.add('modal-open');
+    }
+
+    function cerrarModalImpresion() {
+        const modal = document.getElementById('printReceiptModal');
+        const frame = document.getElementById('printReceiptFrame');
+
+        if (!modal || !frame) {
+            return;
+        }
+
+        modal.classList.remove('show');
+        document.body.classList.remove('modal-open');
+
+        setTimeout(() => {
+            frame.src = '';
+        }, 200);
+    }
+
+    function imprimirReciboModal() {
+        const frame = document.getElementById('printReceiptFrame');
+
+        if (!frame || !frame.contentWindow) {
+            return;
+        }
+
+        frame.contentWindow.focus();
+        frame.contentWindow.print();
+    }
+
+    document.addEventListener('keydown', function (event) {
+        if (event.key === 'Escape') {
+            cerrarModalImpresion();
+        }
     });
 </script>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+
 </body>
 </html>

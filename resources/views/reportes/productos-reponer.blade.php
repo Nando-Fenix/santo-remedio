@@ -6,43 +6,52 @@
 
 @section('content')
 
-<div class="card" style="margin-bottom: 22px;">
-    <div style="display:flex; justify-content:space-between; align-items:center; gap:16px; flex-wrap:wrap;">
+<div class="report-detail-page">
+
+    <div class="compact-card report-detail-header">
         <div>
-            <h2 style="margin:0; color:#4C1D95;">Productos a reponer</h2>
+            <h2>
+                <i class="bi bi-arrow-repeat"></i>
+                Productos a reponer
+            </h2>
 
-            <p style="margin:6px 0 0; color:#6B7280;">
-                Productos agotados o con stock bajo, priorizados según ventas recientes.
-            </p>
-
-            <p style="margin:6px 0 0; color:#4B5563;">
+            <p>
                 Sucursal:
                 <strong>{{ $sucursal?->nombre ?? 'Sin sucursal' }}</strong>
+                |
+                Análisis:
+                <strong>Últimos {{ $dias }} días</strong>
             </p>
         </div>
 
-        <div style="display:flex; gap:10px; flex-wrap:wrap;">
+        <div class="detail-actions">
             <a
-                href="{{ route('reportes.productos-reponer.exportar-csv', request()->query()) }}"
+                href="{{ route('reportes.productos-reponer.exportar-xlsx', request()->query()) }}"
                 class="btn-primary"
             >
-                Exportar Excel
+                <i class="bi bi-file-earmark-spreadsheet"></i>
+                Excel
+            </a>
+
+            <a
+                href="{{ route('reportes.productos-reponer.exportar-csv', request()->query()) }}"
+                class="btn-secondary"
+            >
+                <i class="bi bi-file-earmark-excel"></i>
+                CSV
             </a>
 
             <a href="{{ route('reportes.index') }}" class="btn-secondary">
-                Volver a reportes
+                <i class="bi bi-arrow-left"></i>
+                Reportes
             </a>
         </div>
     </div>
-</div>
 
-<div class="card" style="margin-bottom: 22px;">
-    <h3 style="margin-top:0; color:#4C1D95;">Filtros</h3>
-
-    <form method="GET" action="{{ route('reportes.productos-reponer') }}">
-        <div class="form-grid">
+    <div class="compact-card report-filter-card">
+        <form method="GET" action="{{ route('reportes.productos-reponer') }}" class="filter-bar report-filter-bar">
             <div class="form-group">
-                <label>Periodo de análisis</label>
+                <label>Periodo</label>
                 <select name="dias">
                     <option value="7" @selected($dias == 7)>Últimos 7 días</option>
                     <option value="15" @selected($dias == 15)>Últimos 15 días</option>
@@ -52,7 +61,7 @@
                 </select>
             </div>
 
-            <div class="form-group">
+            <div class="form-group filter-search">
                 <label>Buscar producto</label>
                 <input
                     type="text"
@@ -61,113 +70,151 @@
                     placeholder="Nombre, genérico, concentración o laboratorio"
                 >
             </div>
+
+            <div class="filter-actions">
+                <button type="submit" class="btn-primary" title="Buscar">
+                    <i class="bi bi-search"></i>
+                </button>
+
+                <a href="{{ route('reportes.productos-reponer') }}" class="btn-secondary" title="Limpiar filtros">
+                    <i class="bi bi-x-circle"></i>
+                </a>
+            </div>
+        </form>
+    </div>
+
+    <div class="critical-summary-strip">
+        <div class="critical-mini-stat critical-soft">
+            <span>Productos a reponer</span>
+            <strong>{{ $resumen['productos_reponer'] }}</strong>
         </div>
 
-        <div style="display:flex; gap:10px; margin-top:14px; flex-wrap:wrap;">
-            <button type="submit" class="btn-primary">
-                Aplicar filtros
-            </button>
-
-            <a href="{{ route('reportes.productos-reponer') }}" class="btn-secondary">
-                Limpiar
-            </a>
+        <div class="critical-mini-stat critical-danger">
+            <span>Agotados</span>
+            <strong>{{ $resumen['agotados'] }}</strong>
         </div>
-    </form>
-</div>
 
-<div class="grid" style="grid-template-columns: repeat(4, 1fr); margin-bottom: 22px;">
-    <div class="stat-card">
-        <span>Productos a reponer</span>
-        <h3>{{ $resumen['productos_reponer'] }}</h3>
+        <div class="critical-mini-stat critical-warning">
+            <span>Stock bajo</span>
+            <strong>{{ $resumen['stock_bajo'] }}</strong>
+        </div>
+
+        <div class="critical-mini-stat">
+            <span>Cantidad sugerida</span>
+            <strong>{{ $resumen['cantidad_sugerida_total'] }}</strong>
+        </div>
     </div>
 
-    <div class="stat-card">
-        <span>Agotados</span>
-        <h3>{{ $resumen['agotados'] }}</h3>
-    </div>
+    <div class="compact-card">
+        <div class="detail-section-head">
+            <div>
+                <h3>
+                    <i class="bi bi-list-check"></i>
+                    Detalle de reposición sugerida
+                </h3>
 
-    <div class="stat-card">
-        <span>Stock bajo</span>
-        <h3>{{ $resumen['stock_bajo'] }}</h3>
-    </div>
+                <small style="color:#6B7280;">
+                    La cantidad sugerida es referencial y busca alcanzar aproximadamente el doble del stock mínimo.
+                </small>
+            </div>
+        </div>
 
-    <div class="stat-card">
-        <span>Cantidad sugerida total</span>
-        <h3>{{ $resumen['cantidad_sugerida_total'] }}</h3>
-    </div>
-</div>
-
-<div class="card">
-    <h3 style="margin-top:0; color:#4C1D95;">Detalle de reposición sugerida</h3>
-
-    <p style="color:#6B7280;">
-        La cantidad sugerida es referencial. Se calcula para alcanzar aproximadamente el doble del stock mínimo.
-    </p>
-
-    <div class="table-container">
-        <table class="table">
-            <thead>
-                <tr>
-                    <th>Producto</th>
-                    <th>Laboratorio</th>
-                    <th>Stock actual</th>
-                    <th>Stock mínimo</th>
-                    <th>Vendidas</th>
-                    <th>Promedio diario</th>
-                    <th>Sugerido</th>
-                    <th>Prioridad</th>
-                </tr>
-            </thead>
-
-            <tbody>
-                @forelse ($productosPaginados as $item)
-                    @php
-                        $inventario = $item['inventario'];
-                    @endphp
-
+        <div class="table-container compact-table-container">
+            <table class="table compact-table report-reorder-table">
+                <thead>
                     <tr>
-                        <td>
-                            <strong>{{ $inventario->producto->nombre_comercial ?? '-' }}</strong>
-                            <br>
-                            <small style="color:#6B7280;">
-                                {{ $inventario->producto->nombre_generico ?? '' }}
-                                {{ $inventario->producto->concentracion ?? '' }}
-                            </small>
-                        </td>
-
-                        <td>{{ $inventario->producto->laboratorio->nombre ?? '-' }}</td>
-                        <td>{{ $inventario->stock_actual }}</td>
-                        <td>{{ $inventario->stock_minimo }}</td>
-                        <td>{{ $item['unidades_vendidas'] }}</td>
-                        <td>{{ number_format($item['promedio_diario'], 2) }}</td>
-                        <td>
-                            <strong>{{ $item['cantidad_sugerida'] }}</strong>
-                        </td>
-
-                        <td>
-                            @if ($item['prioridad'] === 'Alta')
-                                <span class="badge badge-danger">Alta</span>
-                            @elseif ($item['prioridad'] === 'Media')
-                                <span class="badge badge-warning">Media</span>
-                            @else
-                                <span class="badge badge-soft">Baja</span>
-                            @endif
-                        </td>
+                        <th>Producto</th>
+                        <th>Laboratorio</th>
+                        <th>Stock</th>
+                        <th>Mín.</th>
+                        <th>Vendidas</th>
+                        <th>Prom. diario</th>
+                        <th>Sugerido</th>
+                        <th>Prioridad</th>
                     </tr>
-                @empty
-                    <tr>
-                        <td colspan="8" style="text-align:center; color:#6B7280;">
-                            No hay productos para reponer según los filtros aplicados.
-                        </td>
-                    </tr>
-                @endforelse
-            </tbody>
-        </table>
+                </thead>
+
+                <tbody>
+                    @forelse ($productosPaginados as $item)
+                        @php
+                            $inventario = $item['inventario'];
+                        @endphp
+
+                        <tr>
+                            <td>
+                                <strong>{{ $inventario->producto->nombre_comercial ?? '-' }}</strong>
+
+                                @if (($inventario->producto->nombre_generico ?? null) || ($inventario->producto->concentracion ?? null))
+                                    <br>
+                                    <small style="color:#6B7280;">
+                                        {{ $inventario->producto->nombre_generico ?? '' }}
+                                        {{ $inventario->producto->concentracion ?? '' }}
+                                    </small>
+                                @endif
+                            </td>
+
+                            <td>
+                                {{ $inventario->producto->laboratorio->nombre ?? '-' }}
+                            </td>
+
+                            <td>
+                                @if ($inventario->stock_actual <= 0)
+                                    <strong class="critical-stock-danger">
+                                        {{ $inventario->stock_actual }}
+                                    </strong>
+                                @elseif ($inventario->stock_actual <= $inventario->stock_minimo)
+                                    <strong class="critical-stock-warning">
+                                        {{ $inventario->stock_actual }}
+                                    </strong>
+                                @else
+                                    <strong>{{ $inventario->stock_actual }}</strong>
+                                @endif
+                            </td>
+
+                            <td>
+                                {{ $inventario->stock_minimo }}
+                            </td>
+
+                            <td>
+                                <strong>{{ $item['unidades_vendidas'] }}</strong>
+                            </td>
+
+                            <td>
+                                {{ number_format($item['promedio_diario'], 2) }}
+                            </td>
+
+                            <td>
+                                <span class="reorder-suggested">
+                                    {{ $item['cantidad_sugerida'] }}
+                                </span>
+                            </td>
+
+                            <td>
+                                @if ($item['prioridad'] === 'Alta')
+                                    <span class="badge badge-danger">Alta</span>
+                                @elseif ($item['prioridad'] === 'Media')
+                                    <span class="badge badge-warning">Media</span>
+                                @else
+                                    <span class="badge badge-soft">Baja</span>
+                                @endif
+                            </td>
+                        </tr>
+                    @empty
+                        <tr>
+                            <td colspan="8" class="empty-table-message">
+                                No hay productos para reponer según los filtros aplicados.
+                            </td>
+                        </tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
+
+        <div class="pagination-wrapper">
+            {{ $productosPaginados->links() }}
+        </div>
     </div>
 
-    <div style="margin-top:18px;">
-        {{ $productosPaginados->links() }}
-    </div>
 </div>
 
 @endsection

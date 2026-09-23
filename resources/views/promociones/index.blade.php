@@ -6,84 +6,101 @@
 
 @section('content')
 
-<div class="card">
+@if (session('success'))
+    <div class="alert-success">
+        {{ session('success') }}
+    </div>
+@endif
 
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; gap: 14px;">
+@if (session('error'))
+    <div class="alert-danger">
+        {{ session('error') }}
+    </div>
+@endif
+
+<div class="compact-card">
+
+    <div class="compact-header">
         <div>
-            <h2 style="margin: 0; color: #4C1D95;">Listado de promociones</h2>
-            <p style="margin: 6px 0 0; color: #6B7280;">
+            <h2>
+                <i class="bi bi-tags"></i>
+                Promociones
+            </h2>
+
+            <p>
                 Administre promociones individuales, combos y productos próximos a vencer.
             </p>
         </div>
 
         @if (auth()->user()->tienePermiso('crear_promocion'))
             <a href="{{ route('promociones.create') }}" class="btn-primary">
-                + Nueva promoción
+                <i class="bi bi-plus-circle"></i>
+                Nueva promoción
             </a>
         @endif
     </div>
 
-    @if (session('success'))
-        <div class="alert-success">
-            {{ session('success') }}
-        </div>
-    @endif
-
-    <form method="GET" action="{{ route('promociones.index') }}" style="margin-bottom: 18px;">
-        <div class="form-grid">
-            <div class="form-group">
-                <label>Buscar promoción</label>
-                <input
-                    type="text"
-                    name="buscar"
-                    value="{{ $buscar ?? '' }}"
-                    placeholder="Nombre, descripción o motivo"
-                >
-            </div>
-
-            <div class="form-group">
-                <label>Tipo</label>
-                <select name="tipo">
-                    <option value="">Todos</option>
-                    <option value="producto_individual" @selected(($tipo ?? '') === 'producto_individual')>Producto individual</option>
-                    <option value="combo" @selected(($tipo ?? '') === 'combo')>Combo</option>
-                    <option value="por_vencimiento" @selected(($tipo ?? '') === 'por_vencimiento')>Por vencimiento</option>
-                </select>
-            </div>
-
-            <div class="form-group">
-                <label>Estado</label>
-                <select name="estado">
-                    <option value="">Todos</option>
-                    <option value="activo" @selected(($estado ?? '') === 'activo')>Activo</option>
-                    <option value="inactivo" @selected(($estado ?? '') === 'inactivo')>Inactivo</option>
-                </select>
-            </div>
+    <form method="GET" action="{{ route('promociones.index') }}" class="filter-bar">
+        <div class="filter-search">
+            <label>Buscar promoción</label>
+            <input
+                type="text"
+                name="buscar"
+                value="{{ $buscar ?? '' }}"
+                placeholder="Nombre, descripción o motivo"
+            >
         </div>
 
-        <div style="display: flex; gap: 10px; margin-top: 14px;">
+        <div class="form-group">
+            <label>Tipo</label>
+            <select name="tipo">
+                <option value="">Todos</option>
+                <option value="producto_individual" @selected(($tipo ?? '') === 'producto_individual')>
+                    Producto individual
+                </option>
+                <option value="combo" @selected(($tipo ?? '') === 'combo')>
+                    Combo
+                </option>
+                <option value="por_vencimiento" @selected(($tipo ?? '') === 'por_vencimiento')>
+                    Por vencimiento
+                </option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label>Estado</label>
+            <select name="estado">
+                <option value="">Todos</option>
+                <option value="activo" @selected(($estado ?? '') === 'activo')>Activo</option>
+                <option value="inactivo" @selected(($estado ?? '') === 'inactivo')>Inactivo</option>
+            </select>
+        </div>
+
+        <div class="filter-actions">
             <button type="submit" class="btn-primary">
+                <i class="bi bi-search"></i>
                 Buscar
             </button>
 
             <a href="{{ route('promociones.index') }}" class="btn-secondary">
+                <i class="bi bi-x-circle"></i>
                 Limpiar
             </a>
         </div>
     </form>
 
-    <div class="table-container">
-        <table class="table">
+    <div class="table-container compact-table-container">
+        <table class="table compact-table">
             <thead>
                 <tr>
                     <th>Promoción</th>
                     <th>Tipo</th>
-                    <th>Precio promocional</th>
+                    <th>Precio</th>
                     <th>Vigencia</th>
-                    <th>Productos incluidos</th>
+                    <th>Productos</th>
                     <th>Sucursal</th>
                     <th>Estado</th>
-                    <th>Acciones</th>
+                    <th class="table-actions-cell">Acciones</th>
                 </tr>
             </thead>
 
@@ -95,8 +112,8 @@
 
                             @if ($promocion->descripcion)
                                 <br>
-                                <small style="color: #6B7280;">
-                                    {{ $promocion->descripcion }}
+                                <small style="color:#6B7280;">
+                                    {{ Str::limit($promocion->descripcion, 90) }}
                                 </small>
                             @endif
                         </td>
@@ -119,16 +136,20 @@
 
                         <td>
                             @if ($promocion->fecha_inicio || $promocion->fecha_fin)
-                                {{ $promocion->fecha_inicio ? $promocion->fecha_inicio->format('d/m/Y') : 'Sin inicio' }}
-                                -
-                                {{ $promocion->fecha_fin ? $promocion->fecha_fin->format('d/m/Y') : 'Sin fin' }}
+                                <small>
+                                    {{ $promocion->fecha_inicio ? $promocion->fecha_inicio->format('d/m/Y') : 'Sin inicio' }}
+                                    <br>
+                                    {{ $promocion->fecha_fin ? $promocion->fecha_fin->format('d/m/Y') : 'Sin fin' }}
+                                </small>
                             @else
-                                Sin vigencia definida
+                                <small style="color:#6B7280;">Sin vigencia</small>
                             @endif
                         </td>
 
                         <td>
-                            {{ $promocion->items_count }}
+                            <span class="badge badge-info">
+                                {{ $promocion->items_count }} producto(s)
+                            </span>
                         </td>
 
                         <td>
@@ -142,28 +163,42 @@
                         </td>
 
                         <td>
-                            <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                            <div class="action-group">
                                 @if (auth()->user()->tienePermiso('ver_promociones'))
-                                    <a href="{{ route('promociones.show', $promocion) }}" class="btn-secondary">
-                                        Ver
+                                    <a
+                                        href="{{ route('promociones.show', $promocion) }}"
+                                        class="icon-action icon-action-primary"
+                                        title="Ver detalle"
+                                    >
+                                        <i class="bi bi-eye"></i>
                                     </a>
                                 @endif
 
                                 @if ($promocion->estado === 'activo' && auth()->user()->tienePermiso('editar_promocion'))
-                                    <a href="{{ route('promociones.edit', $promocion) }}" class="btn-secondary">
-                                        Editar
+                                    <a
+                                        href="{{ route('promociones.edit', $promocion) }}"
+                                        class="icon-action icon-action-edit"
+                                        title="Editar promoción"
+                                    >
+                                        <i class="bi bi-pencil"></i>
                                     </a>
                                 @endif
 
                                 @if ($promocion->estado === 'activo' && auth()->user()->tienePermiso('desactivar_promocion'))
-                                    <form method="POST"
+                                    <form
+                                        method="POST"
                                         action="{{ route('promociones.destroy', $promocion) }}"
-                                        onsubmit="return confirmarFormulario(event, '¿Desea desactivar esta promoción?')">
+                                        class="form-desactivar-promocion"
+                                    >
                                         @csrf
                                         @method('DELETE')
 
-                                        <button type="submit" class="btn-danger">
-                                            Desactivar
+                                        <button
+                                            type="submit"
+                                            class="icon-action icon-action-danger"
+                                            title="Desactivar promoción"
+                                        >
+                                            <i class="bi bi-power"></i>
                                         </button>
                                     </form>
                                 @endif
@@ -172,7 +207,7 @@
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="8" style="text-align: center; color: #6B7280;">
+                        <td colspan="8" class="empty-table-message">
                             Todavía no hay promociones registradas.
                         </td>
                     </tr>
@@ -181,10 +216,33 @@
         </table>
     </div>
 
-    <div style="margin-top: 18px;">
+    <div class="pagination-wrapper">
         {{ $promociones->links() }}
     </div>
 
 </div>
+
+<script>
+document.querySelectorAll('.form-desactivar-promocion').forEach(function (form) {
+    form.addEventListener('submit', function (event) {
+        event.preventDefault();
+
+        Swal.fire({
+            icon: 'warning',
+            title: '¿Desactivar promoción?',
+            text: 'La promoción ya no estará disponible para nuevas ventas.',
+            showCancelButton: true,
+            confirmButtonText: 'Sí, desactivar',
+            cancelButtonText: 'Cancelar',
+            confirmButtonColor: '#DC2626',
+            cancelButtonColor: '#6B7280'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                form.submit();
+            }
+        });
+    });
+});
+</script>
 
 @endsection

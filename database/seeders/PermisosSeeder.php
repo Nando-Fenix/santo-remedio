@@ -2,10 +2,8 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 use App\Models\Permiso;
-use App\Models\Rol;
 
 class PermisosSeeder extends Seeder
 {
@@ -148,43 +146,6 @@ class PermisosSeeder extends Seeder
                 ['nombre' => $permiso['nombre']],
                 $permiso
             );
-        }
-
-        $admin = Rol::where('nombre', 'Administrador')->first();
-        $vendedor = Rol::where('nombre', 'Vendedor')->first();
-
-        if ($admin) {
-            $admin->permisos()->sync(Permiso::pluck('id')->toArray());
-        }
-
-        if ($vendedor) {
-            $permisosVendedor = Permiso::whereIn('nombre', [
-                'ver_dashboard',
-                'registrar_egreso',
-
-                'ver_ventas',
-                'realizar_venta',
-
-                'ver_clientes',
-                'crear_cliente',
-
-                'ver_productos',
-                'ver_inventario',
-                'ver_movimientos_inventario',
-
-                'ver_caja',
-                'abrir_caja',
-                'cerrar_caja',
-
-                'ver_promociones',
-                'vender_promocion',
-
-                'ver_servicios_farmacia',
-                'ver_atenciones_servicio',
-                'registrar_atencion_servicio',
-            ])->pluck('id')->toArray();
-
-            $vendedor->permisos()->sync($permisosVendedor);
         }
     }
 }

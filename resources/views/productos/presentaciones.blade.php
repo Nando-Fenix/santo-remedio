@@ -6,31 +6,15 @@
 
 @section('content')
 
-<div class="card" style="margin-bottom: 22px;">
-    <div style="display: flex; justify-content: space-between; align-items: center; gap: 16px;">
-        <div>
-            <h2 style="margin: 0; color: #4C1D95;">
-                {{ $producto->nombre_comercial }}
-            </h2>
-            <p style="margin: 6px 0 0; color: #6B7280;">
-                {{ $producto->nombre_generico ?? 'Sin nombre genérico' }}
-                @if($producto->concentracion)
-                    — {{ $producto->concentracion }}
-                @endif
-            </p>
-        </div>
-
-        @if (auth()->user()->tienePermiso('ver_productos'))
-            <a href="{{ route('productos.index') }}" class="btn-secondary">
-                Volver a productos
-            </a>
-        @endif
-    </div>
-</div>
-
 @if (session('success'))
     <div class="alert-success">
         {{ session('success') }}
+    </div>
+@endif
+
+@if (session('error'))
+    <div class="alert-danger">
+        {{ session('error') }}
     </div>
 @endif
 
@@ -45,19 +29,210 @@
     </div>
 @endif
 
-@if (auth()->user()->tienePermiso('editar_producto'))
-    <div class="card" style="margin-bottom: 22px;">
-        <h3 style="margin-top: 0; color: #4C1D95;">Agregar forma de venta</h3>
+<div class="product-presentations-layout">
 
-        <p style="color: #6B7280; margin-top: -6px;">
-            Use esta sección solo si el producto se vende, compra o utiliza en más de una forma.
-            Ejemplo: unidad, ampolla, blíster x 10, caja x 100.
-        </p>
+    <section class="product-presentations-main">
 
-        <form method="POST" action="{{ route('productos.presentaciones.store', $producto) }}">
-            @csrf
+        <div class="compact-card">
+            <div class="compact-header">
+                <div>
+                    <h2>
+                        <i class="bi bi-layers"></i>
+                        {{ $producto->nombre_comercial }}
+                    </h2>
 
-            <div class="form-grid">
+                    <p>
+                        {{ $producto->nombre_generico ?? 'Sin nombre genérico' }}
+                        @if($producto->concentracion)
+                            · {{ $producto->concentracion }}
+                        @endif
+                    </p>
+                </div>
+
+                @if (auth()->user()->tienePermiso('ver_productos'))
+                    <a href="{{ route('productos.index') }}" class="btn-secondary">
+                        <i class="bi bi-arrow-left"></i>
+                        Volver
+                    </a>
+                @endif
+            </div>
+
+            <div class="product-presentations-info">
+                <div>
+                    <span>Categoría</span>
+                    <strong>{{ $producto->categoria->nombre ?? '-' }}</strong>
+                </div>
+
+                <div>
+                    <span>Laboratorio / Marca</span>
+                    <strong>{{ $producto->laboratorio->nombre ?? '-' }}</strong>
+                </div>
+
+                <div>
+                    <span>Tipo</span>
+                    <strong>{{ ucfirst(str_replace('_', ' ', $producto->tipo_producto ?? '-')) }}</strong>
+                </div>
+
+                <div>
+                    <span>Estado</span>
+                    <strong>{{ ucfirst($producto->estado) }}</strong>
+                </div>
+            </div>
+        </div>
+
+        <div class="detail-section-card compact-section">
+            <div class="detail-section-head">
+                <h3>
+                    <i class="bi bi-list-check"></i>
+                    Formas de venta registradas
+                </h3>
+            </div>
+
+            <p class="product-presentations-help">
+                Estas son las opciones disponibles para vender, comprar o usar este producto.
+            </p>
+
+            <div class="table-container compact-table-container">
+                <table class="table compact-table product-presentations-table">
+                    <thead>
+                        <tr>
+                            <th>Forma</th>
+                            <th>Nombre visible</th>
+                            <th>Descuenta</th>
+                            <th>P. compra</th>
+                            <th>P. venta</th>
+                            <th>Códigos</th>
+                            <th>Principal</th>
+                            <th>Estado</th>
+                            <th class="table-actions-cell">Acción</th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+                        @forelse ($producto->presentaciones as $item)
+                            <tr>
+                                <td>
+                                    <strong>{{ $item->presentacion->nombre ?? '-' }}</strong>
+                                </td>
+
+                                <td>
+                                    {{ $item->nombre_mostrado }}
+                                </td>
+
+                                <td>
+                                    <span class="badge badge-soft">
+                                        {{ $item->unidades_equivalentes }} unidad(es)
+                                    </span>
+                                </td>
+
+                                <td>
+                                    {{ number_format($item->precio_compra, 2) }} Bs
+                                </td>
+
+                                <td>
+                                    <strong>{{ number_format($item->precio_venta, 2) }} Bs</strong>
+                                </td>
+
+                                <td>
+                                    <div class="presentation-codes">
+                                        @forelse ($item->codigosBarras as $codigo)
+                                            <span class="badge badge-soft">
+                                                {{ $codigo->codigo }}
+                                            </span>
+                                        @empty
+                                            -
+                                        @endforelse
+                                    </div>
+                                </td>
+
+                                <td>
+                                    @if ($item->es_principal)
+                                        <span class="badge badge-success">Sí</span>
+                                    @else
+                                        <span class="badge badge-soft">No</span>
+                                    @endif
+                                </td>
+
+                                <td>
+                                    @if ($item->estado === 'activo')
+                                        <span class="badge badge-success">Activo</span>
+                                    @else
+                                        <span class="badge badge-danger">Inactivo</span>
+                                    @endif
+                                </td>
+
+                                <td>
+                                    <div class="action-group">
+                                        @if ($item->estado === 'activo' && auth()->user()->tienePermiso('editar_producto'))
+                                            <a
+                                                href="{{ route('productos.presentaciones.edit', [$producto, $item]) }}"
+                                                class="icon-action icon-action-edit"
+                                                title="Editar presentación"
+                                            >
+                                                <i class="bi bi-pencil"></i>
+                                            </a>
+                                        @endif
+
+                                        @if ($item->estado === 'activo' && auth()->user()->tienePermiso('desactivar_producto'))
+                                            <form
+                                                method="POST"
+                                                action="{{ route('productos.presentaciones.destroy', [$producto, $item]) }}"
+                                                class="form-desactivar-presentacion"
+                                            >
+                                                @csrf
+                                                @method('DELETE')
+
+                                                <button
+                                                    class="icon-action icon-action-danger"
+                                                    type="submit"
+                                                    title="Desactivar presentación"
+                                                >
+                                                    <i class="bi bi-power"></i>
+                                                </button>
+                                            </form>
+                                        @endif
+
+                                        @if ($item->estado !== 'activo')
+                                            -
+                                        @endif
+                                    </div>
+                                </td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="9" class="empty-table-message">
+                                    Este producto todavía no tiene presentaciones registradas.
+                                </td>
+                            </tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </section>
+
+    @if (auth()->user()->tienePermiso('editar_producto'))
+        <aside class="product-presentations-side">
+
+            <form
+                method="POST"
+                action="{{ route('productos.presentaciones.store', $producto) }}"
+                class="cancel-form-card"
+            >
+                @csrf
+
+                <div class="detail-section-head">
+                    <h3>
+                        <i class="bi bi-plus-circle"></i>
+                        Agregar forma de venta
+                    </h3>
+                </div>
+
+                <p class="product-presentations-help">
+                    Use esta sección si el producto se vende, compra o utiliza en más de una forma.
+                </p>
+
                 <div class="form-group">
                     <label>Forma de venta *</label>
                     <select name="presentacion_id" id="presentacion_id">
@@ -72,162 +247,92 @@
 
                 <div class="form-group">
                     <label>Nombre que verá el vendedor *</label>
-                    <input 
-                        type="text" 
-                        name="nombre_mostrado" 
+                    <input
+                        type="text"
+                        name="nombre_mostrado"
                         id="nombre_mostrado"
-                        value="{{ old('nombre_mostrado') }}" 
-                        placeholder="Ej: Paracetamol 500mg INTI - Caja x 100"
+                        value="{{ old('nombre_mostrado') }}"
+                        placeholder="Ej: Paracetamol 500mg - Caja x 100"
                     >
                 </div>
 
                 <div class="form-group">
                     <label>¿Cuántas unidades descuenta? *</label>
-                    <input 
-                        type="number" 
-                        min="1" 
-                        name="unidades_equivalentes" 
+                    <input
+                        type="number"
+                        min="1"
+                        name="unidades_equivalentes"
                         value="{{ old('unidades_equivalentes', 1) }}"
                     >
-                    <small style="color: #6B7280;">
+                    <small class="form-help">
                         Unidad = 1, blíster x 10 = 10, caja x 100 = 100.
                     </small>
                 </div>
 
-                <div class="form-group">
-                    <label>Precio de compra *</label>
-                    <input type="number" step="0.01" min="0" name="precio_compra" value="{{ old('precio_compra', 0) }}">
-                </div>
+                <div class="product-presentations-price-grid">
+                    <div class="form-group">
+                        <label>Precio compra *</label>
+                        <input
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            name="precio_compra"
+                            value="{{ old('precio_compra', 0) }}"
+                        >
+                    </div>
 
-                <div class="form-group">
-                    <label>Precio de venta *</label>
-                    <input type="number" step="0.01" min="0" name="precio_venta" value="{{ old('precio_venta', 0) }}">
+                    <div class="form-group">
+                        <label>Precio venta *</label>
+                        <input
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            name="precio_venta"
+                            value="{{ old('precio_venta', 0) }}"
+                        >
+                    </div>
                 </div>
 
                 <div class="form-group">
                     <label>Código de barras</label>
-                    <input 
-                        type="text" 
-                        id="codigo_barras"
-                        name="codigo_barras" 
-                        value="{{ old('codigo_barras') }}" 
-                        placeholder="Escanee el código del producto"
-                    >
+
+                    <div class="barcode-input-group">
+                        <input
+                            type="text"
+                            id="codigo_barras"
+                            name="codigo_barras"
+                            value="{{ old('codigo_barras') }}"
+                            placeholder="Escanee el código"
+                        >
+
+                        <button type="button" class="btn-secondary" onclick="activarEscaner()">
+                            <i class="bi bi-upc-scan"></i>
+                        </button>
+                    </div>
                 </div>
 
-                <div class="form-group" style="display: flex; align-items: end;">
-                    <button type="button" class="btn-secondary" onclick="activarEscaner()">
-                        Escanear código
-                    </button>
-                </div>
-            </div>
+                <label class="checkbox-line product-main-check">
+                    <input type="checkbox" name="es_principal" value="1" @checked(old('es_principal'))>
+                    Usar como forma principal de venta
+                </label>
 
-            <label class="checkbox-line" style="margin-top: 18px;">
-                <input type="checkbox" name="es_principal" value="1" @checked(old('es_principal'))>
-                Usar como forma principal de venta
-            </label>
-            <small style="display: block; color: #6B7280; margin-top: 4px;">
-                Esta será la opción que se mostrará como principal en el listado de productos.
-            </small>
+                <small class="form-help">
+                    Esta será la opción que se mostrará como principal en el listado de productos.
+                </small>
 
-            <div style="margin-top: 22px;">
-                @if (auth()->user()->tienePermiso('editar_producto'))
+                <div class="product-presentations-actions">
                     <button class="btn-primary" type="submit">
-                        Guardar presentación
+                        <i class="bi bi-check2-circle"></i>
+                        Guardar
                     </button>
-                @endif
-            </div>
-        </form>
-    </div>
-@endif
+                </div>
+            </form>
 
-<div class="card">
-    <h3 style="margin-top: 0; color: #4C1D95;">Formas de venta registradas</h3>
+        </aside>
+    @endif
 
-    <p style="color: #6B7280; margin-top: -6px;">
-        Estas son las opciones disponibles para vender, comprar o usar este producto.
-    </p>
-
-    <div class="table-container">
-        <table class="table">
-            <thead>
-                <tr>
-                    <th>Forma</th>
-                    <th>Nombre visible</th>
-                    <th>Descuenta</th>
-                    <th>Precio compra</th>
-                    <th>Precio venta</th>
-                    <th>Códigos</th>
-                    <th>Principal</th>
-                    <th>Estado</th>
-                    <th>Acción</th>
-                </tr>
-            </thead>
-            <tbody>
-                @forelse ($producto->presentaciones as $item)
-                    <tr>
-                        <td>{{ $item->presentacion->nombre ?? '-' }}</td>
-                        <td>{{ $item->nombre_mostrado }}</td>
-                        <td>{{ $item->unidades_equivalentes }} unidad(es)</td>
-                        <td>{{ number_format($item->precio_compra, 2) }} Bs</td>
-                        <td>{{ number_format($item->precio_venta, 2) }} Bs</td>
-                        <td>
-                            @forelse ($item->codigosBarras as $codigo)
-                                <span class="badge badge-soft">{{ $codigo->codigo }}</span>
-                            @empty
-                                -
-                            @endforelse
-                        </td>
-                        <td>
-                            @if ($item->es_principal)
-                                <span class="badge badge-success">Sí</span>
-                            @else
-                                <span class="badge badge-soft">No</span>
-                            @endif
-                        </td>
-                        <td>
-                            <span class="badge {{ $item->estado === 'activo' ? 'badge-success' : 'badge-danger' }}">
-                                {{ ucfirst($item->estado) }}
-                            </span>
-                        </td>
-                        <td>
-                            <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-                                @if ($item->estado === 'activo' && auth()->user()->tienePermiso('editar_producto'))
-                                    <a href="{{ route('productos.presentaciones.edit', [$producto, $item]) }}" class="btn-secondary">
-                                        Editar
-                                    </a>
-                                @endif
-
-                                @if ($item->estado === 'activo' && auth()->user()->tienePermiso('desactivar_producto'))
-                                    <form method="POST"
-                                        action="{{ route('productos.presentaciones.destroy', [$producto, $item]) }}"
-                                        onsubmit="return confirmarFormulario(event,'¿Desactivar esta forma de venta?')">
-                                        @csrf
-                                        @method('DELETE')
-
-                                        <button class="btn-danger" type="submit">
-                                            Desactivar
-                                        </button>
-                                    </form>
-                                @endif
-
-                                @if ($item->estado !== 'activo')
-                                    -
-                                @endif
-                            </div>
-                        </td>
-                    </tr>
-                @empty
-                    <tr>
-                        <td colspan="9" style="text-align: center; color: #6B7280;">
-                            Este producto todavía no tiene presentaciones registradas.
-                        </td>
-                    </tr>
-                @endforelse
-            </tbody>
-        </table>
-    </div>
 </div>
+
 <script>
 document.addEventListener('DOMContentLoaded', function () {
     const presentacionSelect = document.getElementById('presentacion_id');
@@ -266,6 +371,27 @@ document.addEventListener('DOMContentLoaded', function () {
     if (presentacionSelect) {
         presentacionSelect.addEventListener('change', generarNombreMostrado);
     }
+
+    document.querySelectorAll('.form-desactivar-presentacion').forEach(form => {
+        form.addEventListener('submit', function (event) {
+            event.preventDefault();
+
+            Swal.fire({
+                icon: 'warning',
+                title: '¿Desactivar forma de venta?',
+                text: 'Esta presentación quedará inactiva para nuevas ventas.',
+                showCancelButton: true,
+                confirmButtonText: 'Sí, desactivar',
+                cancelButtonText: 'Cancelar',
+                confirmButtonColor: '#DC2626',
+                cancelButtonColor: '#6B7280'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    event.target.submit();
+                }
+            });
+        });
+    });
 });
 
 function activarEscaner() {
@@ -274,4 +400,5 @@ function activarEscaner() {
     input.select();
 }
 </script>
+
 @endsection

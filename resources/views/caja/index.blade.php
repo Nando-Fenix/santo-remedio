@@ -18,18 +18,25 @@
     </div>
 @endif
 
-<div class="card" style="margin-bottom: 22px;">
-    <div style="display: flex; justify-content: space-between; align-items: center; gap: 14px;">
+<div class="compact-card">
+
+    <div class="compact-header">
         <div>
-            <h2 style="margin: 0; color: #4C1D95;">Estado de caja</h2>
-            <p style="margin: 6px 0 0; color: #6B7280;">
-                Sucursal actual: <strong>{{ $sucursal->nombre }}</strong>
+            <h2>
+                <i class="bi bi-cash-stack"></i>
+                Estado de caja
+            </h2>
+
+            <p>
+                Sucursal actual:
+                <strong>{{ $sucursal->nombre }}</strong>
             </p>
         </div>
 
-        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+        <div class="detail-actions">
             @if (!$cajaAbierta && auth()->user()->tienePermiso('abrir_caja'))
                 <a href="{{ route('caja.create') }}" class="btn-primary">
+                    <i class="bi bi-unlock"></i>
                     Abrir caja
                 </a>
             @endif
@@ -37,97 +44,115 @@
             @if ($cajaAbierta)
                 @if (auth()->user()->tienePermiso('ver_caja'))
                     <a href="{{ route('caja.movimientos') }}" class="btn-secondary">
-                        Ver movimientos
+                        <i class="bi bi-list-ul"></i>
+                        Movimientos
                     </a>
                 @endif
 
                 @if (auth()->user()->tienePermiso('registrar_egreso'))
                     <a href="{{ route('caja.egreso.create') }}" class="btn-secondary">
-                        Registrar egreso
+                        <i class="bi bi-dash-circle"></i>
+                        Egreso
                     </a>
                 @endif
 
                 @if (auth()->user()->tienePermiso('cerrar_caja'))
                     <a href="{{ route('caja.cierre.create') }}" class="btn-primary">
+                        <i class="bi bi-lock"></i>
                         Cerrar caja
                     </a>
                 @endif
             @endif
         </div>
     </div>
+
+    @if ($cajaAbierta)
+        <div class="detail-stat-grid compact-detail-stats">
+            <div class="detail-stat-card detail-stat-main">
+                <span>Estado</span>
+                <strong>Abierta</strong>
+            </div>
+
+            <div class="detail-stat-card">
+                <span>Turno</span>
+                <strong>{{ $cajaAbierta->turno->nombre ?? '-' }}</strong>
+            </div>
+
+            <div class="detail-stat-card">
+                <span>Monto inicial</span>
+                <strong>{{ number_format($cajaAbierta->monto_inicial, 2) }} Bs</strong>
+            </div>
+
+            <div class="detail-stat-card">
+                <span>Apertura</span>
+                <strong>{{ $cajaAbierta->fecha_apertura->format('d/m/Y H:i') }}</strong>
+            </div>
+        </div>
+
+        <div class="cash-current-grid">
+            <div class="cash-current-item">
+                <span>Efectivo</span>
+                <strong>{{ number_format($cajaAbierta->total_efectivo, 2) }} Bs</strong>
+            </div>
+
+            <div class="cash-current-item">
+                <span>QR / Transferencia</span>
+                <strong>{{ number_format($cajaAbierta->total_qr, 2) }} Bs</strong>
+            </div>
+
+            <div class="cash-current-item cash-current-danger">
+                <span>Egresos</span>
+                <strong>{{ number_format($cajaAbierta->total_egresos, 2) }} Bs</strong>
+            </div>
+
+            <div class="cash-current-item cash-current-danger">
+                <span>Reembolsos / devoluciones</span>
+                <strong>{{ number_format($cajaAbierta->total_reembolsos, 2) }} Bs</strong>
+            </div>
+
+            <div class="cash-current-item cash-current-total">
+                <span>Total final estimado</span>
+                <strong>{{ number_format($cajaAbierta->total_final, 2) }} Bs</strong>
+            </div>
+        </div>
+    @else
+        <div class="cash-empty-state">
+            <div>
+                <i class="bi bi-cash-stack"></i>
+            </div>
+
+            <section>
+                <h3>No hay caja abierta</h3>
+                <p>
+                    Para registrar ventas reales con control de caja, primero debe abrir una caja.
+                </p>
+            </section>
+        </div>
+    @endif
+
 </div>
 
-@if ($cajaAbierta)
-    <div class="grid">
-        <div class="stat-card">
-            <span>Estado</span>
-            <h3>Abierta</h3>
-        </div>
+<div class="compact-card" style="margin-top: 14px;">
 
-        <div class="stat-card">
-            <span>Turno</span>
-            <h3 style="font-size: 20px;">{{ $cajaAbierta->turno->nombre ?? '-' }}</h3>
-        </div>
+    <div class="compact-header">
+        <div>
+            <h2>
+                <i class="bi bi-clock-history"></i>
+                Historial de cajas
+            </h2>
 
-        <div class="stat-card">
-            <span>Monto inicial</span>
-            <h3>{{ number_format($cajaAbierta->monto_inicial, 2) }} Bs</h3>
-        </div>
-
-        <div class="stat-card">
-            <span>Apertura</span>
-            <h3 style="font-size: 18px;">{{ $cajaAbierta->fecha_apertura->format('d/m/Y H:i') }}</h3>
+            <p>
+                Aperturas y cierres registrados en el sistema.
+            </p>
         </div>
     </div>
 
-    <div class="card" style="margin-bottom: 22px;">
-        <h3 style="margin-top: 0; color: #4C1D95;">Resumen actual</h3>
-
-        <div class="grid" style="grid-template-columns: repeat(5, 1fr); margin-bottom: 0;">
-            <div class="stat-card">
-                <span>Efectivo</span>
-                <h3>{{ number_format($cajaAbierta->total_efectivo, 2) }} Bs</h3>
-            </div>
-
-            <div class="stat-card">
-                <span>QR / Transferencia</span>
-                <h3>{{ number_format($cajaAbierta->total_qr, 2) }} Bs</h3>
-            </div>
-
-            <div class="stat-card">
-                <span>Egresos</span>
-                <h3>{{ number_format($cajaAbierta->total_egresos, 2) }} Bs</h3>
-            </div>
-
-            <div class="stat-card">
-                <span>Reembolsos / devoluciones</span>
-                <h3>{{ number_format($cajaAbierta->total_reembolsos, 2) }} Bs</h3>
-            </div>
-
-            <div class="stat-card">
-                <span>Total final estimado</span>
-                <h3>{{ number_format($cajaAbierta->total_final, 2) }} Bs</h3>
-            </div>
-        </div>
-    </div>
-@else
-    <div class="card" style="margin-bottom: 22px;">
-        <h3 style="margin-top: 0; color: #4C1D95;">No hay caja abierta</h3>
-        <p style="color: #6B7280;">
-            Para registrar ventas reales con control de caja, primero debe abrir una caja.
-        </p>
-    </div>
-@endif
-
-<div class="card">
-    <h3 style="margin-top: 0; color: #4C1D95;">Historial de cajas</h3>
-
-    <div class="table-container">
-        <table class="table">
+    <div class="table-container compact-table-container">
+        <table class="table compact-table cash-history-table">
             <thead>
                 <tr>
-                    <th>Fecha apertura</th>
-                    <th>Fecha cierre</th>
+                    <th>Apertura</th>
+                    <th>Cierre</th>
                     <th>Usuario</th>
                     <th>Turno</th>
                     <th>Inicial</th>
@@ -138,18 +163,41 @@
                     <th>Estado</th>
                 </tr>
             </thead>
+
             <tbody>
                 @forelse ($cajas as $caja)
                     <tr>
-                        <td>{{ $caja->fecha_apertura?->format('d/m/Y H:i') }}</td>
-                        <td>{{ $caja->fecha_cierre?->format('d/m/Y H:i') ?? '-' }}</td>
+                        <td>
+                            {{ $caja->fecha_apertura?->format('d/m/Y') }}
+                            <br>
+                            <small style="color:#6B7280;">
+                                {{ $caja->fecha_apertura?->format('H:i') }}
+                            </small>
+                        </td>
+
+                        <td>
+                            @if ($caja->fecha_cierre)
+                                {{ $caja->fecha_cierre->format('d/m/Y') }}
+                                <br>
+                                <small style="color:#6B7280;">
+                                    {{ $caja->fecha_cierre->format('H:i') }}
+                                </small>
+                            @else
+                                -
+                            @endif
+                        </td>
+
                         <td>{{ $caja->usuario->nombre ?? '-' }}</td>
                         <td>{{ $caja->turno->nombre ?? '-' }}</td>
                         <td>{{ number_format($caja->monto_inicial, 2) }} Bs</td>
                         <td>{{ number_format($caja->total_efectivo, 2) }} Bs</td>
                         <td>{{ number_format($caja->total_qr, 2) }} Bs</td>
                         <td>{{ number_format($caja->total_egresos, 2) }} Bs</td>
-                        <td>{{ number_format($caja->total_final, 2) }} Bs</td>
+
+                        <td>
+                            <strong>{{ number_format($caja->total_final, 2) }} Bs</strong>
+                        </td>
+
                         <td>
                             <span class="badge {{ $caja->estado === 'abierta' ? 'badge-success' : 'badge-soft' }}">
                                 {{ ucfirst($caja->estado) }}
@@ -158,7 +206,7 @@
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="10" style="text-align: center; color: #6B7280;">
+                        <td colspan="10" class="empty-table-message">
                             No existen cajas registradas.
                         </td>
                     </tr>
@@ -167,9 +215,10 @@
         </table>
     </div>
 
-    <div style="margin-top: 18px;">
+    <div class="pagination-wrapper">
         {{ $cajas->links() }}
     </div>
+
 </div>
 
 @endsection
