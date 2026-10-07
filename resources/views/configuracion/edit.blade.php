@@ -193,20 +193,20 @@
                         </p>
                     </div>
                 </div>
+
+                <div>
+                    <button type="submit" class="btn-primary">
+                        <i class="bi bi-save"></i>
+                        Guardar configuración
+                    </button>
+
+                    <a href="{{ route('dashboard') }}" class="btn-secondary">
+                        <i class="bi bi-x-circle"></i>
+                        Cancelar
+                    </a>
+                </div>
             </div>
 
-        </div>
-
-        <div class="config-actions compact-card">
-            <button type="submit" class="btn-primary">
-                <i class="bi bi-save"></i>
-                Guardar configuración
-            </button>
-
-            <a href="{{ route('dashboard') }}" class="btn-secondary">
-                <i class="bi bi-x-circle"></i>
-                Cancelar
-            </a>
         </div>
     </form>
 

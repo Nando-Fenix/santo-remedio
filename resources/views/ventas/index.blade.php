@@ -207,7 +207,7 @@
                                     type="button"
                                     class="icon-action icon-action-print"
                                     onclick="abrirModalImpresion('{{ route('ventas.recibo', $venta) }}')"
-                                    title="Imprimir recibo"
+                                    title="Imprimir recibo"  
                                 >
                                     <i class="bi bi-printer"></i>
                                 </button>

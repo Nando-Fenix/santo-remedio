@@ -39,10 +39,10 @@
                 {{ ucfirst(str_replace('_', ' ', $venta->estado)) }}
             </span>
 
-            <a href="{{ route('ventas.recibo', $venta) }}" class="btn-primary" onclick="abrirModalImpresion('{{ route('ventas.recibo', $venta) }}')">
+            <button class="btn-primary" onclick="abrirModalImpresion('{{ route('ventas.recibo', $venta) }}')">
                 <i class="bi bi-printer"></i>
                 Imprimir
-            </a>
+            </button>
 
             @if ($venta->estado === 'completada' && $venta->caja?->estado === 'abierta')
                 @if (auth()->user()->tienePermiso('reembolsar_venta'))
